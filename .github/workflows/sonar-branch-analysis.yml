@@ -61,6 +61,6 @@ jobs:
             -Dsonar.projectKey=mcp-server-simulator-ios-idb
             -Dsonar.organization=com.inditex
             -Dsonar.sources=src
-            -Dsonar.tests=src/**/__tests__
+            -Dsonar.tests=src/parser/__tests__,src/orchestrator/__tests__
             -Dsonar.typescript.lcov.reportPaths=coverage/lcov.info
             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
