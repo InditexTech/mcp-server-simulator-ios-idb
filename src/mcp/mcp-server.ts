@@ -12,7 +12,10 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { createMCPServer } from '../index.js';
+// Export implementations
+import { IDBManager } from '../idb/IDBManager.js';
+import { NLParser } from '../parser/NLParser.js';
+import { MCPOrchestrator } from '../orchestrator/MCPOrchestrator.js';
 
 // Log configuration
 // Get the directory name using ESM approach
@@ -34,6 +37,23 @@ const logToFile = (message: string, level: string = 'info') => {
     // Not much we can do if logging fails
   }
 };
+
+/**
+ * Create a complete MCP Server instance
+ * @returns Object with all necessary instances
+ */
+export function createMCPServer() {
+  // Create instances
+  const idbManager = new IDBManager();
+  const parser = new NLParser();
+  const orchestrator = new MCPOrchestrator(parser, idbManager);
+  
+  return {
+    idbManager,
+    parser,
+    orchestrator
+  };
+}
 
 /**
  * MCP Server implementation for iOS simulator
