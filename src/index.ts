@@ -27,11 +27,6 @@ import mcpServer from './mcp/mcp-server.js';
  * It also serves as the entry point for starting the MCP server.
  */
 
-// Local imports for internal use
-import { IDBManager } from './idb/IDBManager.js';
-import { NLParser } from './parser/NLParser.js';
-import { MCPOrchestrator } from './orchestrator/MCPOrchestrator.js';
-
 // Export interfaces
 export { IIDBManager, SimulatorInfo, AppInfo, SessionConfig } from './idb/interfaces/IIDBManager.js';
 export { IParser, ParseResult, ValidationResult } from './parser/interfaces/IParser.js';
@@ -53,23 +48,6 @@ export { MCPOrchestrator } from './orchestrator/MCPOrchestrator.js';
 // Export adapters
 export { ParserToOrchestrator } from './adapters/ParserToOrchestrator.js';
 export { OrchestratorToIDB } from './adapters/OrchestratorToIDB.js';
-
-/**
- * Create a complete MCP Server instance
- * @returns Object with all necessary instances
- */
-export function createMCPServer() {
-  // Create instances
-  const idbManager = new IDBManager();
-  const parser = new NLParser();
-  const orchestrator = new MCPOrchestrator(parser, idbManager);
-  
-  return {
-    idbManager,
-    parser,
-    orchestrator
-  };
-}
 
 /**
  * Main entry point for the MCP server
