@@ -1,0 +1,48 @@
+version = 1
+SPDX-PackageName = "mcp-server-simulator-ios-idb"
+SPDX-PackageSupplier = "2025 Industria de Diseño Textil S.A."
+SPDX-PackageDownloadLocation = "https://github.com/InditexTech/mcp-server-simulator-ios-idb"
+
+# Computer-generated files.
+[[annotations]]
+path = [
+    ".gitignore",
+    ".npmrc",
+    "package*.json",
+    "repolinter.json",
+    "tsconfig.json",
+    "jest.config.js",
+    "glama.json",
+]
+SPDX-FileCopyrightText = "2025 Industria Textil de Diseño, S.A."
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ".github/ISSUE_TEMPLATE/**"
+SPDX-FileCopyrightText = "2025 Industria Textil de Diseño, S.A."
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ".github/workflows/**"
+SPDX-FileCopyrightText = "2025 Industria Textil de Diseño, S.A."
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "README.md"
+SPDX-FileCopyrightText = "2025 Industria Textil de Diseño, S.A."
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "CHANGELOG.md"
+SPDX-FileCopyrightText = "2025 Industria Textil de Diseño, S.A."
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "demo/demo.gif"
+SPDX-FileCopyrightText = "2025 Industria Textil de Diseño, S.A."
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "src/**/__tests__/*"
+SPDX-FileCopyrightText = "2025 Industria Textil de Diseño, S.A."
+SPDX-License-Identifier = "Apache-2.0"
