@@ -328,3 +328,8 @@ This project would not be possible without [facebook/idb](https://github.com/fac
 ## 📄 License
 
 This tool is available as open source under the terms of the Apache-2.0.
+
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/inditextech-mcp-server-simulator-ios-idb).
+
