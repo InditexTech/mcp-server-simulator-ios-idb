@@ -1,0 +1,14 @@
+CONTRIBUTING.md
+  h_8fe143308bc629 15-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "df2bdadf8b4a81309692bb249bd36de5c5072239",
+  "prompts": {},
+  "humans": {
+    "h_8fe143308bc629": {
+      "author": "Mariano Alonso Ortiz <marianoao@inditex.com>"
+    }
+  }
+}
