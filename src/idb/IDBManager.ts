@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: © 2025 Industria de Diseño Textil S.A. INDITEX
 // SPDX-License-Identifier: Apache-2.0
 
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-import * as fs from 'fs';
-import * as path from 'path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { 
   IIDBManager, 
   SimulatorInfo, 
@@ -17,11 +17,24 @@ import {
 
 const execFileAsync = promisify(execFile);
 
+interface IDBAppInfo {
+  bundle_id: string;
+  name?: string;
+  install_path?: string;
+  pid?: number | null;
+}
+
+interface IDBCrashLogInfo {
+  name: string | null;
+  bundle_id: string | null;
+  timestamp: number | null;
+}
+
 /**
  * IDB manager implementation for interacting with iOS simulators
  */
 export class IDBManager implements IIDBManager {
-  private sessions: Map<string, string> = new Map(); // sessionId -> udid
+  private readonly sessions: Map<string, string> = new Map(); // sessionId -> udid
   private sessionCounter: number = 0;
 
   private async executeCommand(command: string, args: string[] = []): Promise<string> {
@@ -35,14 +48,11 @@ export class IDBManager implements IIDBManager {
     }
   }
 
-  private parseAppList(output: string): any[] {
+  private parseAppList(output: string): IDBAppInfo[] {
     return output
       .split('\n')
       .filter(Boolean)
-      .flatMap(line => {
-        const app = JSON.parse(line);
-        return Array.isArray(app) ? app : [app];
-      });
+      .map(line => JSON.parse(line) as IDBAppInfo);
   }
 
   private async verifyIDBAvailability(): Promise<void> {
@@ -231,7 +241,7 @@ export class IDBManager implements IIDBManager {
       String(endX),
       String(endY),
       '--duration',
-      String(duration),
+      String(duration / 1000),
       '--udid',
       udid
     ]);
@@ -265,11 +275,20 @@ export class IDBManager implements IIDBManager {
       throw new Error(`Session not found: ${sessionId}`);
     }
     
-    const args = ['log', '--udid', udid, '--'];
-    if (options?.bundle) args.push('--bundle', options.bundle);
-    if (options?.limit) args.push('--limit', String(options.limit));
+    const args = ['log', '--udid', udid, '--', 'stream'];
+    if (options?.bundle) {
+      const output = await this.executeCommand('idb', ['list-apps', '--udid', udid, '--json']);
+      const app = this.parseAppList(output).find(item => item.bundle_id === options.bundle);
+      if (app?.pid === undefined || app.pid === null) {
+        throw new Error(`Application is not running: ${options.bundle}`);
+      }
+      args.push('--process', String(app.pid));
+    }
     args.push('--timeout', '5');
-    return this.executeCommand('idb', args);
+    const output = await this.executeCommand('idb', args);
+    return options?.limit === undefined
+      ? output
+      : output.split('\n').slice(0, Math.max(0, options.limit)).join('\n');
   }
 
   async getAppLogs(sessionId: string, bundleId: string): Promise<string> {
@@ -297,7 +316,7 @@ export class IDBManager implements IIDBManager {
     try {
       const output = await this.executeCommand('idb', ['list-apps', '--udid', udid, '--json']);
       const apps = this.parseAppList(output);
-      return apps.some((app: any) => app.bundle_id === bundleId);
+      return apps.some(app => app.bundle_id === bundleId);
     } catch (error) {
       return false;
     }
@@ -326,7 +345,7 @@ export class IDBManager implements IIDBManager {
     }
     const output = await this.executeCommand('idb', ['list-apps', '--udid', udid, '--json']);
     const apps = this.parseAppList(output);
-    return apps.map((app: any) => ({
+    return apps.map(app => ({
       bundleId: app.bundle_id,
       name: app.name || app.bundle_id,
       installedPath: app.install_path
@@ -339,7 +358,7 @@ export class IDBManager implements IIDBManager {
       throw new Error(`Session not found: ${sessionId}`);
     }
     const args = ['ui', 'button', button];
-    if (duration) args.push('--duration', String(duration));
+    if (duration) args.push('--duration', String(duration / 1000));
     args.push('--udid', udid);
     await this.executeCommand('idb', args);
   }
@@ -358,7 +377,7 @@ export class IDBManager implements IIDBManager {
       throw new Error(`Session not found: ${sessionId}`);
     }
     const args = ['ui', 'key', String(keyCode)];
-    if (duration) args.push('--duration', String(duration));
+    if (duration) args.push('--duration', String(duration / 1000));
     args.push('--udid', udid);
     await this.executeCommand('idb', args);
   }
@@ -384,15 +403,13 @@ export class IDBManager implements IIDBManager {
     }
     try {
       const output = await this.executeCommand('idb', ['debugserver', 'status', '--udid', udid]);
-      if (output.includes("No debug server running")) {
+      if (output === 'Not Running') {
         return { running: false };
       }
-      const portMatch = output.match(/port: (\d+)/);
-      const bundleMatch = output.match(/bundle_id: ([^\s]+)/);
+      const portMatch = /connect:\/\/[^:\s]+:(\d+)/.exec(output);
       return {
         running: true,
-        port: portMatch ? parseInt(portMatch[1], 10) : undefined,
-        bundleId: bundleMatch ? bundleMatch[1] : undefined
+        port: portMatch ? Number.parseInt(portMatch[1], 10) : undefined
       };
     } catch (error) {
       return { running: false };
@@ -410,17 +427,16 @@ export class IDBManager implements IIDBManager {
     }
     const args = ['crash', 'list', '--udid', udid];
     if (options?.bundleId) args.push('--bundle-id', options.bundleId);
-    if (options?.before) args.push('--before', options.before.toISOString());
-    if (options?.since) args.push('--since', options.since.toISOString());
+    if (options?.before) args.push('--before', String(Math.floor(options.before.getTime() / 1000)));
+    if (options?.since) args.push('--since', String(Math.floor(options.since.getTime() / 1000)));
     const output = await this.executeCommand('idb', args);
-    const lines = output.split('\n').filter(Boolean);
-    return lines.map(line => {
-      const parts = line.split(' - ');
+    return output.split('\n').filter(Boolean).map(line => {
+      const crash = JSON.parse(line) as IDBCrashLogInfo;
       return {
-        name: parts[0].trim(),
-        bundleId: parts[1]?.trim(),
-        date: new Date(parts[2]?.trim() || Date.now()),
-        path: parts[3]?.trim() || ''
+        name: crash.name ?? '',
+        bundleId: crash.bundle_id ?? undefined,
+        date: crash.timestamp === null ? new Date() : new Date(crash.timestamp * 1000),
+        path: ''
       };
     });
   }
@@ -456,8 +472,8 @@ export class IDBManager implements IIDBManager {
     }
     const args = ['crash', 'delete', '--udid', udid];
     if (options.bundleId) args.push('--bundle-id', options.bundleId);
-    if (options.before) args.push('--before', options.before.toISOString());
-    if (options.since) args.push('--since', options.since.toISOString());
+    if (options.before) args.push('--before', String(Math.floor(options.before.getTime() / 1000)));
+    if (options.since) args.push('--since', String(Math.floor(options.since.getTime() / 1000)));
     await this.executeCommand('idb', args);
   }
 
@@ -482,7 +498,7 @@ export class IDBManager implements IIDBManager {
     if (!udid) {
       throw new Error(`Session not found: ${sessionId}`);
     }
-    await this.executeCommand('idb', ['clear_keychain', '--udid', udid]);
+    await this.executeCommand('idb', ['clear-keychain', '--udid', udid]);
   }
 
   async setLocation(sessionId: string, latitude: number, longitude: number): Promise<void> {
@@ -491,7 +507,7 @@ export class IDBManager implements IIDBManager {
       throw new Error(`Session not found: ${sessionId}`);
     }
     await this.executeCommand('idb', [
-      'set_location',
+      'set-location',
       '--udid',
       udid,
       String(latitude),

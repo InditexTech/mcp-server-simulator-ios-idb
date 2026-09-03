@@ -51,7 +51,7 @@ jobs:
         run: npm run build
 
       - name: Run tests
-        run: npm test
+        run: npm run test:coverage
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
