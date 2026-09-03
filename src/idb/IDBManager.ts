@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: © 2025 Industria de Diseño Textil S.A. INDITEX
 // SPDX-License-Identifier: Apache-2.0
 
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -15,7 +15,7 @@ import {
   CrashLogInfo
 } from './interfaces/IIDBManager.js';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 /**
  * IDB manager implementation for interacting with iOS simulators
@@ -24,20 +24,30 @@ export class IDBManager implements IIDBManager {
   private sessions: Map<string, string> = new Map(); // sessionId -> udid
   private sessionCounter: number = 0;
 
-  private async executeCommand(command: string): Promise<string> {
+  private async executeCommand(command: string, args: string[] = []): Promise<string> {
     try {
-      const { stdout } = await execAsync(command);
+      const { stdout } = await execFileAsync(command, args);
       return stdout.trim();
     } catch (error: any) {
-      console.error(`Error executing idb command: ${command}`);
+      console.error(`Error executing command: ${command}`, args);
       console.error(error.message);
-      throw new Error(`Error executing idb command: ${error.message}`);
+      throw new Error(`Error executing command: ${error.message}`);
     }
+  }
+
+  private parseAppList(output: string): any[] {
+    return output
+      .split('\n')
+      .filter(Boolean)
+      .flatMap(line => {
+        const app = JSON.parse(line);
+        return Array.isArray(app) ? app : [app];
+      });
   }
 
   private async verifyIDBAvailability(): Promise<void> {
     try {
-      await this.executeCommand('idb --version');
+      await this.executeCommand('idb', ['--version']);
     } catch (error) {
       throw new Error('idb is not installed or not available in PATH. Make sure idb-companion and fb-idb are properly installed.');
     }
@@ -89,7 +99,7 @@ export class IDBManager implements IIDBManager {
 
   async listAvailableSimulators(): Promise<SimulatorInfo[]> {
     await this.verifyIDBAvailability();
-    const output = await this.executeCommand('xcrun simctl list devices --json');
+    const output = await this.executeCommand('xcrun', ['simctl', 'list', 'devices', '--json']);
     const data = JSON.parse(output);
     const simulators: SimulatorInfo[] = [];
     
@@ -121,7 +131,7 @@ export class IDBManager implements IIDBManager {
       return;
     }
     
-    await this.executeCommand(`xcrun simctl boot ${udid}`);
+    await this.executeCommand('xcrun', ['simctl', 'boot', udid]);
     let attempts = 0;
     const maxAttempts = 30;
     
@@ -152,7 +162,7 @@ export class IDBManager implements IIDBManager {
 
   async shutdownSimulatorByUDID(udid: string): Promise<void> {
     await this.verifyIDBAvailability();
-    await this.executeCommand(`xcrun simctl shutdown ${udid}`);
+    await this.executeCommand('xcrun', ['simctl', 'shutdown', udid]);
   }
 
   async installApp(sessionId: string, appPath: string): Promise<AppInfo> {
@@ -165,7 +175,7 @@ export class IDBManager implements IIDBManager {
       throw new Error(`File does not exist: ${appPath}`);
     }
     
-    await this.executeCommand(`idb install --udid ${udid} ${appPath}`);
+    await this.executeCommand('idb', ['install', '--udid', udid, '--', appPath]);
     
     const appName = path.basename(appPath, path.extname(appPath));
     const bundleId = `com.example.${appName}`;
@@ -182,7 +192,7 @@ export class IDBManager implements IIDBManager {
     if (!udid) {
       throw new Error(`Session not found: ${sessionId}`);
     }
-    await this.executeCommand(`idb launch --udid ${udid} ${bundleId}`);
+    await this.executeCommand('idb', ['launch', '--udid', udid, '--', bundleId]);
   }
 
   async terminateApp(sessionId: string, bundleId: string): Promise<void> {
@@ -190,7 +200,7 @@ export class IDBManager implements IIDBManager {
     if (!udid) {
       throw new Error(`Session not found: ${sessionId}`);
     }
-    await this.executeCommand(`idb terminate --udid ${udid} ${bundleId}`);
+    await this.executeCommand('idb', ['terminate', '--udid', udid, '--', bundleId]);
   }
 
   async tap(sessionId: string, x: number, y: number): Promise<void> {
@@ -198,7 +208,7 @@ export class IDBManager implements IIDBManager {
     if (!udid) {
       throw new Error(`Session not found: ${sessionId}`);
     }
-    await this.executeCommand(`idb ui --udid ${udid} tap ${x} ${y}`);
+    await this.executeCommand('idb', ['ui', 'tap', String(x), String(y), '--udid', udid]);
   }
 
   async swipe(
@@ -213,9 +223,18 @@ export class IDBManager implements IIDBManager {
     if (!udid) {
       throw new Error(`Session not found: ${sessionId}`);
     }
-    await this.executeCommand(
-      `idb ui --udid ${udid} swipe ${startX} ${startY} ${endX} ${endY} ${duration}`
-    );
+    await this.executeCommand('idb', [
+      'ui',
+      'swipe',
+      String(startX),
+      String(startY),
+      String(endX),
+      String(endY),
+      '--duration',
+      String(duration),
+      '--udid',
+      udid
+    ]);
   }
 
   async takeScreenshot(sessionId: string, outputPath?: string): Promise<Buffer | string> {
@@ -225,7 +244,7 @@ export class IDBManager implements IIDBManager {
     }
     
     const tempPath = outputPath || path.join(process.cwd(), `screenshot_${Date.now()}.png`);
-    await this.executeCommand(`idb screenshot --udid ${udid} ${tempPath}`);
+    await this.executeCommand('idb', ['screenshot', '--udid', udid, '--', tempPath]);
     
     if (outputPath) {
       return outputPath;
@@ -246,10 +265,11 @@ export class IDBManager implements IIDBManager {
       throw new Error(`Session not found: ${sessionId}`);
     }
     
-    let command = `idb log --udid ${udid}`;
-    if (options?.bundle) command += ` --bundle ${options.bundle}`;
-    if (options?.limit) command += ` --limit ${options.limit}`;
-    return this.executeCommand(`${command} --timeout 5`);
+    const args = ['log', '--udid', udid, '--'];
+    if (options?.bundle) args.push('--bundle', options.bundle);
+    if (options?.limit) args.push('--limit', String(options.limit));
+    args.push('--timeout', '5');
+    return this.executeCommand('idb', args);
   }
 
   async getAppLogs(sessionId: string, bundleId: string): Promise<string> {
@@ -275,8 +295,9 @@ export class IDBManager implements IIDBManager {
       throw new Error(`Session not found: ${sessionId}`);
     }
     try {
-      await this.executeCommand(`idb list-apps --udid ${udid} | grep "${bundleId}"`);
-      return true;
+      const output = await this.executeCommand('idb', ['list-apps', '--udid', udid, '--json']);
+      const apps = this.parseAppList(output);
+      return apps.some((app: any) => app.bundle_id === bundleId);
     } catch (error) {
       return false;
     }
@@ -287,7 +308,7 @@ export class IDBManager implements IIDBManager {
     if (!udid) {
       throw new Error(`Session not found: ${sessionId}`);
     }
-    await this.executeCommand(`idb focus --udid ${udid}`);
+    await this.executeCommand('idb', ['focus', '--udid', udid]);
   }
 
   async uninstallApp(sessionId: string, bundleId: string): Promise<void> {
@@ -295,7 +316,7 @@ export class IDBManager implements IIDBManager {
     if (!udid) {
       throw new Error(`Session not found: ${sessionId}`);
     }
-    await this.executeCommand(`idb uninstall --udid ${udid} ${bundleId}`);
+    await this.executeCommand('idb', ['uninstall', '--udid', udid, '--', bundleId]);
   }
 
   async listApps(sessionId: string): Promise<AppInfo[]> {
@@ -303,8 +324,8 @@ export class IDBManager implements IIDBManager {
     if (!udid) {
       throw new Error(`Session not found: ${sessionId}`);
     }
-    const output = await this.executeCommand(`idb list-apps --udid ${udid} --json`);
-    const apps = JSON.parse(output);
+    const output = await this.executeCommand('idb', ['list-apps', '--udid', udid, '--json']);
+    const apps = this.parseAppList(output);
     return apps.map((app: any) => ({
       bundleId: app.bundle_id,
       name: app.name || app.bundle_id,
@@ -317,9 +338,10 @@ export class IDBManager implements IIDBManager {
     if (!udid) {
       throw new Error(`Session not found: ${sessionId}`);
     }
-    let command = `idb ui --udid ${udid} button ${button}`;
-    if (duration) command += ` --duration ${duration}`;
-    await this.executeCommand(command);
+    const args = ['ui', 'button', button];
+    if (duration) args.push('--duration', String(duration));
+    args.push('--udid', udid);
+    await this.executeCommand('idb', args);
   }
 
   async inputText(sessionId: string, text: string): Promise<void> {
@@ -327,8 +349,7 @@ export class IDBManager implements IIDBManager {
     if (!udid) {
       throw new Error(`Session not found: ${sessionId}`);
     }
-    const escapedText = text.replace(/"/g, '\\"');
-    await this.executeCommand(`idb ui --udid ${udid} text "${escapedText}"`);
+    await this.executeCommand('idb', ['ui', 'text', '--udid', udid, '--', text]);
   }
 
   async pressKey(sessionId: string, keyCode: number, duration?: number): Promise<void> {
@@ -336,9 +357,10 @@ export class IDBManager implements IIDBManager {
     if (!udid) {
       throw new Error(`Session not found: ${sessionId}`);
     }
-    let command = `idb ui --udid ${udid} key ${keyCode}`;
-    if (duration) command += ` --duration ${duration}`;
-    await this.executeCommand(command);
+    const args = ['ui', 'key', String(keyCode)];
+    if (duration) args.push('--duration', String(duration));
+    args.push('--udid', udid);
+    await this.executeCommand('idb', args);
   }
 
   async pressKeySequence(sessionId: string, keyCodes: number[]): Promise<void> {
@@ -346,8 +368,13 @@ export class IDBManager implements IIDBManager {
     if (!udid) {
       throw new Error(`Session not found: ${sessionId}`);
     }
-    const keyCodesStr = keyCodes.join(' ');
-    await this.executeCommand(`idb ui --udid ${udid} key-sequence ${keyCodesStr}`);
+    await this.executeCommand('idb', [
+      'ui',
+      'key-sequence',
+      ...keyCodes.map(String),
+      '--udid',
+      udid
+    ]);
   }
 
   async getDebugServerStatus(sessionId: string): Promise<{ running: boolean; port?: number; bundleId?: string; }> {
@@ -356,7 +383,7 @@ export class IDBManager implements IIDBManager {
       throw new Error(`Session not found: ${sessionId}`);
     }
     try {
-      const output = await this.executeCommand(`idb debugserver status --udid ${udid}`);
+      const output = await this.executeCommand('idb', ['debugserver', 'status', '--udid', udid]);
       if (output.includes("No debug server running")) {
         return { running: false };
       }
@@ -381,11 +408,11 @@ export class IDBManager implements IIDBManager {
     if (!udid) {
       throw new Error(`Session not found: ${sessionId}`);
     }
-    let command = `idb crash list --udid ${udid}`;
-    if (options?.bundleId) command += ` --bundle-id ${options.bundleId}`;
-    if (options?.before) command += ` --before ${options.before.toISOString()}`;
-    if (options?.since) command += ` --since ${options.since.toISOString()}`;
-    const output = await this.executeCommand(command);
+    const args = ['crash', 'list', '--udid', udid];
+    if (options?.bundleId) args.push('--bundle-id', options.bundleId);
+    if (options?.before) args.push('--before', options.before.toISOString());
+    if (options?.since) args.push('--since', options.since.toISOString());
+    const output = await this.executeCommand('idb', args);
     const lines = output.split('\n').filter(Boolean);
     return lines.map(line => {
       const parts = line.split(' - ');
@@ -403,7 +430,7 @@ export class IDBManager implements IIDBManager {
     if (!udid) {
       throw new Error(`Session not found: ${sessionId}`);
     }
-    return this.executeCommand(`idb crash show --udid ${udid} ${crashName}`);
+    return this.executeCommand('idb', ['crash', 'show', '--udid', udid, '--', crashName]);
   }
 
   async deleteCrashLogs(sessionId: string, options: {
@@ -418,20 +445,20 @@ export class IDBManager implements IIDBManager {
       throw new Error(`Session not found: ${sessionId}`);
     }
     if (options.all) {
-      await this.executeCommand(`idb crash delete --udid ${udid} --all`);
+      await this.executeCommand('idb', ['crash', 'delete', '--udid', udid, '--all']);
       return;
     }
     if (options.crashNames?.length) {
       for (const crashName of options.crashNames) {
-        await this.executeCommand(`idb crash delete --udid ${udid} ${crashName}`);
+        await this.executeCommand('idb', ['crash', 'delete', '--udid', udid, '--', crashName]);
       }
       return;
     }
-    let command = `idb crash delete --udid ${udid}`;
-    if (options.bundleId) command += ` --bundle-id ${options.bundleId}`;
-    if (options.before) command += ` --before ${options.before.toISOString()}`;
-    if (options.since) command += ` --since ${options.since.toISOString()}`;
-    await this.executeCommand(command);
+    const args = ['crash', 'delete', '--udid', udid];
+    if (options.bundleId) args.push('--bundle-id', options.bundleId);
+    if (options.before) args.push('--before', options.before.toISOString());
+    if (options.since) args.push('--since', options.since.toISOString());
+    await this.executeCommand('idb', args);
   }
 
   async installDylib(sessionId: string, dylibPath: string): Promise<void> {
@@ -439,7 +466,7 @@ export class IDBManager implements IIDBManager {
     if (!udid) {
       throw new Error(`Session not found: ${sessionId}`);
     }
-    await this.executeCommand(`idb dylib install --udid ${udid} ${dylibPath}`);
+    await this.executeCommand('idb', ['dylib', 'install', '--udid', udid, '--', dylibPath]);
   }
 
   async openUrl(sessionId: string, url: string): Promise<void> {
@@ -447,7 +474,7 @@ export class IDBManager implements IIDBManager {
     if (!udid) {
       throw new Error(`Session not found: ${sessionId}`);
     }
-    await this.executeCommand(`idb open --udid ${udid} ${url}`);
+    await this.executeCommand('idb', ['open', '--udid', udid, '--', url]);
   }
 
   async clearKeychain(sessionId: string): Promise<void> {
@@ -455,7 +482,7 @@ export class IDBManager implements IIDBManager {
     if (!udid) {
       throw new Error(`Session not found: ${sessionId}`);
     }
-    await this.executeCommand(`idb clear_keychain --udid ${udid}`);
+    await this.executeCommand('idb', ['clear_keychain', '--udid', udid]);
   }
 
   async setLocation(sessionId: string, latitude: number, longitude: number): Promise<void> {
@@ -463,7 +490,13 @@ export class IDBManager implements IIDBManager {
     if (!udid) {
       throw new Error(`Session not found: ${sessionId}`);
     }
-    await this.executeCommand(`idb set_location --udid ${udid} ${latitude} ${longitude}`);
+    await this.executeCommand('idb', [
+      'set_location',
+      '--udid',
+      udid,
+      String(latitude),
+      String(longitude)
+    ]);
   }
 
   async addMedia(sessionId: string, mediaPaths: string[]): Promise<void> {
@@ -471,8 +504,7 @@ export class IDBManager implements IIDBManager {
     if (!udid) {
       throw new Error(`Session not found: ${sessionId}`);
     }
-    const mediaPathsStr = mediaPaths.join(' ');
-    await this.executeCommand(`idb add-media --udid ${udid} ${mediaPathsStr}`);
+    await this.executeCommand('idb', ['add-media', '--udid', udid, '--', ...mediaPaths]);
   }
 
   async approvePermissions(sessionId: string, bundleId: string, permissions: string[]): Promise<void> {
@@ -480,8 +512,7 @@ export class IDBManager implements IIDBManager {
     if (!udid) {
       throw new Error(`Session not found: ${sessionId}`);
     }
-    const permissionsStr = permissions.join(' ');
-    await this.executeCommand(`idb approve --udid ${udid} ${bundleId} ${permissionsStr}`);
+    await this.executeCommand('idb', ['approve', '--udid', udid, '--', bundleId, ...permissions]);
   }
 
   async updateContacts(sessionId: string, dbPath: string): Promise<void> {
@@ -489,6 +520,6 @@ export class IDBManager implements IIDBManager {
     if (!udid) {
       throw new Error(`Session not found: ${sessionId}`);
     }
-    await this.executeCommand(`idb contacts update --udid ${udid} ${dbPath}`);
+    await this.executeCommand('idb', ['contacts', 'update', '--udid', udid, '--', dbPath]);
   }
 }
