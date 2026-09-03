@@ -17,7 +17,7 @@
   "author": "arturono[at]inditex[dot]com",
   "license": "Apache-2.0",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.6.1",
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "uuid": "^9.0.0",
     "zod": "^3.22.4"
   },
