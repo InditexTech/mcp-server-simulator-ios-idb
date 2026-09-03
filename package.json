@@ -11,14 +11,14 @@
     "postinstall": "chmod +x ./scripts/install_dependencies.sh && ./scripts/install_dependencies.sh"
   },
   "engines": {
-    "node": ">=14.0.0",
+    "node": ">=20.0.0",
     "os": "darwin"
   },
   "author": "arturono[at]inditex[dot]com",
   "license": "Apache-2.0",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.6.1",
-    "uuid": "^9.0.0",
+    "@modelcontextprotocol/sdk": "^1.25.2",
+    "uuid": "^11.1.1",
     "zod": "^3.22.4"
   },
   "devDependencies": {

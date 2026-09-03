@@ -54,7 +54,7 @@ Check out the Architecture section to understand how the components work togethe
 ## 📋 Requirements
 
 - **macOS**: Required for iOS simulator support
-- **Node.js**: v14.0.0 or higher
+- **Node.js**: v20.0.0 or higher
 - **Homebrew**: Required for installing dependencies
 - **XCode**: With iOS simulators installed
 
