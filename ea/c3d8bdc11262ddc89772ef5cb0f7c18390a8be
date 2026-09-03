@@ -1,0 +1,18 @@
+.github/dependabot.yml
+  h_8fe143308bc629 1-13
+.github/workflows/PR-verify.yml
+  h_8fe143308bc629 14-16,67-68,89-90
+.github/workflows/sonar-branch-analysis.yml
+  h_8fe143308bc629 17-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "eac3d8bdc11262ddc89772ef5cb0f7c18390a8be",
+  "prompts": {},
+  "humans": {
+    "h_8fe143308bc629": {
+      "author": "Mariano Alonso Ortiz <marianoao@inditex.com>"
+    }
+  }
+}
