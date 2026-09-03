@@ -11,15 +11,18 @@ jobs:
   verify:
     name: Verify
     runs-on: macos-latest
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -32,7 +35,7 @@ jobs:
           echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -50,31 +53,25 @@ jobs:
 
       - name: SonarCloud Scan
         if: ${{ vars.IS_INDITEXTECH_REPO == 'true' }}
-        uses: sonarsource/sonarcloud-github-action@master
+        uses: SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: >
-            -Dsonar.projectKey=mcp-server-simulator-ios-idb
-            -Dsonar.organization=com.inditex
-            -Dsonar.sources=src
-            -Dsonar.tests=src/**/__tests__
-            -Dsonar.typescript.lcov.reportPaths=coverage/lcov.info
-            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
 
   repo-linter:
     name: Repo Linter
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -86,12 +83,14 @@ jobs:
   reuse-compliance:
     name: REUSE Compliance
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: REUSE Compliance Check
-        uses: fsfe/reuse-action@v5
+        uses: fsfe/reuse-action@676e2d560c9a403aa252096d99fcab3e1132b0f5 # v6.0.0

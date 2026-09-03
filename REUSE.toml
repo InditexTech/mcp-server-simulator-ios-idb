@@ -13,6 +13,7 @@ path = [
     "tsconfig.json",
     "jest.config.js",
     "glama.json",
+    "sonar-project.properties",
 ]
 SPDX-FileCopyrightText = "2025 Industria Textil de Diseño, S.A."
 SPDX-License-Identifier = "Apache-2.0"
@@ -24,6 +25,11 @@ SPDX-License-Identifier = "Apache-2.0"
 
 [[annotations]]
 path = ".github/workflows/**"
+SPDX-FileCopyrightText = "2025 Industria Textil de Diseño, S.A."
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ".github/dependabot.yml"
 SPDX-FileCopyrightText = "2025 Industria Textil de Diseño, S.A."
 SPDX-License-Identifier = "Apache-2.0"
 
