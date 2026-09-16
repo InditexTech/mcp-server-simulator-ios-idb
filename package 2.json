@@ -1,0 +1,32 @@
+{
+  "name": "mcp-server-simulator-ios-idb",
+  "version": "1.0.1",
+  "description": "Model Context Protocol server for iOS simulator automation via IDB",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "postinstall": "chmod +x ./scripts/install_dependencies.sh && ./scripts/install_dependencies.sh"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "os": "darwin"
+  },
+  "author": "arturono[at]inditex[dot]com",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.6.1",
+    "uuid": "^9.0.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.11.0",
+    "@types/uuid": "^9.0.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.6",
+    "typescript": "^5.0.0"
+  }
+}
