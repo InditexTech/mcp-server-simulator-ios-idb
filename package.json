@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
     "build": "tsc",
     "start": "node dist/index.js",
     "postinstall": "chmod +x ./scripts/install_dependencies.sh && ./scripts/install_dependencies.sh"

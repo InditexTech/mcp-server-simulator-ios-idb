@@ -49,7 +49,7 @@ jobs:
         run: npm run build
 
       - name: Run tests
-        run: npm test
+        run: npm run test:coverage
 
       - name: SonarCloud Scan
         if: ${{ vars.IS_INDITEXTECH_REPO == 'true' }}
