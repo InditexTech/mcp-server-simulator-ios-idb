@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/inditextech-mcp-server-simulator-ios-idb-badge.png)](https://mseep.ai/app/inditextech-mcp-server-simulator-ios-idb)
+
 # 📱 MCP Server for iOS Simulator
 
 [![MCP Server](https://glama.ai/mcp/servers/@InditexTech/mcp-server-simulator-ios-idb/badge)](https://glama.ai/mcp/servers/@InditexTech/mcp-server-simulator-ios-idb)
