@@ -71,10 +71,17 @@ export class IDBManager implements IIDBManager {
     await this.verifyIDBAvailability();
     let udid: string;
 
+    // Booted first: with several devices sharing a name (one per runtime),
+    // reuse the one already running instead of booting another.
+    const simulators = (await this.listAvailableSimulators())
+      .sort((a, b) => Number(b.state === 'Booted') - Number(a.state === 'Booted'));
+
     if (config?.deviceName) {
-      const simulators = await this.listAvailableSimulators();
-      const simulator = simulators.find(sim => 
-        sim.name === config.deviceName && 
+      // The parser may lowercase the instruction, so compare case-insensitively.
+      // A UDID is accepted too, for when a name is ambiguous.
+      const wanted = config.deviceName.trim().toLowerCase();
+      const simulator = simulators.find(sim =>
+        (sim.name.toLowerCase() === wanted || sim.udid.toLowerCase() === wanted) &&
         (!config.platformVersion || sim.os.includes(config.platformVersion))
       );
 
@@ -83,7 +90,6 @@ export class IDBManager implements IIDBManager {
       }
       udid = simulator.udid;
     } else {
-      const simulators = await this.listAvailableSimulators();
       if (simulators.length === 0) {
         throw new Error('No available simulators found');
       }
