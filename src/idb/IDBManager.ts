@@ -57,7 +57,7 @@ export class IDBManager implements IIDBManager {
 
   private async verifyIDBAvailability(): Promise<void> {
     try {
-      await this.executeCommand('idb', ['--version']);
+      await this.executeCommand('idb', ['list-targets']);
     } catch (error) {
       throw new Error('idb is not installed or not available in PATH. Make sure idb-companion and fb-idb are properly installed.');
     }
