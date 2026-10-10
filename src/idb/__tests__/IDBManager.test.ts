@@ -53,7 +53,7 @@ describe('IDBManager', () => {
       os: 'iOS-18-0',
       deviceType: 'iPhone'
     }]);
-    expect(executeCommand).toHaveBeenNthCalledWith(1, 'idb', ['--version']);
+    expect(executeCommand).toHaveBeenNthCalledWith(1, 'idb', ['list-targets']);
     expect(executeCommand).toHaveBeenNthCalledWith(
       2,
       'xcrun',
