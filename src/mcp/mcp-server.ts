@@ -5,6 +5,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
   CallToolRequestSchema,
+  ListToolsRequestSchema,
   ErrorCode,
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
@@ -105,6 +106,19 @@ class MCPSimulatorServer {
    * Register MCP server tools
    */
   private registerTools() {
+    // Advertise the available tools so MCP clients can discover them
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
+      tools: [{
+        name: 'process-instruction',
+        description: 'Control the iOS simulator with a natural-language instruction (e.g. "create session", "take screenshot", "tap at 100, 200", "launch app com.example.app")',
+        inputSchema: {
+          type: 'object',
+          properties: { instruction: { type: 'string', description: 'Instruction to run' } },
+          required: ['instruction'],
+        },
+      }],
+    }));
+
     // Main tool for processing natural language instructions
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (request.params.name === 'process-instruction') {
