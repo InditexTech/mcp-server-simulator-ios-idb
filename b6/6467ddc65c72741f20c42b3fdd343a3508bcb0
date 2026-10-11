@@ -1,0 +1,161 @@
+.agents/skills/docouture-authoring-guides/SKILL.md
+  s_0e139d6447cd4a::t_87fc62c66755bb 1-170
+.agents/skills/docouture-authoring-guides/reference/additional-information.md
+  s_0e139d6447cd4a::t_df9cf3dd613862 1-492
+.agents/skills/docouture-authoring-guides/reference/contributing.md
+  s_0e139d6447cd4a::t_2fb0e9823f13ab 1-82
+.agents/skills/docouture-authoring-guides/reference/getting-started.md
+  s_0e139d6447cd4a::t_321d44a1975c53 1-190
+.agents/skills/docouture-authoring-guides/reference/guides.md
+  s_0e139d6447cd4a::t_002142163bd175 1-260
+.agents/skills/docouture-authoring-guides/reference/home.md
+  s_0e139d6447cd4a::t_e7accad0e64910 1-198
+.agents/skills/docouture-authoring-guides/reference/overview.md
+  s_0e139d6447cd4a::t_33019e6295618b 1-222
+.agents/skills/docouture-authoring-guides/reference/reference.md
+  s_0e139d6447cd4a::t_b962a5bc2455ec 1-296
+.agents/skills/docouture-authoring-guides/reference/skeletons/about.adoc
+  s_0e139d6447cd4a::t_e0c3bbd68f8f06 1-32
+.agents/skills/docouture-authoring-guides/reference/skeletons/additional-information-overview.adoc
+  s_0e139d6447cd4a::t_85ef6e22db787a 1-38
+.agents/skills/docouture-authoring-guides/reference/skeletons/architecture.adoc
+  s_0e139d6447cd4a::t_67819457d195ed 1-22
+.agents/skills/docouture-authoring-guides/reference/skeletons/changelog-overview.adoc
+  s_0e139d6447cd4a::t_28182f02dbce36 1-14
+.agents/skills/docouture-authoring-guides/reference/skeletons/changelog-version.adoc
+  s_0e139d6447cd4a::t_3af748b5fac51b 1-28
+.agents/skills/docouture-authoring-guides/reference/skeletons/configuration.adoc
+  s_0e139d6447cd4a::t_1146716f528a1f 1-36
+.agents/skills/docouture-authoring-guides/reference/skeletons/contributing-overview.adoc
+  s_0e139d6447cd4a::t_8335302dce6fb8 1-26
+.agents/skills/docouture-authoring-guides/reference/skeletons/development.adoc
+  s_0e139d6447cd4a::t_a9c66b7f9656f9 1-22
+.agents/skills/docouture-authoring-guides/reference/skeletons/eol.adoc
+  s_0e139d6447cd4a::t_78c91a50398d1a 1-23
+.agents/skills/docouture-authoring-guides/reference/skeletons/faq.adoc
+  s_0e139d6447cd4a::t_69375bbe8baaac 1-41
+.agents/skills/docouture-authoring-guides/reference/skeletons/glossary-term-partial.adoc
+  s_0e139d6447cd4a::t_302a12e0f9ed61 1
+.agents/skills/docouture-authoring-guides/reference/skeletons/glossary.adoc
+  s_0e139d6447cd4a::t_6c44f35ef039ee 1-21
+.agents/skills/docouture-authoring-guides/reference/skeletons/guides-overview.adoc
+  s_0e139d6447cd4a::t_c6362aa0273da5 1-26
+.agents/skills/docouture-authoring-guides/reference/skeletons/home.adoc
+  s_0e139d6447cd4a::t_6d3452514ddc3b 1-86
+.agents/skills/docouture-authoring-guides/reference/skeletons/how-to-guide.adoc
+  s_0e139d6447cd4a::t_99c092f6ca3087 1-36
+.agents/skills/docouture-authoring-guides/reference/skeletons/migration-guides.adoc
+  s_0e139d6447cd4a::t_c80f5ab51114df 1-21
+.agents/skills/docouture-authoring-guides/reference/skeletons/prerequisites.adoc
+  s_0e139d6447cd4a::t_c4fea4141ac77f 1-46
+.agents/skills/docouture-authoring-guides/reference/skeletons/quickstart.adoc
+  s_0e139d6447cd4a::t_3a780fd37fca6e 1-32
+.agents/skills/docouture-authoring-guides/reference/skeletons/reference-overview.adoc
+  s_0e139d6447cd4a::t_eada1eccef9733 1-24
+.agents/skills/docouture-authoring-guides/reference/skeletons/release-notes-overview.adoc
+  s_0e139d6447cd4a::t_2e4fa4c007f6c3 1-11
+.agents/skills/docouture-authoring-guides/reference/skeletons/release-notes-version.adoc
+  s_0e139d6447cd4a::t_7a6e0ca0a99af4 1-29
+.agents/skills/docouture-authoring-guides/reference/skeletons/surface-api.adoc
+  s_0e139d6447cd4a::t_de23a8cf807484 1-51
+.agents/skills/docouture-authoring-guides/reference/skeletons/surface-cli.adoc
+  s_0e139d6447cd4a::t_59136716ac1715 1-32
+.claude/skills/docouture-docs-internals
+  s_0e139d6447cd4a::t_3b2d2a4c18d200 1
+.github/workflows/docouture-kroki-cache-warm.yml
+  s_5b4dfd259e38f6::t_afef419830b07e 1-123
+.github/workflows/docouture-pr-verify.yml
+  s_5b4dfd259e38f6::t_3405342e737c2c 1,3-18,20,22-26,30-33,35-46,48-49,51-52,54-61,63-64,66-73,75-79,81-93,95-96,98-100,102-109,111-112,114-127
+.github/workflows/docouture-publish-prerelease.yml
+  s_5b4dfd259e38f6::t_32eb139d2848fe 1-127
+.github/workflows/docouture-publish.yml
+  s_5b4dfd259e38f6::t_0f16abdc645d23 1-32,34-35,37-39,41-48,50-58,60-61,63-65,68-69,71-88,90-93,96-105,107-109,111-112,114-149,151-152
+.github/workflows/docouture-release-preview.yml
+  s_5b4dfd259e38f6::t_dc535aed9eb258 1-20,22-28,31-51,54-62,64-94,96,98-111,113-117,119-120,122-128,130-156,159-165,168-170,172-173,175,177-193,195,197-199
+.github/workflows/docouture-release.yml
+  s_5b4dfd259e38f6::t_ac124a8c585501 1-454
+AGENTS.md
+  s_5b4dfd259e38f6::t_0bf4033b9029d4 1-89
+REUSE.toml
+  s_1d4a5257321709::t_44db3f6dbea67f 151-156
+docs/.gitignore
+  s_5b4dfd259e38f6::t_27414174f7e169 1-2
+docs/.release-version
+  s_5b4dfd259e38f6::t_4c4c6509d86069 1
+docs/antora-playbook.local.yml
+  s_5b4dfd259e38f6::t_56e36137c4cea9 1-32,35-48,51-53,55-79,82-91,93-96,99-101
+docs/antora-playbook.yml
+  s_5b4dfd259e38f6::t_0084327133f025 1-12,15-43,46-56,58-123,126-148,150-156,159-168
+docs/package-lock.json
+  s_5b4dfd259e38f6::t_1f806ec19d7080 3,9-10,12-18,21,24-27,29,31-33,36,40-42,44,46-49,55,59-61,63,65-67,72-73,82,86-88,90,92-94,98,102-104,106,108,111,115-117,119,121,125-127,129,131-132,134,137,141-143,145,147-148,151,155-157,159,161,164,168-170,172,174-175,178,182-184,186,190,194,198-200,202,204,208,212-231,234,238-240,242,244,248,252-254,256,258,261,265-267,269,271,276,281,284,288-290,292,294,297,301-303,305,307-308,311-313,320-321,323-326,328,330-336,339,342-345,347-351,353,356-359,361,363-367,370,373-376,378,380,383,386-389,391,393,396-409,411,413-417,420-428,431-434,436,438-439,442,445-450,453-456,458,460-467,470-478,481-484,486,488-501,504-507,509,511-513,516-524,527-530,532,534-535,538-546,549-552,554,556,559-562,564,566-578,581-584,586-590,592-600,603-606,608-622,624,626-629,631,633-642,645-653,656-659,661,663-676,679-682,684,686-689,692-700,703-1175,1193,1200-1202,1204,1206,1214,1223-1225,1227,1229-1232,1241-1244,1246,1248-1249,1252,1255-1258,1260,1262-1263,1266,1269,1272-1275,1277-1290,1293-1315,1318-1324,1329-1369,1376,1386,1398-1399,1401-1410,1413-1415,1417,1419,1422-1427,1430-1432,1434,1448,1457-1459,1461,1464-1466,1473-1476,1478-1482,1485,1488-1504,1506-1509,1511-1514,1517-1520,1522,1524-1555,1563,1579,1592-1615,1620-1634,1637-1639,1641,1643-1648,1651,1656-1658,1665-1669,1672-1674,1676,1678,1681,1684,1689-1691,1693,1695-1700,1703,1707-1710,1712,1714-1719,1722-1735,1737-1739,1741-1744,1750-1752,1754,1764-1777,1782-1798,1804,1814,1819-1827,1833-1834,1837-1839,1841,1847,1853-1856,1858-1860,1863-1871,1873-1876,1878,1880-1888,1896,1904-1907,1909-1931,1933-1943,1945-1949,1952-1965,1972,1977-1989,1991-1993,1995,1997-1998,2000,2002-2006,2015-2068,2070-2072,2074,2076-2078,2081,2092,2100-2103,2105,2107-2128,2134-2140,2142-2144,2146,2168,2176-2179,2181,2189-2192,2194-2197,2206-2208,2210,2218-2221,2223-2239,2242-2254,2261,2266,2268-2269,2271-2274,2278-2280,2289,2291-2294,2297,2301-2303,2305,2311-2314,2335-2336,2343,2352-2366,2373,2378-2387,2393,2401-2413,2419,2424-2459,2461-2463,2465,2475-2476,2483,2487-2489,2491-2501,2506,2514,2522-2571,2577-2674,2676-2706,2708-2719,2726,2731-2824,2830,2840-2842,2844,2853-2855,2857-2860,2862,2865,2869-2871,2873,2879-2881,2883,2885,2888-2905,2913,2922-2924,2926,2928,2931-2934,2942,2952,2957-2960,2962,2964,2972,2977-2986,2991-3003,3010,3023,3033,3038-3041,3043-3146,3150-3154,3156-3164,3166-3169,3171,3173-3180,3183-3186,3188,3190,3197-3198,3201-3203,3205,3218,3224-3226,3228,3230,3233,3235,3240,3247-3249,3251,3256-3259,3261,3263-3266,3268,3270,3273,3276-3279,3281,3283,3291,3297-3311,3318-3319,3324-3327,3329,3331-3332,3353-3354,3360-3361,3364-3366,3368,3370-3374,3377,3385,3390-3416,3421-3422,3429,3434-3437,3439-3443,3445-3448,3452-3454,3456,3462-3489,3505,3512,3521-3522,3524-3532,3539,3553-3555,3557,3559-3561,3565-3590,3597-3598,3600-3603,3605,3607,3610,3631-3632,3653,3660-3669,3671-3673,3675,3685,3690-3700,3706,3711-3736,3738-3740,3742,3744,3754,3759-3762,3764-3769,3771,3777-3792,3794-3795,3797,3799,3802-3818,3826,3832-3839,3842-3864,3866,3868-3873,3881,3889-3926,3933,3942-4013,4015,4017-4018,4020-4030,4032,4040,4045-4058,4060-4073,4076-4078,4080,4091-4094,4096,4098-4104,4107-4110,4117-4178,4184-4185,4192,4202,4208-4210,4212,4221-4223,4225,4227-4251
+docs/package.json
+  s_5b4dfd259e38f6::t_048c1f9ac14e10 3-10,12-15,18-37
+docs/scripts/check-links.mjs
+  s_5b4dfd259e38f6::t_594999e5b406ae 1-178
+docs/src/antora.yml
+  s_5b4dfd259e38f6::t_6b010eaf5e1593 1-9,11-21,23-34,36-85
+docs/src/modules/ROOT/pages/index.adoc
+  s_5b4dfd259e38f6::t_761a96fa2094a1 1-124
+docs/src/modules/main/nav.adoc
+  s_5b4dfd259e38f6::t_5bdb29044beb70 1-19
+docs/src/modules/main/pages/app.adoc
+  s_5b4dfd259e38f6::t_20bdd2701e4702 1-5
+docs/src/modules/main/pages/architecture.adoc
+  s_5b4dfd259e38f6::t_516af9a84ca87a 1-6
+docs/src/modules/main/pages/changelog/index.adoc
+  s_5b4dfd259e38f6::t_d5d95a317b73e5 1-9
+docs/src/modules/main/pages/components.adoc
+  s_5b4dfd259e38f6::t_c6faee7b3c3ca9 1-701
+docs/src/modules/main/pages/contributing.adoc
+  s_5b4dfd259e38f6::t_f4e32a7c98014d 1-6
+docs/src/modules/main/pages/getting-started.adoc
+  s_5b4dfd259e38f6::t_ec08ff33653b3e 1-169
+docs/src/modules/main/pages/glossary.adoc
+  s_5b4dfd259e38f6::t_86dbdfa60023bf 1-8
+docs/src/modules/main/pages/index.adoc
+  s_5b4dfd259e38f6::t_ca8bd0f065fec3 1-9
+docs/src/modules/main/pages/prerequisites.adoc
+  s_5b4dfd259e38f6::t_56aa6361be66ab 1-55
+docs/src/modules/main/pages/quickstart.adoc
+  s_5b4dfd259e38f6::t_54f4ad7db475ec 1-21
+docs/src/modules/main/pages/release-notes/index.adoc
+  s_5b4dfd259e38f6::t_8666449af4ed88 1-9
+docs/src/modules/main/pages/requirements.adoc
+  s_5b4dfd259e38f6::t_b65d63b6602848 1-8
+docs/src/modules/main/pages/roadmap.adoc
+  s_5b4dfd259e38f6::t_ecee3605f6fd93 1-4
+docs/src/modules/main/pages/structure.adoc
+  s_5b4dfd259e38f6::t_86178c392a19ac 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "b66467ddc65c72741f20c42b3fdd343a3508bcb0",
+  "prompts": {},
+  "sessions": {
+    "s_0e139d6447cd4a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fa838bbf3ffeVaG041n1lYTQ5Y",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Jesus Manuel Piñeiro Cid <jesusmpc@inditex.com>"
+    },
+    "s_1d4a5257321709": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fa822a89dffexHNiRI27Z88ZwQ",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Jesus Manuel Piñeiro Cid <jesusmpc@inditex.com>"
+    },
+    "s_5b4dfd259e38f6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fa81fe53bffexvyU4XD2hOlZVj",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Jesus Manuel Piñeiro Cid <jesusmpc@inditex.com>"
+    }
+  }
+}

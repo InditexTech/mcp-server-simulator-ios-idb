@@ -1,0 +1,21 @@
+code/package-lock.json
+  s_f7e456f45d17da::t_0aebf5daddec35 11851-11853
+code/package.json
+  s_f7e456f45d17da::t_e986dca063cef6 58,61-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "b5a569c42cedd825e4baaf1700607328eaa1f540",
+  "prompts": {},
+  "sessions": {
+    "s_f7e456f45d17da": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "e107f94f-7932-4bda-b0a9-59d5a385590b",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Alejandro Montes <alejandromogarcia@ext.inditex.com>"
+    }
+  }
+}

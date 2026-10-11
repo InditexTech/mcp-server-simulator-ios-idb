@@ -1,0 +1,27 @@
+docs/src/modules/release/pages/index.adoc
+  s_5b4dfd259e38f6::t_c4def505c5339a 2-46,48-50,52-81,83,85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "1eac130a65c43f5928c76c78b4c0a6c16fd44873",
+  "prompts": {},
+  "sessions": {
+    "s_5b4dfd259e38f6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fa81fe53bffexvyU4XD2hOlZVj",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Jesus Manuel Piñeiro Cid <jesusmpc@inditex.com>"
+    },
+    "s_b616bd58e1c3b2": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fa7e35818ffebr8CXqo99AVy6t",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Jesus Manuel Piñeiro Cid <jesusmpc@inditex.com>"
+    }
+  }
+}

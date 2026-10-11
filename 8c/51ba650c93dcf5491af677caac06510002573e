@@ -1,0 +1,431 @@
+.agents/skills/docouture-authoring-guides/SKILL.md
+  s_3ce5212f007365::t_044c798976ea86 1-170
+.agents/skills/docouture-authoring-guides/reference/additional-information.md
+  s_3ce5212f007365::t_a94ca9c58b10b8 1-492
+.agents/skills/docouture-authoring-guides/reference/contributing.md
+  s_3ce5212f007365::t_340e2c4bc340c3 1-82
+.agents/skills/docouture-authoring-guides/reference/getting-started.md
+  s_3ce5212f007365::t_36724d3f60b80f 1-190
+.agents/skills/docouture-authoring-guides/reference/guides.md
+  s_3ce5212f007365::t_f9b1dda6000dfb 1-260
+.agents/skills/docouture-authoring-guides/reference/home.md
+  s_3ce5212f007365::t_0c2dc04f68de95 1,3,5,7-8,10,12,14,16,18,20,22,24,26,28-35,37,39-45,47,49,51,53-64,66-67,69-71,73,75-80,82-83,85-198
+.agents/skills/docouture-authoring-guides/reference/overview.md
+  s_3ce5212f007365::t_9353878c22ef38 1-222
+.agents/skills/docouture-authoring-guides/reference/reference.md
+  s_3ce5212f007365::t_eb916a56a34b1e 1-296
+.agents/skills/docouture-authoring-guides/reference/skeletons/about.adoc
+  s_3ce5212f007365::t_b1eca95615477f 1-2,4-8,10,12-13,15,17,19-20,22,24,26,28,30,32
+.agents/skills/docouture-authoring-guides/reference/skeletons/additional-information-overview.adoc
+  s_3ce5212f007365::t_08bcefbde6a899 1-38
+.agents/skills/docouture-authoring-guides/reference/skeletons/architecture.adoc
+  s_3ce5212f007365::t_ef93991241e70f 1-2,4-5,7-8,10,12,14-16,18,20,22
+.agents/skills/docouture-authoring-guides/reference/skeletons/changelog-overview.adoc
+  s_3ce5212f007365::t_d074b311c27a12 1-14
+.agents/skills/docouture-authoring-guides/reference/skeletons/changelog-version.adoc
+  s_3ce5212f007365::t_aec4d0e5f4c4e7 1-28
+.agents/skills/docouture-authoring-guides/reference/skeletons/configuration.adoc
+  s_3ce5212f007365::t_6a24fe738ccee6 1-36
+.agents/skills/docouture-authoring-guides/reference/skeletons/contributing-overview.adoc
+  s_3ce5212f007365::t_8bdb7f678974e8 1-26
+.agents/skills/docouture-authoring-guides/reference/skeletons/development.adoc
+  s_3ce5212f007365::t_695376a90be318 1-22
+.agents/skills/docouture-authoring-guides/reference/skeletons/eol.adoc
+  s_3ce5212f007365::t_f06c3e261cde45 1-23
+.agents/skills/docouture-authoring-guides/reference/skeletons/faq.adoc
+  s_3ce5212f007365::t_64a4ddc3ad895d 1-41
+.agents/skills/docouture-authoring-guides/reference/skeletons/glossary-term-partial.adoc
+  s_3ce5212f007365::t_05aecb84b15654 1
+.agents/skills/docouture-authoring-guides/reference/skeletons/glossary.adoc
+  s_3ce5212f007365::t_8b8e273b15a4fe 1-21
+.agents/skills/docouture-authoring-guides/reference/skeletons/guides-overview.adoc
+  s_3ce5212f007365::t_658ba9c0d2dd73 1-26
+.agents/skills/docouture-authoring-guides/reference/skeletons/home.adoc
+  s_3ce5212f007365::t_57038c215e95ed 1-17,19,21,23-86
+.agents/skills/docouture-authoring-guides/reference/skeletons/how-to-guide.adoc
+  s_3ce5212f007365::t_f9ad95dde912ff 1-36
+.agents/skills/docouture-authoring-guides/reference/skeletons/migration-guides.adoc
+  s_3ce5212f007365::t_23991412a5ed73 1-21
+.agents/skills/docouture-authoring-guides/reference/skeletons/prerequisites.adoc
+  s_3ce5212f007365::t_8212b03d038979 1-46
+.agents/skills/docouture-authoring-guides/reference/skeletons/quickstart.adoc
+  s_3ce5212f007365::t_28f713fc1aa660 1-32
+.agents/skills/docouture-authoring-guides/reference/skeletons/reference-overview.adoc
+  s_3ce5212f007365::t_65e29dd0d67aa2 1-24
+.agents/skills/docouture-authoring-guides/reference/skeletons/release-notes-overview.adoc
+  s_3ce5212f007365::t_c459bf91daee9e 1-11
+.agents/skills/docouture-authoring-guides/reference/skeletons/release-notes-version.adoc
+  s_3ce5212f007365::t_5e20dd444a01f9 1-29
+.agents/skills/docouture-authoring-guides/reference/skeletons/surface-api.adoc
+  s_3ce5212f007365::t_766b0c1ea6cf8f 1-51
+.agents/skills/docouture-authoring-guides/reference/skeletons/surface-cli.adoc
+  s_3ce5212f007365::t_e295a8719c55b7 1-32
+.agents/skills/docouture-docs-internals/SKILL.md
+  s_3ce5212f007365::t_f154e95648e536 1-61
+.agents/skills/docouture-docs-internals/reference/naming.md
+  s_3ce5212f007365::t_191a39457417a5 1-41
+.agents/skills/docouture-docs-internals/reference/page-patterns.md
+  s_3ce5212f007365::t_dbfd3c62bbb0c8 1-281
+.agents/skills/docouture-docs-versioning/SKILL.md
+  s_3ce5212f007365::t_b65a91869d8152 1-37
+.agents/skills/docouture-docs-versioning/reference/releasing.md
+  s_3ce5212f007365::t_c49ae153db0d5d 1-106
+.agents/skills/docouture-documenting-changes/SKILL.md
+  s_3ce5212f007365::t_628a576b4ce163 1-79
+.agents/skills/docouture-documenting-changes/reference/maintenance-loop.md
+  s_3ce5212f007365::t_d2b58bf8635b84 1-75
+.agents/skills/docouture-getting-started/SKILL.md
+  s_3ce5212f007365::t_18dad337324c08 1-72
+.agents/skills/docouture-getting-started/reference/content-sourcing.md
+  s_3ce5212f007365::t_64e962ea038840 1-56
+.agents/skills/docouture-getting-started/reference/structure-planning.md
+  s_3ce5212f007365::t_41f07cda7a6db4 1-152
+.agents/skills/docouture-writing-docs-pages/SKILL.md
+  s_3ce5212f007365::t_a8518d3aafbfd0 1-132
+.agents/skills/docouture-writing-docs-pages/reference/docouture-blocks.md
+  s_3ce5212f007365::t_fbd53ae1cd329b 1-170
+.agents/skills/docouture-writing-docs-pages/reference/language-basics.md
+  s_3ce5212f007365::t_9f4140bf9d5347 1-402
+.claude/skills/docouture-authoring-guides
+  s_3ce5212f007365::t_4c3efe9286edc4 1
+.claude/skills/docouture-docs-internals
+  s_3ce5212f007365::t_444a80d8f2b311 1
+.claude/skills/docouture-docs-versioning
+  s_3ce5212f007365::t_f82be520ca46ff 1
+.claude/skills/docouture-documenting-changes
+  s_3ce5212f007365::t_d8a9cffbc33d3a 1
+.claude/skills/docouture-getting-started
+  s_3ce5212f007365::t_c096528e63bddc 1
+.claude/skills/docouture-writing-docs-pages
+  s_3ce5212f007365::t_116fbdc203a5c9 1
+.github/actionlint.yaml
+  s_3ce5212f007365::t_22a0b501c82dcd 1-22
+.github/actions/test-results-verification/action.yml
+  s_3ce5212f007365::t_f8110b50947192 48
+.github/inditextech-ci-sync-manifest.json
+  s_3ce5212f007365::t_3face603f0209b 32,42-47,49-50,72-73
+.github/workflows/code-maven_java-PR_verify.yml
+  s_3ce5212f007365::t_2574fa4b838fbe 51-52,58-59,62,91
+.github/workflows/code-maven_java-QA_e2e_karate.yml
+  s_3ce5212f007365::t_796da169786dbc 76,189,199,395,498,507
+.github/workflows/code-maven_java-QA_integration.yml
+  s_3ce5212f007365::t_321872d485d580 58,75,85,187,213,222
+.github/workflows/code-maven_java-QA_mutation.yml
+  s_3ce5212f007365::t_4890bd84806649 58,75,85,165,174
+.github/workflows/code-maven_java-QA_unit.yml
+  s_3ce5212f007365::t_c16aaae4d7501d 58,75,85,187,213,222
+.github/workflows/code-maven_java-build_snapshot.yml
+  s_3ce5212f007365::t_d8cc4b8debca8d 74-75,81-82,85,114,198-199,205-206,209,238,277,279
+.github/workflows/code-maven_java-release-core.yml
+  s_3ce5212f007365::t_6d3e2d4f94b286 97,224-225,231-232,235,300,1026-1027,1033-1034,1037,1066,1234-1235,1241-1242,1245,1274
+.github/workflows/code-maven_java-release.yml
+  s_3ce5212f007365::t_ada012268ea302 35-37,88-89,95-96,99,144,161,163,172,174
+.github/workflows/code-maven_java-sonarcloud-analysis.yml
+  s_3ce5212f007365::t_ba797497ebecdc 76-77,83-84,87,116
+.github/workflows/code-release_preview.yml
+  s_3ce5212f007365::t_28b88b1cd356a7 62-63,69-70,73,102
+.github/workflows/docouture-kroki-cache-warm.yml
+  s_3ce5212f007365::t_3b25db434b8c4d 1,3-44,46-47,50-54,60-75,77-78,80-81,83-90,92-93,95-101,103-107,109-118,120-121,123-124,126-128
+.github/workflows/docouture-pr-verify.yml
+  s_3ce5212f007365::t_17dbc7927e447b 1-137
+.github/workflows/docouture-publish-prerelease.yml
+  s_3ce5212f007365::t_f1a8f882e71616 1-130
+.github/workflows/docouture-publish.yml
+  s_3ce5212f007365::t_c4cae8b4fd4c23 1-32,34-35,37-39,41-42,44-51,53-61,63-64,66-68,71-72,74-91,93-96,99-108,110-112,114-115,117-152,154-155
+.github/workflows/docouture-release-preview.yml
+  s_3ce5212f007365::t_3a96b364f9ce8b 1-24,26-32,34-35,38-40,44,46-72,74-104,106,108-121,123-127,129-130,132-138,140-155,158-189,192-194,196-197,199,201-217,219,221-223
+.github/workflows/docouture-release.yml
+  s_3ce5212f007365::t_d215339f276f4a 1-508
+.github/workflows/pr-verify.yml
+  s_3ce5212f007365::t_b1687b355cf832 31
+.github/workflows/push-verify.yml
+  s_3ce5212f007365::t_c09293ca67fb66 32
+.gitignore
+  s_3ce5212f007365::t_b60d271529f984 27-29
+.tool-versions
+  s_3ce5212f007365::t_3171215666857e 1
+AGENTS.md
+  s_3ce5212f007365::t_f3bdce81ce9c2a 1-89
+REUSE.toml
+  s_3ce5212f007365::t_590d8d0ca4103a 19-25,84,91,98,105,112-114,116,119,121,125,127,129,132,134,136,139,141-143,146,152
+agent/skills/docouture-authoring-guides/SKILL.md
+  s_3ce5212f007365::t_58b917764deeff 1-168
+agent/skills/docouture-authoring-guides/reference/additional-information.md
+  s_3ce5212f007365::t_2f982891a1d585 1-492
+agent/skills/docouture-authoring-guides/reference/contributing.md
+  s_3ce5212f007365::t_0288634145b21c 1-82
+agent/skills/docouture-authoring-guides/reference/getting-started.md
+  s_3ce5212f007365::t_e6249928f751b3 1-190
+agent/skills/docouture-authoring-guides/reference/guides.md
+  s_3ce5212f007365::t_0de24f584c5503 1-260
+agent/skills/docouture-authoring-guides/reference/home.md
+  s_3ce5212f007365::t_c98ce05f12fc23 1-198
+agent/skills/docouture-authoring-guides/reference/overview.md
+  s_3ce5212f007365::t_c4fe0dcde246e9 1-222
+agent/skills/docouture-authoring-guides/reference/reference.md
+  s_3ce5212f007365::t_2d12652498dff8 1-296
+agent/skills/docouture-authoring-guides/reference/skeletons/about.adoc
+  s_3ce5212f007365::t_bf3563d4132a95 1-32
+agent/skills/docouture-authoring-guides/reference/skeletons/additional-information-overview.adoc
+  s_3ce5212f007365::t_ddf51c9ea19cf6 1-38
+agent/skills/docouture-authoring-guides/reference/skeletons/architecture.adoc
+  s_3ce5212f007365::t_534bb0c5f1935f 1-8,12-22
+agent/skills/docouture-authoring-guides/reference/skeletons/changelog-overview.adoc
+  s_3ce5212f007365::t_84df5d8a33d2d7 1-14
+agent/skills/docouture-authoring-guides/reference/skeletons/changelog-version.adoc
+  s_3ce5212f007365::t_3fdc1ca83795a6 1-28
+agent/skills/docouture-authoring-guides/reference/skeletons/configuration.adoc
+  s_3ce5212f007365::t_de97f73362632f 1-36
+agent/skills/docouture-authoring-guides/reference/skeletons/contributing-overview.adoc
+  s_3ce5212f007365::t_7f910e5ccbad01 1-26
+agent/skills/docouture-authoring-guides/reference/skeletons/development.adoc
+  s_3ce5212f007365::t_a70d510c4f194b 1-22
+agent/skills/docouture-authoring-guides/reference/skeletons/eol.adoc
+  s_3ce5212f007365::t_dcc5fa675bda35 1-23
+agent/skills/docouture-authoring-guides/reference/skeletons/faq.adoc
+  s_3ce5212f007365::t_1aec8b90b5cae9 1-41
+agent/skills/docouture-authoring-guides/reference/skeletons/glossary-term-partial.adoc
+  s_3ce5212f007365::t_aa8a06a26f10c9 1
+agent/skills/docouture-authoring-guides/reference/skeletons/glossary.adoc
+  s_3ce5212f007365::t_070a21673b69ed 1-21
+agent/skills/docouture-authoring-guides/reference/skeletons/guides-overview.adoc
+  s_3ce5212f007365::t_056e191042947a 1-26
+agent/skills/docouture-authoring-guides/reference/skeletons/home.adoc
+  s_3ce5212f007365::t_7d336df8e0ee4f 1-86
+agent/skills/docouture-authoring-guides/reference/skeletons/how-to-guide.adoc
+  s_3ce5212f007365::t_0a0776f917ed3e 1-36
+agent/skills/docouture-authoring-guides/reference/skeletons/migration-guides.adoc
+  s_3ce5212f007365::t_16a9c1f988f3e5 1-21
+agent/skills/docouture-authoring-guides/reference/skeletons/prerequisites.adoc
+  s_3ce5212f007365::t_f36160d73f4145 1-46
+agent/skills/docouture-authoring-guides/reference/skeletons/quickstart.adoc
+  s_3ce5212f007365::t_bd6443dd142cd3 1-32
+agent/skills/docouture-authoring-guides/reference/skeletons/reference-overview.adoc
+  s_3ce5212f007365::t_09b9fda32ff13f 1-24
+agent/skills/docouture-authoring-guides/reference/skeletons/release-notes-overview.adoc
+  s_3ce5212f007365::t_a258fcb7a9369b 1-11
+agent/skills/docouture-authoring-guides/reference/skeletons/release-notes-version.adoc
+  s_3ce5212f007365::t_a713740c8de63d 1-29
+agent/skills/docouture-authoring-guides/reference/skeletons/surface-api.adoc
+  s_3ce5212f007365::t_949755edaa7fe4 1-51
+agent/skills/docouture-authoring-guides/reference/skeletons/surface-cli.adoc
+  s_3ce5212f007365::t_b177a29d569dcc 1-32
+agent/skills/docouture-docs-internals/SKILL.md
+  s_3ce5212f007365::t_0b9aa48f69de02 1-59
+agent/skills/docouture-docs-internals/reference/antora-extensions.md
+  s_3ce5212f007365::t_60144f23eedc74 1-54
+agent/skills/docouture-docs-internals/reference/naming.md
+  s_3ce5212f007365::t_d3de5da068fc6c 1-41
+agent/skills/docouture-docs-internals/reference/page-patterns.md
+  s_3ce5212f007365::t_b8c96c66fc2492 1-281
+agent/skills/docouture-docs-versioning/SKILL.md
+  s_3ce5212f007365::t_487def31352fd4 1-35
+agent/skills/docouture-docs-versioning/reference/releasing.md
+  s_3ce5212f007365::t_b564e6df89a67e 1-106
+agent/skills/docouture-documenting-changes/SKILL.md
+  s_3ce5212f007365::t_86853d25ccb7b0 1-77
+agent/skills/docouture-documenting-changes/reference/maintenance-loop.md
+  s_3ce5212f007365::t_c9bb192a189f29 1-75
+agent/skills/docouture-getting-started/SKILL.md
+  s_3ce5212f007365::t_9e1171aa319cc2 1-70
+agent/skills/docouture-getting-started/reference/content-sourcing.md
+  s_3ce5212f007365::t_90a3583d432a0d 1-56
+agent/skills/docouture-getting-started/reference/structure-planning.md
+  s_3ce5212f007365::t_51d97392b2c58f 1-152
+agent/skills/docouture-writing-docs-pages/SKILL.md
+  s_3ce5212f007365::t_4b199e703e7748 1-130
+agent/skills/docouture-writing-docs-pages/reference/docouture-blocks.md
+  s_3ce5212f007365::t_bb9b39689e0952 1-170
+agent/skills/docouture-writing-docs-pages/reference/language-basics.md
+  s_3ce5212f007365::t_0902e962fc704b 1-402
+docs/.gitignore
+  s_3ce5212f007365::t_99c0b5d4cc3165 1-2,4
+docs/.release-version
+  s_3ce5212f007365::t_56e29a70db9995 1
+docs/antora-playbook.local.yml
+  s_3ce5212f007365::t_6abbacd1408ffd 1-32,35-58,61-63,65-93,96-106,114-117,120-122
+docs/antora-playbook.yml
+  s_3ce5212f007365::t_666fe990b53139 1-12,15-68,71-81,83-108,110-185,188-215,223-229,232-482
+docs/package-lock.json
+  s_3ce5212f007365::t_3fe73222a57a5a 3,9-10,12-19,22,25-28,30,32-34,37,41-43,45,47-50,56,60-62,64,66-68,73-74,83,87-89,91,93-95,99,103-105,107,109,112,116-118,120,122,126-128,130,132-133,135,138,142-144,146,148-149,152,156-158,160,162,165,169-171,173,175-176,179,183-185,187,191,195,199-201,203,205,209,213-232,235,239-241,243,245,249,253-255,257,259,262,266-268,270,272,277,282,285,289-291,293,295,298,302-304,306,308-309,312-314,321-322,324-327,329,331-338,341,344-347,349-353,355,358-361,363,365-369,372,375-378,380,382,385,388-391,393,395,398-411,413,415-419,422-430,433-436,438,440-441,444,447-452,455-458,460,462-469,472-480,483-486,490-503,506-509,511,513-515,518-526,529-532,534,536-537,540-548,551-554,556,558,561-564,566,568-580,583-586,588-592,594-602,605-608,610-624,626,628-631,633,635-644,647-655,658-661,665-678,681-684,686,688-1177,1202,1209-1211,1213,1215,1223,1232-1234,1236,1238-1241,1250-1253,1255,1257-1258,1261,1264-1267,1269,1271-1272,1275,1278,1281-1284,1286-1299,1302-1347,1354-1394,1401,1411,1423-1424,1426-1435,1438-1440,1442,1444,1447-1452,1455-1457,1459,1473,1481-1495,1497-1499,1501,1504-1506,1513-1516,1518-1522,1525,1528-1544,1546-1549,1551-1554,1557-1560,1562,1564-1595,1603,1619-1647,1649,1652-1653,1660-1674,1677-1679,1681,1683-1688,1691,1696-1698,1705-1709,1712-1714,1716,1718,1721,1724,1729-1731,1733,1735-1740,1743,1747-1750,1752,1754-1759,1762-1775,1777-1779,1781-1784,1790-1792,1794,1804-1817,1822-1838,1844,1854,1859-1867,1873-1874,1877-1879,1881,1887,1893-1896,1898-1900,1903-1911,1913-1916,1918,1920-1928,1936,1944-1947,1949-1954,1956,1958-1959,1962-2015,2022,2027-2039,2041-2043,2045,2047-2048,2050,2052-2056,2065-2118,2120-2122,2124,2126-2128,2131,2142,2150-2153,2155,2157-2178,2184-2190,2192-2194,2196,2218,2228,2236-2239,2241,2249-2252,2254-2257,2266-2268,2270,2278-2281,2283-2299,2302-2314,2321,2326-2329,2331-2335,2338-2340,2349,2351-2354,2357,2361-2363,2365,2371-2374,2395-2396,2403,2412-2442,2449,2454-2463,2469,2477-2489,2495,2500-2555,2557-2559,2561,2571-2572,2579,2583-2585,2587-2597,2602-2622,2630,2638-2707,2713-2796,2798-2841,2843-2854,2861,2866-2959,2965,2975-2977,2979,2988-2990,2992-2995,2997,3000,3004-3006,3008,3014-3016,3018,3020,3023-3040,3048,3057-3059,3061,3063,3066-3069,3077,3087,3092-3095,3097,3099,3107,3112-3121,3126-3138,3145,3153-3156,3158,3161-3193,3196-3390,3393-3396,3398,3400,3403-3406,3408-3410,3413-3416,3418-3420,3423-3426,3428,3430-3437,3440-3443,3445,3447,3454-3455,3458-3460,3462,3475,3481-3483,3485,3487,3490,3492,3497,3504-3506,3508,3513-3516,3518,3520-3523,3525,3527,3530,3533-3536,3538,3540,3548,3554-3568,3575,3580-3583,3585,3587-3588,3609-3610,3616-3617,3620-3622,3624,3626-3630,3633,3641,3646-3672,3677-3678,3685,3690-3693,3695-3699,3701-3704,3708-3710,3712,3737,3743-3761,3768,3777-3778,3780-3788,3795,3809-3811,3813,3815-3817,3821-3869,3876-3877,3879-3882,3884,3886,3889,3910-3911,3932,3939-3948,3950-3952,3954,3964,3969-3979,3985-4008,4010-4013,4017-4019,4021,4023,4033,4038-4041,4043-4054,4056-4074,4076-4079,4081,4084-4097,4105,4118,4124-4131,4134-4166,4168,4170-4175,4183,4191-4228,4235,4244-4315,4317,4319-4320,4322-4332,4334,4342,4347-4360,4362-4375,4378-4380,4382,4393-4396,4398,4400-4403,4406-4428,4435-4496,4502-4503,4510,4515-4530,4536,4542-4544,4546,4555-4557,4559,4561-4585
+docs/package.json
+  s_3ce5212f007365::t_a64709603c3e06 3-10,12-16,19-39
+docs/patches/@inditextech+docouture-antora-extensions+1.1.1.patch
+  s_3ce5212f007365::t_b6ef854b7a5376 1-28
+docs/scripts/check-links.mjs
+  s_3ce5212f007365::t_a1515e4d58566f 1-205
+docs/src/antora.yml
+  s_3ce5212f007365::t_09e4e45b2c08d0 1-23,25-35,37-48,50-119
+docs/src/modules/ROOT/images/home-images.md
+  s_3ce5212f007365::t_b49e0dbc3c4916 1-59
+docs/src/modules/ROOT/pages/index.adoc
+  s_3ce5212f007365::t_5fcb2d0b847696 1-148
+docs/src/modules/main/examples/clients/kafka-config-local.yml
+  s_3ce5212f007365::t_31ef97ae9346f1 24
+docs/src/modules/main/examples/configuration/logback-test.xml
+  s_3ce5212f007365::t_a4b3cc2d6fcaef 7,16
+docs/src/modules/main/examples/contributing/docs-tree-callouts.txt
+  s_3ce5212f007365::t_5e6089e8901939 1-9
+docs/src/modules/main/examples/contributing/docs-tree.txt
+  s_3ce5212f007365::t_edc085de0d20a9 3-4,8-14
+docs/src/modules/main/nav.adoc
+  s_3ce5212f007365::t_1fb4c5920ec55a 1-60
+docs/src/modules/main/pages/about.adoc
+  s_3ce5212f007365::t_8408f30948fa5a 1-2,4-5,7,9-10,12-58
+docs/src/modules/main/pages/additional-information-overview.adoc
+  s_3ce5212f007365::t_0ba0b3d6c72d23 1-24
+docs/src/modules/main/pages/architecture.adoc
+  s_3ce5212f007365::t_f984ad2b844099 1-2,4-5,7,9-10,14,16,18-21,23,25-27,29-31,33-36,38-42,44-47
+docs/src/modules/main/pages/contributing-overview.adoc
+  s_3ce5212f007365::t_69afb5cab79332 2-71
+docs/src/modules/main/pages/contributing/repo-structure/archetype.adoc
+  s_3ce5212f007365::t_9939be60aee643 1-3,14,21,23
+docs/src/modules/main/pages/contributing/repo-structure/boot.adoc
+  s_3ce5212f007365::t_8feb92134b763e 1-3,18,28
+docs/src/modules/main/pages/contributing/repo-structure/clients.adoc
+  s_3ce5212f007365::t_f05db1714b847b 1-3,25
+docs/src/modules/main/pages/contributing/repo-structure/code.adoc
+  s_3ce5212f007365::t_eaf96736ec1f53 1-3,6-12
+docs/src/modules/main/pages/contributing/repo-structure/docs.adoc
+  s_3ce5212f007365::t_75a56deb69e7ec 1-3,8,10,13-14,19,22-25
+docs/src/modules/main/pages/contributing/repo-structure/generators.adoc
+  s_3ce5212f007365::t_876bf2fa49b695 1-2,12
+docs/src/modules/main/pages/contributing/repo-structure/karate-test.adoc
+  s_3ce5212f007365::t_ab0276d1009d45 1-3,6,17,24,26,32,34,40,42,48,50,56,58,140,142,172
+docs/src/modules/main/pages/contributing/repo-structure/openapi-test.adoc
+  s_3ce5212f007365::t_d6ac214bc87654 1-3,8,15,17
+docs/src/modules/main/pages/contributing/repo-structure/overview.adoc
+  s_3ce5212f007365::t_665af4968a429c 1-3,9,11,13,17,19,44,55
+docs/src/modules/main/pages/contributing/repo-structure/runner.adoc
+  s_3ce5212f007365::t_8178e4f558cb56 1-3,26
+docs/src/modules/main/pages/contributing/repo-structure/starter.adoc
+  s_3ce5212f007365::t_7c20fc7b6dfea7 1-3
+docs/src/modules/main/pages/contributing/step-by-step.adoc
+  s_3ce5212f007365::t_8e862920158f59 1-9,31-32,44,69-70,99-102,112-113,128,150,160-161,182,187-188,192-193,213,218,221,237,266,283,297-299,301-302,311,321,330
+docs/src/modules/main/pages/development.adoc
+  s_3ce5212f007365::t_2fdcb13e219700 1-11,15-29,34,37-53,55-57
+docs/src/modules/main/pages/guides/archetype/overview.adoc
+  s_3ce5212f007365::t_f19a9efb26078b 7,11,13,15,19,23
+docs/src/modules/main/pages/guides/clients/jdbc.adoc
+  s_3ce5212f007365::t_7ca4532f67906e 3,7,13,19,23,27,31,38,46,51
+docs/src/modules/main/pages/guides/clients/jms.adoc
+  s_3ce5212f007365::t_f270f0c1676c83 3,7,13,19,23,27,31,35,40,45,50,55
+docs/src/modules/main/pages/guides/clients/kafka.adoc
+  s_3ce5212f007365::t_7f1e9c40f905ae 3,9,13,17,21,26,31,35
+docs/src/modules/main/pages/guides/clients/mongodb.adoc
+  s_3ce5212f007365::t_493ce8b2b947ba 3,9,13,17,22,27
+docs/src/modules/main/pages/guides/clients/overview.adoc
+  s_3ce5212f007365::t_4fa4f99e50e014 5
+docs/src/modules/main/pages/guides/execution/arguments.adoc
+  s_3ce5212f007365::t_c84fb1c40f32e7 16,22,26,30,34
+docs/src/modules/main/pages/guides/execution/overview.adoc
+  s_3ce5212f007365::t_cceb47c9c463d3 3
+docs/src/modules/main/pages/guides/execution/reports.adoc
+  s_3ce5212f007365::t_39e442a8876467 23,27,31,35
+docs/src/modules/main/pages/guides/open-api-generator/open-api-generator-functional.adoc
+  s_3ce5212f007365::t_e87b0660b7aef4 20-21,36,39,47,56,62,67,83,87,94,109,122,139,154,164,170,177,190,194,200,210
+docs/src/modules/main/pages/guides/open-api-generator/open-api-generator-mock.adoc
+  s_3ce5212f007365::t_c00dd3f2f51d31 12,32,45,54,85,88,96,105,111,116,132,136,143,158,171,188,194,207,216,220,231,241,258,266,277,424
+docs/src/modules/main/pages/guides/open-api-generator/open-api-generator-operations.adoc
+  s_3ce5212f007365::t_6bfb7b7c2ec514 26,29,37,46,52,57,73,77,84,101,114
+docs/src/modules/main/pages/guides/open-api-generator/open-api-generator-smoke.adoc
+  s_3ce5212f007365::t_1fa3a16f01f4dc 26,29,37,46,52,57,73,77,84,101,114
+docs/src/modules/main/pages/guides/open-api-generator/overview.adoc
+  s_3ce5212f007365::t_7940c865a3740f 7,11,15,19
+docs/src/modules/main/pages/guides/overview.adoc
+  s_3ce5212f007365::t_3277571642e0a6 1-25
+docs/src/modules/main/pages/prerequisites.adoc
+  s_3ce5212f007365::t_0e8608d71baf71 1-14,17-24
+docs/src/modules/main/pages/quickstart.adoc
+  s_3ce5212f007365::t_d2774c91e27396 1-27,65-71
+docs/src/modules/main/pages/reference/configuration/auth-basic.adoc
+  s_3ce5212f007365::t_af3919106a5f5f 7,15,24,29
+docs/src/modules/main/pages/reference/configuration/auth-jwt.adoc
+  s_3ce5212f007365::t_432a8df622936b 9,17,26,31
+docs/src/modules/main/pages/reference/configuration/auth.adoc
+  s_3ce5212f007365::t_fa419632df6636 5,9,13,17
+docs/src/modules/main/pages/reference/configuration/karate-config.adoc
+  s_3ce5212f007365::t_fc741430ac56f6 5,9
+docs/src/modules/main/pages/reference/configuration/logging.adoc
+  s_3ce5212f007365::t_aa57ed98350197 3,9
+docs/src/modules/main/pages/reference/configuration/overview.adoc
+  s_3ce5212f007365::t_3e81965eebc969 3
+docs/src/modules/main/pages/reference/configuration/urls.adoc
+  s_3ce5212f007365::t_013699bc2ba397 3,7
+docs/src/modules/main/pages/reference/overview.adoc
+  s_3ce5212f007365::t_c09534d70985e2 1-12
+docs/src/modules/main/pages/release-notes/overview.adoc
+  s_3ce5212f007365::t_3b6cd1c3309f0d 1-5,51,55
+docs/src/modules/main/partials/archetype/2-3-generate-archetype-exec.adoc
+  s_3ce5212f007365::t_d1fc5549b15fa8 3
+docs/src/modules/main/partials/archetype/3-review-output.adoc
+  s_3ce5212f007365::t_cb3f934651d331 1
+docs/src/modules/main/partials/clients/available-clients.adoc
+  s_3ce5212f007365::t_974464f04942a3 1,4-6
+docs/src/modules/main/partials/clients/jdbc-config.adoc
+  s_3ce5212f007365::t_1e8234944f6729 3
+docs/src/modules/main/partials/clients/jdbc-pom.adoc
+  s_3ce5212f007365::t_3ef2fe6b6a6e21 1,8
+docs/src/modules/main/partials/clients/jdbc-summary.adoc
+  s_3ce5212f007365::t_f93c3477f6a6a8 7-13
+docs/src/modules/main/partials/clients/jms-config.adoc
+  s_3ce5212f007365::t_67e65426edc0c9 3
+docs/src/modules/main/partials/clients/jms-pom.adoc
+  s_3ce5212f007365::t_8b7b31e20819f2 1,8
+docs/src/modules/main/partials/clients/jms-summary.adoc
+  s_3ce5212f007365::t_c6a7f843a018e9 7-13
+docs/src/modules/main/partials/clients/kafka-config.adoc
+  s_3ce5212f007365::t_ceb488d3b123c8 12
+docs/src/modules/main/partials/clients/kafka-pom.adoc
+  s_3ce5212f007365::t_ae35ef83f231e3 1,8
+docs/src/modules/main/partials/clients/kafka-summary.adoc
+  s_3ce5212f007365::t_5975bd9c307583 7-13
+docs/src/modules/main/partials/clients/mongodb-config.adoc
+  s_3ce5212f007365::t_8dd5ffe3508b72 4
+docs/src/modules/main/partials/clients/mongodb-pom.adoc
+  s_3ce5212f007365::t_69d0b8c3f5bf6a 1,8
+docs/src/modules/main/partials/clients/mongodb-summary.adoc
+  s_3ce5212f007365::t_3ce861919f0daf 7-13
+docs/src/modules/main/partials/configuration/auth-errors.adoc
+  s_3ce5212f007365::t_30dbb2d85d520f 5
+docs/src/modules/main/partials/configuration/auth-types.adoc
+  s_3ce5212f007365::t_c100e884828e04 1-3
+docs/src/modules/main/partials/configuration/summary.adoc
+  s_3ce5212f007365::t_6e9d61c489e3ce 9,14,17,20,23,26-27
+docs/src/modules/main/partials/execution/report-karate-html.adoc
+  s_3ce5212f007365::t_342859f5dc5348 21
+docs/src/modules/main/partials/execution/report-karate-operations-usage-statistics.adoc
+  s_3ce5212f007365::t_083b78b20e3286 10
+docs/src/modules/main/partials/execution/report-surefire.adoc
+  s_3ce5212f007365::t_ba649511a02287 5,19
+docs/src/modules/main/partials/execution/summary.adoc
+  s_3ce5212f007365::t_7c0766d9bae8aa 4,7,10,13,16
+docs/src/modules/main/partials/open-api-generator/api-dependencies.adoc
+  s_3ce5212f007365::t_79ca6b4d305869 5
+docs/src/modules/main/partials/open-api-generator/configuration.adoc
+  s_3ce5212f007365::t_4b26d1fd7af971 1,8,32
+docs/src/modules/main/partials/open-api-generator/execution.adoc
+  s_3ce5212f007365::t_a5529fdaa481c2 8,19,22,26-29
+docs/src/modules/main/partials/open-api-generator/open-api-generator-modes.adoc
+  s_3ce5212f007365::t_1d886d52c79af0 13-14
+docs/src/modules/main/partials/puml/sprites.puml
+  s_3ce5212f007365::t_b51a290327a5ea 8-20
+skills-lock.json
+  s_3ce5212f007365::t_f5abc15b6107ea 1-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8c51ba650c93dcf5491af677caac06510002573e",
+  "prompts": {},
+  "sessions": {
+    "s_3ce5212f007365": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "8ef26558-16bf-44bd-b14f-27e5881e4587",
+        "model": "copilot/gpt-5.6-terra"
+      },
+      "human_author": "Vanesa López Beade <vanesalbe@ext.inditex.com>"
+    }
+  }
+}

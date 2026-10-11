@@ -1,0 +1,29 @@
+.github/workflows/code-verify.yml
+  s_0143a60be8aa16::t_cf5eefd9377fdd 13-15
+.github/workflows/scorecard-analisys.yml
+  s_a0a21b9ebcacfa::t_21a49e6cd9a3e6 2-3,15,18-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "e794e0f253a9d4b09a429ef569a7b551d497f09a",
+  "prompts": {},
+  "sessions": {
+    "s_0143a60be8aa16": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "7040e17e-6101-42f0-9ea3-c8b710e62ad3",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Alejandro Montes <alejandromogarcia@ext.inditex.com>"
+    },
+    "s_a0a21b9ebcacfa": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "cca6e21c-3343-4f96-baed-cfbffaf6eb90",
+        "model": "unknown"
+      },
+      "human_author": "Alejandro Montes <alejandromogarcia@ext.inditex.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+code/Dockerfile
+  s_a49ad944204e23::t_83acc7b605b6be 11-12,38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "a06cf99a31c92684c5ab105410ddcdf5da3ef381",
+  "prompts": {},
+  "sessions": {
+    "s_a49ad944204e23": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "c5449a16-b32d-4295-afc9-4a333128e75e",
+        "model": "unknown"
+      },
+      "human_author": "Alejandro Montes <alejandromogarcia@ext.inditex.com>"
+    }
+  }
+}

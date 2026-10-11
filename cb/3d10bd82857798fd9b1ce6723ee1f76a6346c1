@@ -1,0 +1,29 @@
+LICENSES/CC0-1.0.txt
+  s_c3133ee18d0d52::t_1c8c5c23f2f827 1-121
+REUSE.toml
+  s_cc869d449f4b8a::t_88757d0d021066 106,108-109,112,114-116,119,121-123,126,130
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "cb3d10bd82857798fd9b1ce6723ee1f76a6346c1",
+  "prompts": {},
+  "sessions": {
+    "s_c3133ee18d0d52": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f9ea73964ffeZukrXkfMGcvf8j",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Jesus Manuel Piñeiro Cid <jesusmpc@inditex.com>"
+    },
+    "s_cc869d449f4b8a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f9ea87158ffeWhEnDv3xCrTKQZ",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Jesus Manuel Piñeiro Cid <jesusmpc@inditex.com>"
+    }
+  }
+}

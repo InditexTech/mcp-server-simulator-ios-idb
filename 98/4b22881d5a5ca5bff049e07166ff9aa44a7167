@@ -1,0 +1,32 @@
+.github/actions/test-results-verification/action.yml
+  h_e3804906c674bd 38,40-41,49-55,59,61,63-65
+.github/actions/test-results-verification/test-results-summary.sh
+  h_e3804906c674bd 42-46
+.github/workflows/code-maven_java-QA_e2e_karate.yml
+  h_e3804906c674bd 55-58,79,96-105,113,121,129,141,145,149,153,209,211,213,219,263-271,279,282,291-294,316,332,353-358,366-368,410-412,421,429,441-443,451,455,464
+.github/workflows/code-maven_java-QA_integration.yml
+  h_e3804906c674bd 37-40,61,96,98,100,106,129-130,140
+.github/workflows/code-maven_java-QA_mutation.yml
+  h_e3804906c674bd 37-40,61,96,98,100,106
+.github/workflows/code-maven_java-QA_unit.yml
+  h_e3804906c674bd 37-40,61,96,98,100,106,129-130,140
+.github/workflows/docs-build_snapshot.yml
+  h_e3804906c674bd 78,80,82,86,101
+.github/workflows/docs-publish.yml
+  h_e3804906c674bd 36-38,40-41,43,51,76,78,80,84,99
+.github/workflows/docs-release.yml
+  h_e3804906c674bd 84,86,88,92,134
+.github/workflows/docs-verify.yml
+  h_e3804906c674bd 11-13,45,47,49,53,68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "984b22881d5a5ca5bff049e07166ff9aa44a7167",
+  "prompts": {},
+  "humans": {
+    "h_e3804906c674bd": {
+      "author": "Ivan Alvarez Sabin <ivanasabi@ext.inditex.com>"
+    }
+  }
+}

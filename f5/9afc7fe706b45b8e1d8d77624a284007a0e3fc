@@ -1,0 +1,20 @@
+.github/workflows/docouture-kroki-cache-warm.yml
+  h_8fe143308bc629 115
+.github/workflows/docouture-pr-verify.yml
+  h_8fe143308bc629 100
+.github/workflows/docouture-publish.yml
+  h_8fe143308bc629 102
+.github/workflows/docouture-release.yml
+  h_8fe143308bc629 189
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f59afc7fe706b45b8e1d8d77624a284007a0e3fc",
+  "prompts": {},
+  "humans": {
+    "h_8fe143308bc629": {
+      "author": "Mariano Alonso Ortiz <marianoao@inditex.com>"
+    }
+  }
+}

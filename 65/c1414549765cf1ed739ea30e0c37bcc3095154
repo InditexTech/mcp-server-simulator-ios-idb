@@ -1,0 +1,21 @@
+.github/workflows/oss-compliance.yml
+  s_775892c4663db7::t_f1e7c06ca662dc 28
+.github/workflows/scorecard-analysis.yml
+  s_775892c4663db7::t_764b8acf8a9f30 28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "65c1414549765cf1ed739ea30e0c37bcc3095154",
+  "prompts": {},
+  "sessions": {
+    "s_775892c4663db7": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "4bd97d05-c828-45db-a998-94843836f2cf",
+        "model": "unknown"
+      },
+      "human_author": "Alejandro Montes <alejandromogarcia@ext.inditex.com>"
+    }
+  }
+}
