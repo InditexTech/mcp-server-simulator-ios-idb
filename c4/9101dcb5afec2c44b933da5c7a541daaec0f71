@@ -1,0 +1,37 @@
+.github/CODEOWNERS
+  s_8257c7bfc23fa9::t_6b50b58d017e3e 1-2
+.github/workflows/PR-verify.yml
+  s_8257c7bfc23fa9::t_d0303fbabbceda 38,52,56,74
+.github/workflows/sonar-branch-analysis.yml
+  s_8257c7bfc23fa9::t_d16faf0c2e9c39 40,54,57
+.gitignore
+  s_8257c7bfc23fa9::t_b9bf4cbf34188c 8
+REUSE.toml
+  s_8257c7bfc23fa9::t_f516ae40546c33 7-11
+package-lock.json
+  s_8257c7bfc23fa9::t_eb62f0ce3f59ce 13-14,19,22,908-910,1086-1088,1092,1412-1414,2147-2149,2390-2411,2447-2449,2557-2559,3613-3622,3665-3671,3994-3996,4004-4007,4547-4549,4555,4559-4560,4570-4576,4593-4595,4600-4602,4612-4624,4693-4706,4708-4710,4755-4757,4764,4816-4822
+src/adapters/ParserToOrchestrator.ts
+  s_8257c7bfc23fa9::t_2b7c3bf34fd83c 27-39
+src/idb/IDBManager.ts
+  s_8257c7bfc23fa9::t_a419efc4fcecfe 4-7,18-31,37,40,42,45,47,51-57,60,74-78,80-84,118,150,181,194,211,219,227,242-253,263,284-297,323-325,336,344,352-354,366-369,377,385-388,396-402,411-412,415,418,434-440,442-445,455,470,475,479-483,491,499,507,515-521,529,537,545
+src/idb/__tests__/IDBManager.test.ts
+  s_8257c7bfc23fa9::t_17b2149c0b6a44 1-389
+src/mcp/mcp-server.ts
+  s_8257c7bfc23fa9::t_7e7832c04cf84d 8,109-121
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c49101dcb5afec2c44b933da5c7a541daaec0f71",
+  "prompts": {},
+  "sessions": {
+    "s_8257c7bfc23fa9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ed58ce9e4ffeEpfeEGSjMBTtQw",
+        "model": "inditex/KAIA/glm-5.3-flash"
+      },
+      "human_author": "Arturo Naredo <arturonaredo@gmail.com>"
+    }
+  }
+}
