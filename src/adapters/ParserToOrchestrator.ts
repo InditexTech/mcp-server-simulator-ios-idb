@@ -24,6 +24,19 @@ export class ParserToOrchestrator {
     
     // Mapping natural language commands to CommandType
     this.commandMappings = {
+      // English command names, as emitted by the parser
+      'create session': CommandType.CREATE_SIMULATOR_SESSION,
+      'end session': CommandType.TERMINATE_SIMULATOR_SESSION,
+      'list simulators': CommandType.LIST_AVAILABLE_SIMULATORS,
+      'list booted simulators': CommandType.LIST_BOOTED_SIMULATORS,
+      'boot simulator': CommandType.BOOT_SIMULATOR,
+      'shutdown simulator': CommandType.SHUTDOWN_SIMULATOR,
+      'install app': CommandType.INSTALL_APP,
+      'launch app': CommandType.LAUNCH_APP,
+      'terminate app': CommandType.TERMINATE_APP,
+      'capture screen': CommandType.TAKE_SCREENSHOT,
+      'get logs': CommandType.GET_SYSTEM_LOGS,
+
       // Simulator management commands
       'crear sesión': CommandType.CREATE_SIMULATOR_SESSION,
       'crear simulador': CommandType.CREATE_SIMULATOR_SESSION,
