@@ -5,6 +5,11 @@ SPDX-PackageDownloadLocation = "https://github.com/InditexTech/mcp-server-simula
 
 # Computer-generated files.
 [[annotations]]
+path = ".github/CODEOWNERS"
+SPDX-FileCopyrightText = "2025 Industria Textil de Diseño, S.A."
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
 path = [
     ".gitignore",
     ".npmrc",
