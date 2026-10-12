@@ -10,7 +10,7 @@ This MCP server provides a bridge between Large Language Models (LLMs) and iOS s
 
 For detailed usage, see the Installation guide and Supported Commands sections. You can use this server either through direct MCP integration or as a standalone library.
 
-Check out the Architecture section to understand how the components work together to enable natural language control of iOS simulators.
+Check out the Architecture section to understand how the components work together to enable natural language control of iOS simulators. For the full execution flow, component contracts, and the session model, see [ARCHITECTURE.md](ARCHITECTURE.md). Guidance for agents and contributors working on this repository is in [AGENTS.md](AGENTS.md).
 
 ![demo](demo/demo.gif)
 
@@ -134,22 +134,41 @@ You can also use this package as a library in your own projects:
 
 ### 🔰 Basic Usage
 
+> ⚠️ **Import side effects**: importing the package entry point
+> (`'mcp-server-simulator-ios-idb'` / `dist/index.js`) runs the server startup
+> code at module load: it overrides console output, creates a `logs/`
+> directory, registers `SIGINT`/`SIGTERM`/exception handlers, and **starts the
+> MCP stdio server unconditionally**. There is currently no opt-out. This
+> applies to *any* import of the package root — named imports do not opt out
+> of the bootstrap. To use the parser/orchestrator/manager without transport
+> and signal side effects, import the compiled component modules by **deep
+> path** as shown below (`dist/...`); note that importing
+> `dist/mcp/mcp-server.js` also bootstraps the MCP server singleton, so avoid
+> that path for library use. The package only declares `"main"` (no `exports`
+> map), so deep paths resolve normally.
+
 ```typescript
-import { createMCPServer } from 'mcp-server-simulator-ios-idb';
+// Deep imports of compiled component modules: these do NOT trigger the
+// package root startup (no MCP stdio server, no signal handlers).
+import { MCPOrchestrator } from 'mcp-server-simulator-ios-idb/dist/orchestrator/MCPOrchestrator.js';
+import { NLParser } from 'mcp-server-simulator-ios-idb/dist/parser/NLParser.js';
+import { IDBManager } from 'mcp-server-simulator-ios-idb/dist/idb/IDBManager.js';
 
 async function main() {
-  // Create an instance of the MCP server
-  const { orchestrator } = createMCPServer();
-  
+  // Compose the components (equivalent to createMCPServer internals)
+  const idbManager = new IDBManager();
+  const parser = new NLParser();
+  const orchestrator = new MCPOrchestrator(parser, idbManager);
+
   // Process natural language commands
-  
+
   // Create a simulator session
   const sessionResult = await orchestrator.processInstruction('create session');
   console.log(`Session created: ${sessionResult.data}`);
-  
+
   // Interact with the simulator
   await orchestrator.processInstruction('tap at 100, 200');
-  
+
   // Capture a screenshot
   const screenshotResult = await orchestrator.processInstruction('take screenshot');
   console.log(`Screenshot saved at: ${screenshotResult.data}`);
@@ -158,25 +177,22 @@ async function main() {
 main().catch(console.error);
 ```
 
+> ℹ️ The MCP server itself (currently defined in `src/mcp/mcp-server.ts`, not
+> re-exported from the package entry point) is only meaningful when running
+> the actual server process via `npm start` / an MCP client config; its
+> `createMCPServer()` factory simply composes the same three components shown
+> above.
+
 ### 🚀 Advanced Usage
 
-You can also use the individual components directly:
+You can also use the individual components directly via deep imports:
 
 ```typescript
-import { 
-  IDBManager, 
-  NLParser, 
-  MCPOrchestrator,
-  ParserToOrchestrator,
-  OrchestratorToIDB
-} from 'mcp-server-simulator-ios-idb';
+import { IDBManager } from 'mcp-server-simulator-ios-idb/dist/idb/IDBManager.js';
 
-// Create instances
+// Create instance and use it directly
 const idbManager = new IDBManager();
-const parser = new NLParser();
-const orchestrator = new MCPOrchestrator(parser, idbManager);
 
-// Use the components directly
 const sessionId = await idbManager.createSimulatorSession({
   deviceName: 'iPhone 12',
   platformVersion: '15.0'
@@ -196,7 +212,6 @@ mcp-server-simulator-ios-idb/
 │   ├── orchestrator/         # Command orchestrator
 │   ├── parser/              # Natural language parser
 │   └── index.ts             # Main entry point
-├── types/                   # TypeScript type definitions
 ├── scripts/                 # Installation scripts
 ├── package.json            # Project configuration
 └── tsconfig.json          # TypeScript configuration
@@ -290,6 +305,8 @@ The server consists of three main components:
 These components are connected through adapters:
 - **ParserToOrchestrator**: Converts parser results into orchestrator commands.
 - **OrchestratorToIDB**: Translates orchestrator commands into IDBManager calls.
+
+The complete execution flow (MCP stdio → orchestrator → parser/registry → adapters → IDBManager → `idb` / `xcrun simctl`), component contracts, the session model (`activeSessionId` vs `sessionId → UDID`), and a checklist for adding new commands are documented in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## 🔌 MCP Integration
 
