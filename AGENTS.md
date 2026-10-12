@@ -52,9 +52,8 @@ it active whenever the server runs.
   for `.ts` source files. Do not write extensionless relative imports.
 - Node.js >= 20; `package.json` declares `"os": "darwin"` in its `engines`
   field.
-- Keep SPDX headers (`SPDX-FileCopyrightText` / `SPDX-License-Identifier:
-  Apache-2.0`) at the top of source files, consistent with existing files and
-  [REUSE.toml](REUSE.toml).
+- Keep the SPDX copyright and license header lines at the top of source
+  files, consistent with existing files and [REUSE.toml](REUSE.toml).
 
 ## stdout is reserved for the MCP stdio transport
 
