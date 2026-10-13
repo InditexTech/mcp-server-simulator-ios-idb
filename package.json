@@ -19,15 +19,16 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
-    "uuid": "^11.1.1",
+    "uuid": "^14.0.2",
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@swc/core": "^1.16.18",
+    "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.6.4",
     "@types/uuid": "^9.0.0",
     "jest": "^30.5.2",
-    "ts-jest": "^29.4.14",
-    "typescript": "^5.0.0"
+    "typescript": "^7.0.2"
   }
 }
