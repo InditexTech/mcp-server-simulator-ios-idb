@@ -21,11 +21,13 @@ export abstract class BaseCommandDefinition {
   }
 
   parseCommand(text: string): ParseResult | null {
-    const normalizedText = text.trim().toLowerCase();
+    // Patterns are case-insensitive; matching the original text keeps the case
+    // of captured values (text to type, paths, bundle IDs).
+    const trimmedText = text.trim();
     
     for (const definition of this.definitions) {
       for (const pattern of definition.patterns) {
-        const match = normalizedText.match(pattern);
+        const match = trimmedText.match(pattern);
         if (match) {
           const parameters: Record<string, any> = {};
           for (const [paramName, extractor] of Object.entries(definition.parameterExtractors)) {
