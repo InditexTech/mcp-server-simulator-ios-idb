@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: © 2025 Industria de Diseño Textil S.A. INDITEX
 // SPDX-License-Identifier: Apache-2.0
 
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import { IParser, ParseResult } from '../parser/interfaces/IParser.js';
 import { 
   IOrchestratorCommand, 
@@ -30,7 +30,7 @@ class CommandFactoryImpl {
     return {
       type,
       parameters,
-      id: uuidv4(),
+      id: randomUUID(),
       description,
       timeout: 30000, // 30 seconds by default
       retries: 1      // 1 retry by default
@@ -50,7 +50,7 @@ class CommandFactoryImpl {
         commands,
         stopOnError
       },
-      id: uuidv4(),
+      id: randomUUID(),
       description: `Sequence of ${commands.length} commands`
     };
   }
@@ -74,7 +74,7 @@ class CommandFactoryImpl {
         ifTrue,
         ifFalse
       },
-      id: uuidv4(),
+      id: randomUUID(),
       description: 'Conditional command'
     };
   }
