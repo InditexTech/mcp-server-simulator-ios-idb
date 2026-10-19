@@ -23,6 +23,20 @@ export class OrchestratorToIDB {
   }
 
   /**
+   * Returns an optional IIDBManager method bound to the manager
+   * @param name Method name
+   * @returns Bound method
+   * @throws If the manager does not implement the method
+   */
+  private requireMethod<K extends keyof IIDBManager>(name: K): NonNullable<IIDBManager[K]> {
+    const method = this.idbManager[name];
+    if (typeof method !== 'function') {
+      throw new Error(`Command not supported by the IDB manager: ${String(name)}`);
+    }
+    return (method as Function).bind(this.idbManager) as NonNullable<IIDBManager[K]>;
+  }
+
+  /**
    * Executes an orchestrator command using IDBManager
    * @param command Command to execute
    * @param sessionId Simulator session ID (optional)
@@ -32,6 +46,8 @@ export class OrchestratorToIDB {
     try {
       const startTime = Date.now();
       let result: any;
+      const params = command.parameters;
+      const sid = params.sessionId || sessionId || '';
 
       // Execute command based on its type
       switch (command.type) {
@@ -42,7 +58,7 @@ export class OrchestratorToIDB {
 
         case CommandType.TERMINATE_SIMULATOR_SESSION:
           await this.idbManager.terminateSimulatorSession(
-            command.parameters.sessionId || sessionId || ''
+            sid
           );
           result = { sessionId: command.parameters.sessionId || sessionId };
           break;
@@ -66,7 +82,7 @@ export class OrchestratorToIDB {
             result = { udid: command.parameters.udid };
           } else {
             await this.idbManager.shutdownSimulator(
-              command.parameters.sessionId || sessionId || ''
+              sid
             );
             result = { sessionId: command.parameters.sessionId || sessionId };
           }
@@ -75,14 +91,14 @@ export class OrchestratorToIDB {
         // Application management commands
         case CommandType.INSTALL_APP:
           result = await this.idbManager.installApp(
-            command.parameters.sessionId || sessionId || '',
+            sid,
             command.parameters.appPath
           );
           break;
 
         case CommandType.LAUNCH_APP:
           await this.idbManager.launchApp(
-            command.parameters.sessionId || sessionId || '',
+            sid,
             command.parameters.bundleId
           );
           result = { bundleId: command.parameters.bundleId };
@@ -90,7 +106,7 @@ export class OrchestratorToIDB {
 
         case CommandType.TERMINATE_APP:
           await this.idbManager.terminateApp(
-            command.parameters.sessionId || sessionId || '',
+            sid,
             command.parameters.bundleId
           );
           result = { bundleId: command.parameters.bundleId };
@@ -99,7 +115,7 @@ export class OrchestratorToIDB {
         // UI interaction commands
         case CommandType.TAP:
           await this.idbManager.tap(
-            command.parameters.sessionId || sessionId || '',
+            sid,
             command.parameters.x,
             command.parameters.y
           );
@@ -108,7 +124,7 @@ export class OrchestratorToIDB {
 
         case CommandType.SWIPE:
           await this.idbManager.swipe(
-            command.parameters.sessionId || sessionId || '',
+            sid,
             command.parameters.startX,
             command.parameters.startY,
             command.parameters.endX,
@@ -126,35 +142,154 @@ export class OrchestratorToIDB {
         // Screenshot and logging commands
         case CommandType.TAKE_SCREENSHOT:
           result = await this.idbManager.takeScreenshot(
-            command.parameters.sessionId || sessionId || '',
+            sid,
             command.parameters.outputPath
           );
           break;
 
         case CommandType.GET_SYSTEM_LOGS:
           result = await this.idbManager.getSystemLogs(
-            command.parameters.sessionId || sessionId || '',
+            sid,
             command.parameters.options
           );
           break;
 
         case CommandType.GET_APP_LOGS:
           result = await this.idbManager.getAppLogs(
-            command.parameters.sessionId || sessionId || '',
+            sid,
             command.parameters.bundleId
           );
+          break;
+
+        case CommandType.FOCUS_SIMULATOR:
+          await this.requireMethod('focusSimulator')(sid);
+          result = { sessionId: sid };
+          break;
+
+        case CommandType.UNINSTALL_APP:
+          await this.requireMethod('uninstallApp')(sid, params.bundleId);
+          result = { bundleId: params.bundleId };
+          break;
+
+        case CommandType.LIST_APPS:
+          result = await this.requireMethod('listApps')(sid);
+          break;
+
+        case CommandType.PRESS_BUTTON:
+          await this.requireMethod('pressButton')(sid, params.button, params.duration);
+          result = { button: params.button };
+          break;
+
+        case CommandType.INPUT_TEXT:
+          // Normalization may have turned text such as "1234" or "true" into a non-string
+          await this.requireMethod('inputText')(sid, String(params.text));
+          result = { text: String(params.text) };
+          break;
+
+        case CommandType.PRESS_KEY:
+          await this.requireMethod('pressKey')(sid, params.keyCode, params.duration);
+          result = { keyCode: params.keyCode };
+          break;
+
+        case CommandType.PRESS_KEY_SEQUENCE:
+          await this.requireMethod('pressKeySequence')(sid, params.keyCodes);
+          result = { keyCodes: params.keyCodes };
+          break;
+
+        // Accessibility commands
+        case CommandType.DESCRIBE_ALL_ELEMENTS:
+          result = await this.requireMethod('describeAllElements')(sid);
+          break;
+
+        case CommandType.DESCRIBE_POINT_ELEMENT:
+          result = await this.requireMethod('describePointElement')(sid, params.x, params.y);
+          break;
+
+        case CommandType.START_VIDEO_RECORDING:
+          result = await this.requireMethod('startVideoRecording')(sid, params.outputPath);
+          break;
+
+        case CommandType.STOP_VIDEO_RECORDING:
+          await this.requireMethod('stopVideoRecording')(sid, params.recordingId);
+          result = { recordingId: params.recordingId };
+          break;
+
+        // Debug commands
+        case CommandType.START_DEBUG_SERVER:
+          result = { port: await this.requireMethod('startDebugServer')(sid, params.bundleId) };
+          break;
+
+        case CommandType.STOP_DEBUG_SERVER:
+          await this.requireMethod('stopDebugServer')(sid);
+          result = { sessionId: sid };
+          break;
+
+        case CommandType.GET_DEBUG_SERVER_STATUS:
+          result = await this.requireMethod('getDebugServerStatus')(sid);
+          break;
+
+        case CommandType.LIST_CRASH_LOGS:
+          result = await this.requireMethod('listCrashLogs')(sid, { bundleId: params.bundleId });
+          break;
+
+        case CommandType.GET_CRASH_LOG:
+          result = await this.requireMethod('getCrashLog')(sid, params.crashName);
+          break;
+
+        case CommandType.DELETE_CRASH_LOGS:
+          await this.requireMethod('deleteCrashLogs')(sid, {
+            bundleId: params.bundleId,
+            all: params.all
+          });
+          result = { deleted: true };
+          break;
+
+        // Miscellaneous commands
+        case CommandType.INSTALL_DYLIB:
+          await this.requireMethod('installDylib')(sid, params.dylibPath);
+          result = { dylibPath: params.dylibPath };
+          break;
+
+        case CommandType.OPEN_URL:
+          await this.requireMethod('openUrl')(sid, params.url);
+          result = { url: params.url };
+          break;
+
+        case CommandType.CLEAR_KEYCHAIN:
+          await this.requireMethod('clearKeychain')(sid);
+          result = { sessionId: sid };
+          break;
+
+        case CommandType.SET_LOCATION:
+          await this.requireMethod('setLocation')(sid, params.latitude, params.longitude);
+          result = { latitude: params.latitude, longitude: params.longitude };
+          break;
+
+        case CommandType.ADD_MEDIA:
+          await this.requireMethod('addMedia')(sid, params.mediaPaths);
+          result = { mediaPaths: params.mediaPaths };
+          break;
+
+        case CommandType.APPROVE_PERMISSIONS:
+          await this.requireMethod('approvePermissions')(sid, params.bundleId, params.permissions);
+          result = { bundleId: params.bundleId, permissions: params.permissions };
+          break;
+
+        case CommandType.UPDATE_CONTACTS:
+          await this.requireMethod('updateContacts')(sid, params.dbPath);
+          result = { dbPath: params.dbPath };
           break;
 
         // Verification commands
         case CommandType.IS_SIMULATOR_BOOTED:
           result = await this.idbManager.isSimulatorBooted(
-            command.parameters.sessionId || sessionId || ''
+            sid
           );
           break;
 
         case CommandType.IS_APP_INSTALLED:
           result = await this.idbManager.isAppInstalled(
-            command.parameters.sessionId || sessionId || '',
+            sid,
             command.parameters.bundleId
           );
           break;

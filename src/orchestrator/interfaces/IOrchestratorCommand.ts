@@ -16,25 +16,55 @@ export enum CommandType {
   LIST_BOOTED_SIMULATORS = 'listBootedSimulators',
   BOOT_SIMULATOR = 'bootSimulator',
   SHUTDOWN_SIMULATOR = 'shutdownSimulator',
-  
+  FOCUS_SIMULATOR = 'focusSimulator',
+
   // Application management commands
   INSTALL_APP = 'installApp',
   LAUNCH_APP = 'launchApp',
   TERMINATE_APP = 'terminateApp',
-  
+  UNINSTALL_APP = 'uninstallApp',
+  LIST_APPS = 'listApps',
+
   // UI interaction commands
   TAP = 'tap',
   SWIPE = 'swipe',
-  
+  PRESS_BUTTON = 'pressButton',
+  INPUT_TEXT = 'inputText',
+  PRESS_KEY = 'pressKey',
+  PRESS_KEY_SEQUENCE = 'pressKeySequence',
+
+  // Accessibility commands
+  DESCRIBE_ALL_ELEMENTS = 'describeAllElements',
+  DESCRIBE_POINT_ELEMENT = 'describePointElement',
+
   // Capture and logging commands
   TAKE_SCREENSHOT = 'takeScreenshot',
+  START_VIDEO_RECORDING = 'startVideoRecording',
+  STOP_VIDEO_RECORDING = 'stopVideoRecording',
   GET_SYSTEM_LOGS = 'getSystemLogs',
   GET_APP_LOGS = 'getAppLogs',
-  
+
+  // Debug commands
+  START_DEBUG_SERVER = 'startDebugServer',
+  STOP_DEBUG_SERVER = 'stopDebugServer',
+  GET_DEBUG_SERVER_STATUS = 'getDebugServerStatus',
+  LIST_CRASH_LOGS = 'listCrashLogs',
+  GET_CRASH_LOG = 'getCrashLog',
+  DELETE_CRASH_LOGS = 'deleteCrashLogs',
+
+  // Miscellaneous commands
+  INSTALL_DYLIB = 'installDylib',
+  OPEN_URL = 'openUrl',
+  CLEAR_KEYCHAIN = 'clearKeychain',
+  SET_LOCATION = 'setLocation',
+  ADD_MEDIA = 'addMedia',
+  APPROVE_PERMISSIONS = 'approvePermissions',
+  UPDATE_CONTACTS = 'updateContacts',
+
   // Verification commands
   IS_SIMULATOR_BOOTED = 'isSimulatorBooted',
   IS_APP_INSTALLED = 'isAppInstalled',
-  
+
   // Composite commands
   SEQUENCE = 'sequence',
   CONDITIONAL = 'conditional'
