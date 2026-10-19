@@ -27,6 +27,21 @@ describe('NLParser', () => {
       expect(result.parameters.bundleId).toBe('com.example.app');
     });
 
+    it.each([
+      ['input text please uninstall app com.foo.bar', 'input text'],
+      ['type text tap at 10, 20', 'input text'],
+      ['open url myapp://open app com.x', 'open url'],
+      ['update contacts /tmp/install app x', 'update contacts'],
+      ['add media /Users/me/screenshot.png', 'add media'],
+      ['record video /tmp/screenshot.mp4', 'record video'],
+      ['open url https://example.com/screenshot', 'open url'],
+      ['listar simuladores arrancados', 'list booted simulators'],
+      ['mostrar simuladores arrancados', 'list booted simulators']
+    ])('should pick the command the instruction starts with: "%s"', async (instruction, command) => {
+      const result = await parser.parseInstruction(instruction);
+      expect(result.command).toBe(command);
+    });
+
     it('should handle unknown instructions', async () => {
       try {
         await parser.parseInstruction('invalid command here');
