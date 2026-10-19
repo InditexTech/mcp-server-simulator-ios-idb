@@ -236,11 +236,18 @@ export class OrchestratorToIDB {
           break;
 
         case CommandType.DELETE_CRASH_LOGS:
+          // Without a filter idb deletes every crash log; require it to be asked for
+          if (!params.bundleId && params.all !== true) {
+            throw new Error(
+              'Refusing to delete crash logs without a filter: name an app ' +
+              '("delete crash logs for com.example.app") or ask for "delete all crash logs"'
+            );
+          }
           await this.requireMethod('deleteCrashLogs')(sid, {
             bundleId: params.bundleId,
             all: params.all
           });
-          result = { deleted: true };
+          result = { bundleId: params.bundleId, all: params.all === true };
           break;
 
         // Miscellaneous commands

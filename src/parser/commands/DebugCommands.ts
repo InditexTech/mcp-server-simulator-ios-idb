@@ -117,23 +117,26 @@ export class DebugCommands extends BaseCommandDefinition {
     {
       command: 'delete crash logs',
       patterns: [
-        /eliminar\s+crash\s+logs/i,
-        /borrar\s+crash\s+logs/i,
-        /delete\s+crash\s+logs/i,
-        /remove\s+crash\s+logs/i,
-        /clear\s+crash\s+logs/i
+        /eliminar\s+(?<all>todos\s+los\s+)?crash\s+logs(\s+de\s+(?<bundleId>[^\s,]+))?/i,
+        /borrar\s+(?<all>todos\s+los\s+)?crash\s+logs(\s+de\s+(?<bundleId>[^\s,]+))?/i,
+        /delete\s+(?<all>all\s+)?crash\s+logs(\s+for\s+(?<bundleId>[^\s,]+))?/i,
+        /remove\s+(?<all>all\s+)?crash\s+logs(\s+for\s+(?<bundleId>[^\s,]+))?/i,
+        /clear\s+(?<all>all\s+)?crash\s+logs(\s+for\s+(?<bundleId>[^\s,]+))?/i
       ],
-      description: 'Deletes crash logs',
+      description: 'Deletes the crash logs of an application, or all of them when asked explicitly',
       requiredParameters: [],
       optionalParameters: ['bundleId', 'sessionId', 'all'],
       examples: [
-        'eliminar crash logs',
-        'borrar crash logs',
-        'delete crash logs',
-        'remove crash logs',
-        'clear crash logs'
+        'eliminar crash logs de com.example.app',
+        'borrar todos los crash logs',
+        'delete crash logs for com.example.app',
+        'remove all crash logs',
+        'clear all crash logs'
       ],
-      parameterExtractors: {}
+      parameterExtractors: {
+        bundleId: (match) => match.groups?.bundleId?.trim(),
+        all: (match) => match.groups?.all ? true : undefined
+      }
     }
   ];
 }

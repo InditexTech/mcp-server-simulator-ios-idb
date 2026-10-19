@@ -111,11 +111,30 @@ describe('Command wiring (parser -> orchestrator -> IDB manager)', () => {
 
   it('routes "list crash logs" and "delete crash logs" to the crash log methods', async () => {
     await orchestrator.processInstruction('list crash logs');
-    await orchestrator.processInstruction('delete crash logs');
+    await orchestrator.processInstruction('delete crash logs for com.example.app');
 
     expect(idbManager.listCrashLogs).toHaveBeenCalled();
     expect(idbManager.deleteCrashLogs).toHaveBeenCalled();
     expect(idbManager.getSystemLogs).not.toHaveBeenCalled();
+  });
+
+  it('refuses to delete crash logs without a filter', async () => {
+    const result = await orchestrator.processInstruction('delete crash logs');
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/without a filter/);
+    expect(idbManager.deleteCrashLogs).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['delete all crash logs', { bundleId: undefined, all: true }],
+    ['borrar todos los crash logs', { bundleId: undefined, all: true }],
+    ['delete crash logs for com.example.MyApp', { bundleId: 'com.example.MyApp', all: undefined }]
+  ])('deletes crash logs when asked explicitly: "%s"', async (instruction, options) => {
+    const result = await orchestrator.processInstruction(instruction);
+
+    expect(result.success).toBe(true);
+    expect(idbManager.deleteCrashLogs).toHaveBeenCalledWith('', options);
   });
 
   it('passes the bundle ID of "get logs for" to getSystemLogs', async () => {

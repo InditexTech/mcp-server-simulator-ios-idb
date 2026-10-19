@@ -279,7 +279,7 @@ The NLParser supports the following natural language commands:
 |---------|-------------|---------|
 | List crash logs | Lists available crash logs | "list crash logs", "show crash logs" |
 | Show crash log | Shows content of a crash log | "show crash log crash_2023-01-01" |
-| Delete crash logs | Deletes crash logs | "delete crash logs", "clear crash logs" |
+| Delete crash logs | Deletes crash logs of an app, or all of them when asked explicitly | "delete crash logs for com.example.app", "delete all crash logs" |
 
 ### 🔧 Additional Commands
 | Command | Description | Example |
