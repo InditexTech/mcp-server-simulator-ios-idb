@@ -206,13 +206,6 @@ export class ParserToOrchestrator {
         }
         break;
 
-      case CommandType.GET_CRASH_LOG:
-        // Numeric-looking names are turned into numbers by parameter normalization
-        if (parameters.crashName !== undefined) {
-          parameters.crashName = String(parameters.crashName);
-        }
-        break;
-        
       case CommandType.CREATE_SIMULATOR_SESSION:
         // Convert autoboot to boolean if it's a string
         if (typeof parameters.autoboot === 'string') {

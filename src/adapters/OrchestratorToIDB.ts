@@ -181,9 +181,8 @@ export class OrchestratorToIDB {
           break;
 
         case CommandType.INPUT_TEXT:
-          // Normalization may have turned text such as "1234" or "true" into a non-string
-          await this.requireMethod('inputText')(sid, String(params.text));
-          result = { text: String(params.text) };
+          await this.requireMethod('inputText')(sid, params.text);
+          result = { text: params.text };
           break;
 
         case CommandType.PRESS_KEY:

@@ -130,10 +130,16 @@ describe('Command wiring (parser -> orchestrator -> IDB manager)', () => {
     expect(idbManager.inputText).toHaveBeenCalledWith('', 'Hello World');
   });
 
-  it('types numeric text as a string', async () => {
-    await orchestrator.processInstruction('input text 1234');
+  it.each(['0123', '0x1F', '1e3', 'TRUE'])('types "%s" verbatim', async (text) => {
+    await orchestrator.processInstruction(`input text ${text}`);
 
-    expect(idbManager.inputText).toHaveBeenCalledWith('', '1234');
+    expect(idbManager.inputText).toHaveBeenCalledWith('', text);
+  });
+
+  it('keeps leading zeros in crash log names', async () => {
+    await orchestrator.processInstruction('show crash log 00042');
+
+    expect(idbManager.getCrashLog).toHaveBeenCalledWith('', '00042');
   });
 
   it('passes the active session to newly wired commands', async () => {
