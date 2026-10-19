@@ -16,7 +16,6 @@ export class UICommands extends BaseCommandDefinition {
       requiredParameters: ['x', 'y'],
       optionalParameters: ['sessionId', 'duration'],
       examples: [
-        'tap en 100, 200',
         'tocar 150, 300',
         'pulsar en 200, 400',
         'tap at 100, 200',
@@ -37,7 +36,6 @@ export class UICommands extends BaseCommandDefinition {
       requiredParameters: ['startX', 'startY', 'endX', 'endY'],
       optionalParameters: ['duration', 'delta', 'sessionId'],
       examples: [
-        'swipe desde 100, 200 hasta 300, 400',
         'deslizar desde 150, 300 hasta 150, 100 con duración 500',
         'swipe from 100, 200 to 300, 400',
         'swipe from 150, 300 to 150, 100 with duration 500'
