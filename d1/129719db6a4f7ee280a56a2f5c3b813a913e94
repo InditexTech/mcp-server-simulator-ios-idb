@@ -1,0 +1,19 @@
+.github/workflows/oss-compliance.yml
+  s_a49ad944204e23::t_4d146a4a63ba58 28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "d1129719db6a4f7ee280a56a2f5c3b813a913e94",
+  "prompts": {},
+  "sessions": {
+    "s_a49ad944204e23": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "c5449a16-b32d-4295-afc9-4a333128e75e",
+        "model": "unknown"
+      },
+      "human_author": "Alejandro Montes <alejandromogarcia@ext.inditex.com>"
+    }
+  }
+}

@@ -1,0 +1,18 @@
+NOTICE
+  h_e3804906c674bd 1-3
+REUSE.toml
+  h_e3804906c674bd 39-44,177-182
+code/pom.xml
+  h_e3804906c674bd 126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1db8d7f4179ae22ce8088459a9351735b26d4da4",
+  "prompts": {},
+  "humans": {
+    "h_e3804906c674bd": {
+      "author": "Ivan Alvarez Sabin <ivanasabi@ext.inditex.com>"
+    }
+  }
+}

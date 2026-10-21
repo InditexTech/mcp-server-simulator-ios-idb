@@ -1,0 +1,21 @@
+docs/src/modules/main/pages/contributing/repo-structure/karate-test.adoc
+  s_4f05750fdd678c::t_7508e9c46f7a1c 172
+docs/src/modules/main/pages/guides/open-api-generator/open-api-generator-smoke.adoc
+  s_4f05750fdd678c::t_625943de17f23c 77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "d26bbcea51f8055eb60faa109db85ce45e3abc3d",
+  "prompts": {},
+  "sessions": {
+    "s_4f05750fdd678c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f9ec364f9ffeCler6pK49PONrH",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Jesus Manuel Piñeiro Cid <jesusmpc@inditex.com>"
+    }
+  }
+}

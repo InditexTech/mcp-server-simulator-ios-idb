@@ -1,0 +1,24 @@
+.github/workflows/PR-verify.yml
+  h_8fe143308bc629 52
+.github/workflows/sonar-branch-analysis.yml
+  h_8fe143308bc629 54
+.gitignore
+  h_8fe143308bc629 8
+package.json
+  h_8fe143308bc629 9
+src/idb/IDBManager.ts
+  h_8fe143308bc629 4-7,20-32,37,51,55,244,278-286,288-291,319,348,361,380,406,409,412,430-431,433-434,436-439,475-476,501,510
+src/idb/__tests__/IDBManager.test.ts
+  h_8fe143308bc629 8-12,24-129,155-160,162,164-169,172-179,187,191-223,228-230,236-253,287-388
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "70c26a58001968bf7dd63384d2f5df12e738d674",
+  "prompts": {},
+  "humans": {
+    "h_8fe143308bc629": {
+      "author": "Mariano Alonso Ortiz <marianoao@inditex.com>"
+    }
+  }
+}

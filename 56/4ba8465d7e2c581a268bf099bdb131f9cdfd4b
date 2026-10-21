@@ -1,0 +1,23 @@
+AGENTS.md
+  s_20d527bd31cd2d::t_1a14fdd14ec6fc 1-138
+ARCHITECTURE.md
+  s_20d527bd31cd2d::t_34e024093596c8 1-208
+README.md
+  s_20d527bd31cd2d::t_dbcd18e2621283 13,137-149,151-155,158-162,164,168,171,180-185,188,191-193,309-310
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "564ba8465d7e2c581a268bf099bdb131f9cdfd4b",
+  "prompts": {},
+  "sessions": {
+    "s_20d527bd31cd2d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ed113f35cffeN0bIQN5jRDMwbt",
+        "model": "inditex/KAIA/glm-5.3-flash"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+sonar-project.properties
+  h_8fe143308bc629 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "1bcec0dec1b2a657609508d227a7123d2e6758ed",
+  "prompts": {},
+  "humans": {
+    "h_8fe143308bc629": {
+      "author": "Mariano Alonso Ortiz <marianoao@inditex.com>"
+    }
+  }
+}

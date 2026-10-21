@@ -1,0 +1,19 @@
+docs/package-lock.json
+  s_3f996e8aa4e141::t_90e71f3e64cb9a 469-471,594-596
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "831bfa53a46a1d160ccad6094d0b1226edab5d23",
+  "prompts": {},
+  "sessions": {
+    "s_3f996e8aa4e141": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "a61f9862-2247-44f5-8e5c-0ede7a21f061",
+        "model": "copilot/gpt-5.6-terra"
+      },
+      "human_author": "Vanesa López Beade <vanesalbe@ext.inditex.com>"
+    }
+  }
+}

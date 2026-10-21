@@ -1,0 +1,14 @@
+src/idb/IDBManager.ts
+  h_8fe143308bc629 4,18,27,29,32,34,38-47,50,102,134,165,178,195,203,211,226-237,247,268-272,298-300,311,319,327-328,341-344,352,360-363,371-377,386,411-415,433,448,453,457-461,469,477,485,493-499,507,515,523
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "ed442827b28851aad947a6439048eaf56708d26d",
+  "prompts": {},
+  "humans": {
+    "h_8fe143308bc629": {
+      "author": "Mariano Alonso Ortiz <marianoao@inditex.com>"
+    }
+  }
+}

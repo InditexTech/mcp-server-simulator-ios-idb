@@ -1,0 +1,14 @@
+AGENTS.md
+  h_54a1c5973b9675 55-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ebb5a0d58b3a4e3448c30f61d39c1a2203e9b642",
+  "prompts": {},
+  "humans": {
+    "h_54a1c5973b9675": {
+      "author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}

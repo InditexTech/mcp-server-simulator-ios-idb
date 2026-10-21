@@ -1,0 +1,21 @@
+package-lock.json
+  s_8257c7bfc23fa9::t_060da97d5c426e 18-19,24,632-683,761-784,1069-1366,1501-1840,4087-4093,5257-5259,5263,5266,5268-5288
+package.json
+  s_8257c7bfc23fa9::t_924b924687b741 26-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "54aff418d144b77b2af4d62b6c264bfb92964911",
+  "prompts": {},
+  "sessions": {
+    "s_8257c7bfc23fa9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ed58ce9e4ffeEpfeEGSjMBTtQw",
+        "model": "inditex/KAIA/glm-5.3-flash"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}

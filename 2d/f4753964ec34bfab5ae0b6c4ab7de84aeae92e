@@ -1,0 +1,29 @@
+code/src/api/v3/router.ts
+  s_775892c4663db7::t_891fff246fe041 13,41,43,50,52
+code/src/api/v2/router.ts
+  s_775892c4663db7::t_4a215e73510342 23,56,66
+code/src/api/v1/router.ts
+  s_775892c4663db7::t_5fd766fe1faf03 113-117,273,318,363
+code/src/middlewares/api-rate-limit.ts
+  s_775892c4663db7::t_77244c8f2e1f3e 1-50
+code/package.json
+  s_775892c4663db7::t_ac7b3dc299d4a9 89
+code/package-lock.json
+  s_775892c4663db7::t_c821b2d5c195d6 43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "2df4753964ec34bfab5ae0b6c4ab7de84aeae92e",
+  "prompts": {},
+  "sessions": {
+    "s_775892c4663db7": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "4bd97d05-c828-45db-a998-94843836f2cf",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Alejandro Montes <alejandromogarcia@ext.inditex.com>"
+    }
+  }
+}

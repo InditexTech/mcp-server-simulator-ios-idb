@@ -1,0 +1,111 @@
+docs/src/modules/main/pages/guides/archetype/overview.adoc
+  s_5b4dfd259e38f6::t_c8f1a4acbfd8cc 3,5-23
+docs/src/modules/main/pages/guides/clients/jdbc.adoc
+  s_5b4dfd259e38f6::t_90ff4444018416 3,7,13,19,23,27,31,38,46,51
+docs/src/modules/main/pages/guides/clients/jms.adoc
+  s_5b4dfd259e38f6::t_41441521840287 3,7,13,19,23,27,31,35,40,45,50,55
+docs/src/modules/main/pages/guides/clients/kafka.adoc
+  s_5b4dfd259e38f6::t_8dfb5907199118 3,9,13,17,21,26,31,35
+docs/src/modules/main/pages/guides/clients/mongodb.adoc
+  s_5b4dfd259e38f6::t_92bca62b1122e2 3,9,13,17,22,27
+docs/src/modules/main/pages/guides/clients/overview.adoc
+  s_5b4dfd259e38f6::t_bfff0f1114add6 1,3,5
+docs/src/modules/main/pages/guides/configuration/auth-basic.adoc
+  s_5b4dfd259e38f6::t_7ae3cf419f32b4 7,15,24,29
+docs/src/modules/main/pages/guides/configuration/auth-jwt.adoc
+  s_5b4dfd259e38f6::t_30f8c26a1732f1 9,17,26,31
+docs/src/modules/main/pages/guides/configuration/auth.adoc
+  s_5b4dfd259e38f6::t_c7f345af1f58ed 5,9,13,17
+docs/src/modules/main/pages/guides/configuration/karate-config.adoc
+  s_5b4dfd259e38f6::t_70a1af9e6448f0 5,9
+docs/src/modules/main/pages/guides/configuration/logging.adoc
+  s_5b4dfd259e38f6::t_a73cfe0aacbd56 3,9
+docs/src/modules/main/pages/guides/configuration/overview.adoc
+  s_5b4dfd259e38f6::t_540558e9a2061a 3
+docs/src/modules/main/pages/guides/configuration/urls.adoc
+  s_5b4dfd259e38f6::t_505ce2b9510e78 3,7
+docs/src/modules/main/pages/guides/execution/arguments.adoc
+  s_5b4dfd259e38f6::t_868ca38c336443 16,22,26,30,34
+docs/src/modules/main/pages/guides/execution/overview.adoc
+  s_5b4dfd259e38f6::t_137714cd97c727 1,3
+docs/src/modules/main/pages/guides/execution/reports.adoc
+  s_5b4dfd259e38f6::t_ba2a58f34610d8 23,27,31,35
+docs/src/modules/main/pages/guides/open-api-generator/open-api-generator-functional.adoc
+  s_5b4dfd259e38f6::t_04800aed194086 20-21,36,39,47,56,62,67,83,94,109,122,139,154,164,177,190,194,210
+docs/src/modules/main/pages/guides/open-api-generator/open-api-generator-mock.adoc
+  s_5b4dfd259e38f6::t_2522216e4d06bc 12,32,45,54,85,88,96,105,111,116,132,143,158,171,188,207,216,220,231,241,258,266,277
+docs/src/modules/main/pages/guides/open-api-generator/open-api-generator-operations.adoc
+  s_5b4dfd259e38f6::t_44df6c56c3a012 26,29,37,46,52,57,73,84,101,114
+docs/src/modules/main/pages/guides/open-api-generator/open-api-generator-smoke.adoc
+  s_5b4dfd259e38f6::t_ae047167abb93f 26,29,37,46,52,57,73,84,101,114
+docs/src/modules/main/pages/guides/open-api-generator/overview.adoc
+  s_5b4dfd259e38f6::t_5047f7dac0a785 1,3,5-19
+docs/src/modules/main/partials/archetype/2-3-generate-archetype-exec.adoc
+  s_5b4dfd259e38f6::t_bb69e3c57fa4a8 3
+docs/src/modules/main/partials/archetype/3-review-output.adoc
+  s_5b4dfd259e38f6::t_43876f5e81930a 1
+docs/src/modules/main/partials/clients/available-clients.adoc
+  s_5b4dfd259e38f6::t_d038c72b674203 1,4-6
+docs/src/modules/main/partials/clients/jdbc-config.adoc
+  s_5b4dfd259e38f6::t_2aaa445b679512 3
+docs/src/modules/main/partials/clients/jdbc-pom.adoc
+  s_5b4dfd259e38f6::t_4538a5ac7bbc3b 1,8
+docs/src/modules/main/partials/clients/jdbc-summary.adoc
+  s_5b4dfd259e38f6::t_4f0321b21aa3ac 7-8
+docs/src/modules/main/partials/clients/jms-config.adoc
+  s_5b4dfd259e38f6::t_34dd43c5ffc0ee 3
+docs/src/modules/main/partials/clients/jms-pom.adoc
+  s_5b4dfd259e38f6::t_1667c7e1f2a052 1,8
+docs/src/modules/main/partials/clients/jms-summary.adoc
+  s_5b4dfd259e38f6::t_7dc47fd296a4b3 7-8
+docs/src/modules/main/partials/clients/kafka-config.adoc
+  s_5b4dfd259e38f6::t_ae26b4b2e75ebe 12
+docs/src/modules/main/partials/clients/kafka-pom.adoc
+  s_5b4dfd259e38f6::t_1f1dc3d3fbf29c 1,8
+docs/src/modules/main/partials/clients/kafka-summary.adoc
+  s_5b4dfd259e38f6::t_a36442786d2008 7-8
+docs/src/modules/main/partials/clients/mongodb-config.adoc
+  s_5b4dfd259e38f6::t_dcbc3afa93e795 4
+docs/src/modules/main/partials/clients/mongodb-pom.adoc
+  s_5b4dfd259e38f6::t_d12a2dde1c274a 1,8
+docs/src/modules/main/partials/clients/mongodb-summary.adoc
+  s_5b4dfd259e38f6::t_264c476cf36bbf 7-8
+docs/src/modules/main/partials/configuration/auth-errors.adoc
+  s_5b4dfd259e38f6::t_5464c929f9d694 5
+docs/src/modules/main/partials/configuration/auth-types.adoc
+  s_5b4dfd259e38f6::t_f5f0109734480f 1-3
+docs/src/modules/main/partials/configuration/summary.adoc
+  s_5b4dfd259e38f6::t_13a7bca8e5e199 9,14,17,20,23,26-27
+docs/src/modules/main/partials/execution/report-karate-html.adoc
+  s_5b4dfd259e38f6::t_aec9f3199e6675 21
+docs/src/modules/main/partials/execution/report-karate-operations-usage-statistics.adoc
+  s_5b4dfd259e38f6::t_327e419d4e94e4 10
+docs/src/modules/main/partials/execution/report-surefire.adoc
+  s_5b4dfd259e38f6::t_4f5dd2277e4ceb 5,19
+docs/src/modules/main/partials/execution/summary.adoc
+  s_5b4dfd259e38f6::t_7358ccfe8fe1e1 4,7,10,13,16
+docs/src/modules/main/partials/open-api-generator/api-dependencies.adoc
+  s_5b4dfd259e38f6::t_8d430386af5f0b 5
+docs/src/modules/main/partials/open-api-generator/configuration.adoc
+  s_5b4dfd259e38f6::t_0cf6d0ee8225aa 1,8,32
+docs/src/modules/main/partials/open-api-generator/execution.adoc
+  s_5b4dfd259e38f6::t_f15fe55bd4d509 8,19,22,26-29
+docs/src/modules/main/partials/open-api-generator/open-api-generator-modes.adoc
+  s_5b4dfd259e38f6::t_77f1faba7831c2 13-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "88407720ee76de5a3eb9c95a1bb5f0fb334d894d",
+  "prompts": {},
+  "sessions": {
+    "s_5b4dfd259e38f6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fa81fe53bffexvyU4XD2hOlZVj",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Jesus Manuel Piñeiro Cid <jesusmpc@inditex.com>"
+    }
+  }
+}

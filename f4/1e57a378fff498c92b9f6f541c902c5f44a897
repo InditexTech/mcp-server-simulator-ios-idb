@@ -1,0 +1,18 @@
+REUSE.toml
+  h_c93d154c7c7074 64,71,78,85
+docs/src/modules/ROOT/images/home-images.md
+  h_c93d154c7c7074 3,5
+docs/src/modules/ROOT/pages/index.adoc
+  h_c93d154c7c7074 4-6,10-11,13-23,30,32,34,37-38,40,42,45-46,48,50,53-54,56,58,62,66,68,70-71,74,77,79,81-82,85,88,90,92-96,104-105,108,113-114,118-134,137-139,142,145-146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "f41e57a378fff498c92b9f6f541c902c5f44a897",
+  "prompts": {},
+  "humans": {
+    "h_c93d154c7c7074": {
+      "author": "Jesus Manuel Piñeiro Cid <jesusmpc@inditex.com>"
+    }
+  }
+}

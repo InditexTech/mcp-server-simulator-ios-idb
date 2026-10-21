@@ -1,0 +1,14 @@
+src/idb/__tests__/IDBManager.test.ts
+  h_8fe143308bc629 1-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "4b03b69b0beeaeeedd93e006dcea42a751c2ab9f",
+  "prompts": {},
+  "humans": {
+    "h_8fe143308bc629": {
+      "author": "Mariano Alonso Ortiz <marianoao@inditex.com>"
+    }
+  }
+}

@@ -1,0 +1,28 @@
+.github/workflows/code-maven_java-QA_e2e_karate.yml
+  h_e3804906c674bd 1-514
+.github/workflows/code-maven_java-QA_integration.yml
+  h_e3804906c674bd 1-226
+.github/workflows/code-maven_java-QA_mutation.yml
+  h_e3804906c674bd 1-178
+.github/workflows/code-maven_java-QA_unit.yml
+  h_e3804906c674bd 1-226
+.github/workflows/docs/code-maven_java-QA_e2e_karate.md
+  h_e3804906c674bd 1-92
+.github/workflows/docs/code-maven_java-QA_integration.md
+  h_e3804906c674bd 1-57
+.github/workflows/docs/code-maven_java-QA_mutation.md
+  h_e3804906c674bd 1-49
+.github/workflows/docs/code-maven_java-QA_unit.md
+  h_e3804906c674bd 1-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3f98be4aecdd300f1fd3bbb7103fd89a6d2f1d4d",
+  "prompts": {},
+  "humans": {
+    "h_e3804906c674bd": {
+      "author": "Ivan Alvarez Sabin <ivanasabi@ext.inditex.com>"
+    }
+  }
+}
