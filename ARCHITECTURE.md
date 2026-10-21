@@ -179,7 +179,8 @@ pointer.
   - **Homebrew** installation runs via `scripts/install_dependencies.sh`
     during `npm install`/`npm ci` (macOS 15+, arm64, Homebrew and Xcode 26+
     required). The script verifies executable provenance and matching versions;
-    no project Python venv is used. Homebrew follows the current stable tap,
+    on Homebrew versions with trust controls, it trusts only the three idb
+    formulae. No project Python venv is used. Homebrew follows the current stable tap,
     independently of `package-lock.json`.
   - `IDBManager` validates idb availability before simulator operations via
     `idb list-targets`.

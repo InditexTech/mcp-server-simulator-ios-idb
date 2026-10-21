@@ -95,7 +95,7 @@ npm test
 
 The installation process will automatically:
 1. Check macOS 15+, Apple Silicon, Homebrew and Xcode 26+ prerequisites
-2. Install the official `facebook/fb/idb` Homebrew metapackage, which provides matching client and companion versions (currently 1.7.6)
+2. Install the official `facebook/fb/idb` Homebrew metapackage, which provides matching client and companion versions (currently 1.7.6); on Homebrew versions with trust controls, trust only the `idb`, `idb-cli` and `idb-companion` formulae
 3. Verify the effective executable paths and versions
 
 Python and its dependencies are managed by Homebrew; no project virtual environment is needed. If migrating from the old installation, deactivate the old venv and ensure Homebrew's `bin` directory is on the PATH used by your terminal and MCP host. The installer rejects executables that shadow Homebrew's installation; it does not delete the old venv.

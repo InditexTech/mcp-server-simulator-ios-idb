@@ -3,6 +3,10 @@ name: PR-verify
 on:
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 env:
   NODE_VERSION: '24.22.1'
   NPM_VERSION: '12.2.0'
@@ -11,6 +15,7 @@ jobs:
   verify:
     name: Verify
     runs-on: macos-26
+    timeout-minutes: 15
     permissions:
       contents: read
       pull-requests: read
@@ -55,6 +60,7 @@ jobs:
   repo-linter:
     name: Repo Linter
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: read
     steps:
@@ -78,6 +84,7 @@ jobs:
   reuse-compliance:
     name: REUSE Compliance
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: read
     steps:

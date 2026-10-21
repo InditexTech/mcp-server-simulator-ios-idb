@@ -33,6 +33,11 @@ xcrun --find simctl > /dev/null
 # The official metapackage installs the client and companion together, including
 # a Homebrew-managed Python environment. Never modify a project venv here.
 brew tap facebook/fb
+if brew command trust > /dev/null 2>&1; then
+    # Recent Homebrew versions require explicit trust for dependencies in a
+    # third-party tap. Trust only the three formulae used by this installer.
+    brew trust --formula facebook/fb/idb facebook/fb/idb-cli facebook/fb/idb-companion
+fi
 brew install facebook/fb/idb
 
 cli_prefix=$(brew --prefix facebook/fb/idb-cli)
@@ -50,8 +55,10 @@ if [[ ! "$(command -v idb)" -ef "$cli_prefix/bin/idb" ||
 fi
 
 client_version=$("$cli_prefix/libexec/bin/python" -c 'import importlib.metadata; print(importlib.metadata.version("fb-idb"))')
-companion_version=$(brew list --versions facebook/fb/idb-companion)
-companion_version=${companion_version##* }
+# Homebrew's opt prefix resolves to the active keg, while `list --versions`
+# includes inactive installations and must not be used to select a version.
+companion_keg=$(cd "$companion_prefix" && pwd -P)
+companion_version=${companion_keg##*/}
 if [[ "$client_version" != "${companion_version%_*}" ]]; then
     echo "Error: idb client ($client_version) and companion ($companion_version) versions differ." >&2
     echo "Upgrade both with: brew upgrade facebook/fb/idb-cli facebook/fb/idb-companion" >&2
