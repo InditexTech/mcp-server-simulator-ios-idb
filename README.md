@@ -53,10 +53,11 @@ Check out the Architecture section to understand how the components work togethe
 
 ## 📋 Requirements
 
-- **macOS**: Required for iOS simulator support
-- **Node.js**: v20.0.0 or higher
+- **macOS**: 15 or later on Apple Silicon (arm64), required by idb
+- **Node.js**: v24.22.1 LTS or later (CI uses 24.22.1)
+- **npm**: v12.2.0 (install with `npm install --global npm@12.2.0` after selecting Node)
 - **Homebrew**: Required for installing dependencies
-- **XCode**: With iOS simulators installed
+- **Xcode**: 26 or later, selected as the active developer directory, with iOS simulators installed
 
 ## 🚀 Installation
 
@@ -76,12 +77,11 @@ Alternatively, you can install it manually:
 git clone https://github.com/InditexTech/mcp-server-simulator-ios-idb.git
 cd mcp-server-simulator-ios-idb
 
-# Create and activate Python virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On Unix/macOS
+# Install the locked dependencies (also installs native idb dependencies)
+npm ci
 
-# Install dependencies
-npm install
+# Check TypeScript, including tests
+npm run typecheck
 
 # Build the project
 npm run build
@@ -94,11 +94,13 @@ npm test
 ```
 
 The installation process will automatically:
-1. Check if you're running macOS
-2. Install idb-companion via Homebrew
-3. Install fb-idb via pip in the virtual environment
+1. Check macOS 15+, Apple Silicon, Homebrew and Xcode 26+ prerequisites
+2. Install the official `facebook/fb/idb` Homebrew metapackage, which provides matching client and companion versions (currently 1.7.6); on Homebrew versions with trust controls, trust only the `idb`, `idb-cli` and `idb-companion` formulae
+3. Verify the effective executable paths and versions
 
-Note: Make sure to keep the virtual environment activated while using the server. If you close your terminal and come back later, you'll need to reactivate the virtual environment with the `source venv/bin/activate` command before running `npm start`.
+Python and its dependencies are managed by Homebrew; no project virtual environment is needed. If migrating from the old installation, deactivate the old venv and ensure Homebrew's `bin` directory is on the PATH used by your terminal and MCP host. The installer rejects executables that shadow Homebrew's installation; it does not delete the old venv.
+
+Homebrew follows the current stable tap rather than `package-lock.json`. Record the installed versions with `brew list --versions facebook/fb/idb facebook/fb/idb-cli facebook/fb/idb-companion`. To update an existing native installation, run `brew update && brew upgrade facebook/fb/idb facebook/fb/idb-cli facebook/fb/idb-companion`, then rerun `npm ci` to verify it.
 
 ## 🔌 MCP Integration
 
