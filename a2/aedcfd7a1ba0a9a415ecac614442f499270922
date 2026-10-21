@@ -1,0 +1,24 @@
+.github/workflows/PR-verify.yml
+  h_b19c0ab0d49582 6-9,18,63,87
+AGENTS.md
+  h_b19c0ab0d49582 38-39
+ARCHITECTURE.md
+  h_b19c0ab0d49582 182-183
+README.md
+  h_b19c0ab0d49582 98
+scripts/install_dependencies.sh
+  h_b19c0ab0d49582 36-40,58-61
+src/__tests__/installDependencies.test.ts
+  h_b19c0ab0d49582 5,17-18,30-31,38-50,59-60,63-85,87-88,90,104-129,137,142,145-164,179-180,186-191
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a2aedcfd7a1ba0a9a415ecac614442f499270922",
+  "prompts": {},
+  "humans": {
+    "h_b19c0ab0d49582": {
+      "author": "DevStudio <srvcdevstudio@inditex.com>"
+    }
+  }
+}
