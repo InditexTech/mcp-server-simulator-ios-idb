@@ -159,22 +159,28 @@ pointer.
 
 ## Testing and external dependencies
 
-- Jest + ts-jest, ESM (`NODE_OPTIONS=--experimental-vm-modules`), suites under
+- Jest + SWC, ESM (`NODE_OPTIONS=--experimental-vm-modules`), suites under
   `src/idb/__tests__/`, `src/orchestrator/__tests__/`,
   `src/parser/__tests__/`. Unit tests spy on `IDBManager`'s private
   `executeCommand` or inject mock collaborators — no real simulator calls.
+  SWC transpiles TypeScript as ESM; `npm run typecheck` independently checks
+  source and tests using TypeScript 7 without emitting files.
+- The toolchain uses Node 24 LTS (CI: 24.22.1) and npm 12.2.0, with Node 24
+  types. CI uses the `macos-26` ARM64 image for the native idb prerequisites.
 - External binaries and installers, each with its own source:
   - **Xcode** provides `xcrun` and its `simctl` subcommand (device listing,
     boot, shutdown). Xcode with iOS simulators installed is a stated
     requirement.
   - **`idb` CLI** (facebook/idb — UI interaction, app install/launch/
-    terminate, screenshots, logs) comes from the `idb-companion`
-    Homebrew formula plus the `fb-idb` **Python** client installed with `pip`.
-  - **Homebrew** is the installer channel for `idb-companion`
-    (`brew tap facebook/fb && brew install idb-companion`), and a Python
-    virtual environment receives `pip install --upgrade pip` followed by
-    `pip install fb-idb`; both run via `scripts/install_dependencies.sh`
-    during `npm install`/`npm ci` (macOS + Homebrew + active venv required).
+    terminate, screenshots, logs) and **`idb_companion`** come from the official
+    `facebook/fb/idb` Homebrew metapackage, currently 1.7.6. Its `idb-cli`
+    dependency owns the Python environment; `idb-companion` owns the native
+    executable and adjacent resources.
+  - **Homebrew** installation runs via `scripts/install_dependencies.sh`
+    during `npm install`/`npm ci` (macOS 15+, arm64, Homebrew and Xcode 26+
+    required). The script verifies executable provenance and matching versions;
+    no project Python venv is used. Homebrew follows the current stable tap,
+    independently of `package-lock.json`.
   - `IDBManager` validates idb availability before simulator operations via
     `idb list-targets`.
 

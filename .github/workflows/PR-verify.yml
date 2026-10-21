@@ -4,13 +4,13 @@ on:
   pull_request:
 
 env:
-  NODE_VERSION: '20.x'
-  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '24.22.1'
+  NPM_VERSION: '12.2.0'
 
 jobs:
   verify:
     name: Verify
-    runs-on: macos-latest
+    runs-on: macos-26
     permissions:
       contents: read
       pull-requests: read
@@ -21,29 +21,23 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Setup Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Create and activate Python virtual environment
-        run: |
-          python -m venv venv
-          source venv/bin/activate
-          python -m pip install --upgrade pip
-          echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
-          echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
-
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: Setup npm
         run: |
-          source venv/bin/activate
-          npm ci
+          npm install --global npm@${{ env.NPM_VERSION }}
+          node --version
+          npm --version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check types
+        run: npm run typecheck
 
       - name: Build
         run: npm run build
@@ -77,7 +71,8 @@ jobs:
 
       - name: Execute repolinter
         run: |
-          npm install -g repolinter@v0.11.2
+          npm install --global npm@${{ env.NPM_VERSION }}
+          npm install -g repolinter@0.12.0
           repolinter lint .
 
   reuse-compliance:
