@@ -91,6 +91,10 @@ npm start
 
 # Run tests
 npm test
+
+# Run opt-in integration tests against a real, disposable simulator
+# (never touch your existing simulators; requires idb + Xcode locally)
+npm run test:integration
 ```
 
 The installation process will automatically:
@@ -339,6 +343,51 @@ const result = await useMcpTool({
   }
 });
 ```
+
+## 🧪 Testing
+
+### Mocked unit tests (default)
+
+`npm test` runs only the mocked unit suites under `src/**/__tests__/`. They
+never create, boot, or modify any simulator:
+
+- `CommandWiring.test.ts` asserts a hand-written canonical table: every parser
+  example reaches exactly one `IDBManager` method with exact arguments, and no
+  other method is called. Unsupported commands fail with
+  `Command not supported by the IDB manager: <method>` and zero manager calls.
+- `CommandRegressionMatrix.test.ts` covers each regression class fixed by
+  PR #71 (exact command mapping, case/leading-zero preservation, earliest and
+  longest parser match, explicit crash-log deletion scope, session threading).
+- `IDBManager.test.ts` pins the `idb` / `xcrun simctl` argv, response, and
+  error contracts of the newly wired commands. These are **wiring contracts
+  only**: passing here does not prove the real CLI accepts those arguments.
+
+### Opt-in integration tests (real simulator)
+
+```bash
+npm run test:integration
+```
+
+Runs only with the dedicated Jest config (`jest.integration.config.js`) and
+`IOS_SIM_INTEGRATION=1`; it is never enabled by `npm test` or CI. The suite:
+
+1. Creates exactly **one disposable simulator** named `mcp-integration-<id>`
+   from an available runtime/device pair (polled for real `Booted` state —
+   no blind sleeps).
+2. Drives the full stack through the **real MCP protocol**: spawns
+   `dist/index.js` and speaks JSON-RPC over stdio with the MCP SDK Client
+   (transport → parser → adapters → `IDBManager` → `idb`/`simctl`).
+3. Asserts observable effects: owned device in the inventory, accurate booted
+   listing, PNG signature of screenshots, Safari launch/list/terminate,
+   URL opening, and uninstall/`bundleId` truthfulness with a compiled fixture
+   app (`com.inditex.mcp.fixture.demo`).
+4. Verifies unsupported commands fail honestly over the wire.
+5. Guarantees cleanup: teardown shuts down and deletes the owned device by
+   its exact UDID even when tests fail. Existing simulators are never
+   touched; every run asserts their recorded pre-run state is unchanged.
+
+Requires `idb` and `fb-idb` already installed (`npm ci` on macOS). The run
+takes several minutes (simulator boot + fixture build).
 
 ## 🙏 Acknowledgments
 

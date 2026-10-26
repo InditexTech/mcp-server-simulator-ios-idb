@@ -17,6 +17,7 @@ path = [
     "repolinter.json",
     "tsconfig.json",
     "jest.config.js",
+    "jest.integration.config.js",
     "glama.json",
     "sonar-project.properties",
 ]
@@ -55,5 +56,10 @@ SPDX-License-Identifier = "Apache-2.0"
 
 [[annotations]]
 path = "src/**/__tests__/*"
+SPDX-FileCopyrightText = "2025 Industria Textil de Diseño, S.A."
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "src/**/__integration__/**"
 SPDX-FileCopyrightText = "2025 Industria Textil de Diseño, S.A."
 SPDX-License-Identifier = "Apache-2.0"
