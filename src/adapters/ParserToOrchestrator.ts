@@ -22,22 +22,62 @@ export class ParserToOrchestrator {
   constructor(commandFactory: CommandFactory) {
     this.commandFactory = commandFactory;
     
-    // Mapping natural language commands to CommandType
+    // Canonical command names, exactly as emitted by the parser definitions
+    // in src/parser/commands/. Matching is exact: substring matching sent
+    // "uninstall app" to INSTALL_APP and "list crash logs" to GET_SYSTEM_LOGS.
     this.commandMappings = {
-      // English command names, as emitted by the parser
+      // Simulator management commands
       'create session': CommandType.CREATE_SIMULATOR_SESSION,
       'end session': CommandType.TERMINATE_SIMULATOR_SESSION,
       'list simulators': CommandType.LIST_AVAILABLE_SIMULATORS,
       'list booted simulators': CommandType.LIST_BOOTED_SIMULATORS,
       'boot simulator': CommandType.BOOT_SIMULATOR,
       'shutdown simulator': CommandType.SHUTDOWN_SIMULATOR,
+      'focus simulator': CommandType.FOCUS_SIMULATOR,
+
+      // Application management commands
       'install app': CommandType.INSTALL_APP,
       'launch app': CommandType.LAUNCH_APP,
       'terminate app': CommandType.TERMINATE_APP,
+      'uninstall app': CommandType.UNINSTALL_APP,
+      'list apps': CommandType.LIST_APPS,
+
+      // UI interaction commands
+      'tap': CommandType.TAP,
+      'swipe': CommandType.SWIPE,
+      'press device button': CommandType.PRESS_BUTTON,
+      'input text': CommandType.INPUT_TEXT,
+      'press key': CommandType.PRESS_KEY,
+      'press key sequence': CommandType.PRESS_KEY_SEQUENCE,
+
+      // Accessibility commands
+      'describe elements': CommandType.DESCRIBE_ALL_ELEMENTS,
+      'describe point': CommandType.DESCRIBE_POINT_ELEMENT,
+
+      // Capture and logging commands
       'capture screen': CommandType.TAKE_SCREENSHOT,
+      'record video': CommandType.START_VIDEO_RECORDING,
+      'stop recording': CommandType.STOP_VIDEO_RECORDING,
       'get logs': CommandType.GET_SYSTEM_LOGS,
 
-      // Simulator management commands
+      // Debug commands
+      'start debug': CommandType.START_DEBUG_SERVER,
+      'stop debug': CommandType.STOP_DEBUG_SERVER,
+      'debug status': CommandType.GET_DEBUG_SERVER_STATUS,
+      'list crash logs': CommandType.LIST_CRASH_LOGS,
+      'show crash log': CommandType.GET_CRASH_LOG,
+      'delete crash logs': CommandType.DELETE_CRASH_LOGS,
+
+      // Miscellaneous commands
+      'install dylib': CommandType.INSTALL_DYLIB,
+      'open url': CommandType.OPEN_URL,
+      'clear keychain': CommandType.CLEAR_KEYCHAIN,
+      'set location': CommandType.SET_LOCATION,
+      'add media': CommandType.ADD_MEDIA,
+      'approve permissions': CommandType.APPROVE_PERMISSIONS,
+      'update contacts': CommandType.UPDATE_CONTACTS,
+
+      // Legacy aliases (mostly Spanish), accepted from custom IParser implementations
       'crear sesión': CommandType.CREATE_SIMULATOR_SESSION,
       'crear simulador': CommandType.CREATE_SIMULATOR_SESSION,
       'iniciar simulador': CommandType.CREATE_SIMULATOR_SESSION,
@@ -59,10 +99,8 @@ export class ParserToOrchestrator {
       'terminar app': CommandType.TERMINATE_APP,
       
       // UI interaction commands
-      'tap': CommandType.TAP,
       'tocar': CommandType.TAP,
       'pulsar': CommandType.TAP,
-      'swipe': CommandType.SWIPE,
       'deslizar': CommandType.SWIPE,
       
       // Screenshot and logs commands
@@ -109,16 +147,8 @@ export class ParserToOrchestrator {
   private mapToCommandType(naturalCommand: string): CommandType {
     const lowerCommand = naturalCommand.toLowerCase();
     
-    // Look for exact match
-    if (this.commandMappings[lowerCommand]) {
+    if (Object.prototype.hasOwnProperty.call(this.commandMappings, lowerCommand)) {
       return this.commandMappings[lowerCommand];
-    }
-    
-    // Look for partial match
-    for (const [key, value] of Object.entries(this.commandMappings)) {
-      if (lowerCommand.includes(key)) {
-        return value;
-      }
     }
     
     // If no match found, throw error
@@ -169,6 +199,13 @@ export class ParserToOrchestrator {
         }
         break;
         
+      case CommandType.GET_SYSTEM_LOGS:
+        // The parser extracts bundleId; IDBManager reads it from options.bundle
+        if (parameters.bundleId !== undefined) {
+          parameters.options = { ...parameters.options, bundle: String(parameters.bundleId) };
+        }
+        break;
+
       case CommandType.CREATE_SIMULATOR_SESSION:
         // Convert autoboot to boolean if it's a string
         if (typeof parameters.autoboot === 'string') {

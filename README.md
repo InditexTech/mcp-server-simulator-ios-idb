@@ -258,22 +258,22 @@ The NLParser supports the following natural language commands:
 ### ♿ Accessibility
 | Command | Description | Example |
 |---------|-------------|---------|
-| Describe elements | Lists all accessibility elements | "describe all elements", "show accessibility elements" |
-| Describe point | Describes element at coordinates | "describe point 100, 200", "what's at 150, 300" |
+| Describe elements | Lists all accessibility elements (not implemented yet) | "describe all elements", "show accessibility elements" |
+| Describe point | Describes element at coordinates (not implemented yet) | "describe point 100, 200", "what's at 150, 300" |
 
 ### 📸 Capture and Logs
 | Command | Description | Example |
 |---------|-------------|---------|
 | Take screenshot | Captures a screenshot | "take screenshot", "capture screen" |
-| Record video | Records screen activity | "record video /path/output.mp4" |
-| Stop recording | Stops video recording | "stop recording", "stop video recording" |
+| Record video | Records screen activity (not implemented yet) | "record video /path/output.mp4" |
+| Stop recording | Stops video recording (not implemented yet) | "stop recording", "stop video recording" |
 | Get logs | Retrieves system or app logs | "get logs", "get logs for com.example.app" |
 
 ### 🐛 Debug
 | Command | Description | Example |
 |---------|-------------|---------|
-| Start debug | Starts a debug session | "debug app com.example.app", "start debug com.example.app" |
-| Stop debug | Stops a debug session | "stop debug", "terminate debug session" |
+| Start debug | Starts a debug session (not implemented yet) | "debug app com.example.app", "start debug com.example.app" |
+| Stop debug | Stops a debug session (not implemented yet) | "stop debug", "terminate debug session" |
 | Debug status | Gets debug session status | "debug status", "show debug info" |
 
 ### 💥 Crash Logs
@@ -281,7 +281,7 @@ The NLParser supports the following natural language commands:
 |---------|-------------|---------|
 | List crash logs | Lists available crash logs | "list crash logs", "show crash logs" |
 | Show crash log | Shows content of a crash log | "show crash log crash_2023-01-01" |
-| Delete crash logs | Deletes crash logs | "delete crash logs", "clear crash logs" |
+| Delete crash logs | Deletes crash logs of an app, or all of them when asked explicitly | "delete crash logs for com.example.app", "delete all crash logs" |
 
 ### 🔧 Additional Commands
 | Command | Description | Example |

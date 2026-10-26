@@ -11,6 +11,22 @@ import { CaptureCommands } from './commands/CaptureCommands.js';
 import { DebugCommands } from './commands/DebugCommands.js';
 import { MiscCommands } from './commands/MiscCommands.js';
 
+// Free-text parameters are passed through verbatim: converting them would turn
+// a PIN like "0123" into 123 or the text "TRUE" into the boolean true.
+const VERBATIM_PARAMETERS = new Set([
+  'text',
+  'crashName',
+  'bundleId',
+  'url',
+  'appPath',
+  'outputPath',
+  'dylibPath',
+  'dbPath',
+  'deviceName',
+  'udid',
+  'recordingId'
+]);
+
 /**
  * Natural language parser implementation
  */
@@ -103,6 +119,9 @@ export class NLParser implements IParser {
     
     // Normalize numeric values
     for (const [key, value] of Object.entries(normalizedParameters)) {
+      if (VERBATIM_PARAMETERS.has(key)) {
+        continue;
+      }
       if (typeof value === 'string' && !isNaN(Number(value))) {
         normalizedParameters[key] = Number(value);
       }
@@ -110,6 +129,9 @@ export class NLParser implements IParser {
     
     // Normalize booleans
     for (const [key, value] of Object.entries(normalizedParameters)) {
+      if (VERBATIM_PARAMETERS.has(key)) {
+        continue;
+      }
       if (typeof value === 'string' && ['true', 'false'].includes(value.toLowerCase())) {
         normalizedParameters[key] = value.toLowerCase() === 'true';
       }
