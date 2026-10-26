@@ -1,0 +1,36 @@
+README.md
+  h_54a1c5973b9675 94-97,347-391
+REUSE.toml
+  h_54a1c5973b9675 20,61-65
+jest.integration.config.js
+  h_54a1c5973b9675 1-55
+package.json
+  h_54a1c5973b9675 10
+src/__integration__/mcpProtocol.integration.test.js
+  h_54a1c5973b9675 1-211
+src/__integration__/support/fixtureApp.js
+  h_54a1c5973b9675 1-113
+src/__integration__/support/globalSetup.js
+  h_54a1c5973b9675 1-61
+src/__integration__/support/globalTeardown.js
+  h_54a1c5973b9675 1-28
+src/__integration__/support/mcpClient.js
+  h_54a1c5973b9675 1-80
+src/__integration__/support/simctl.js
+  h_54a1c5973b9675 1-83
+src/__integration__/support/simulatorHarness.js
+  h_54a1c5973b9675 1-106
+src/__integration__/support/state.js
+  h_54a1c5973b9675 1-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "4f6f2685bc774f7a2db6fe9c088454cb6be89d74",
+  "prompts": {},
+  "humans": {
+    "h_54a1c5973b9675": {
+      "author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
