@@ -1,0 +1,41 @@
+README.md
+  s_1796ed762ec0dd::t_37f120d1795db6 261-262,268-269,275-276,284
+src/adapters/OrchestratorToIDB.ts
+  s_1796ed762ec0dd::t_32c9eac600611a 25-38,49-50,61,85,94,101,109,118,127,145,152,159,164-288,292,298
+src/adapters/ParserToOrchestrator.ts
+  s_1796ed762ec0dd::t_768cb5b97e48c8 25-27,29,36-38,42-57,59-60,63-80,150,202-208
+src/orchestrator/MCPOrchestrator.ts
+  s_1796ed762ec0dd::t_f334335cbd3373 4,33,53,77
+src/orchestrator/__tests__/CommandWiring.test.ts
+  s_1796ed762ec0dd::t_2148e059c9083f 1-183
+src/orchestrator/interfaces/IOrchestratorCommand.ts
+  s_1796ed762ec0dd::t_988aa03bc1d40e 19-20,25-27,31-39,42-43,46-63,67
+src/parser/NLParser.ts
+  s_1796ed762ec0dd::t_2ce8340468ad84 14-29,122-124,132-134
+src/parser/__tests__/NLParser.test.ts
+  s_1796ed762ec0dd::t_cafdf8d64793f9 30-44
+src/parser/commands/AppCommands.ts
+  s_1796ed762ec0dd::t_6ce1d4ee642036 11-14
+src/parser/commands/BaseCommandDefinition.ts
+  s_1796ed762ec0dd::t_6d74a1a24d892e 24-38,42-54,56-61,66-67,71,74-87
+src/parser/commands/CommandRegistry.ts
+  s_1796ed762ec0dd::t_80b918410e1d0d 5,15,17-19,23-26
+src/parser/commands/DebugCommands.ts
+  s_1796ed762ec0dd::t_d2397f3ccd7a9f 120-124,126,130-134,136-139
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "317e4a321932a490ea40f5458b2cf4899068bef0",
+  "prompts": {},
+  "sessions": {
+    "s_1796ed762ec0dd": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e871f42f5ffeSJxVn7aGpI9hkz",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "DevStudio <srvcdevstudio@inditex.com>"
+    }
+  }
+}
