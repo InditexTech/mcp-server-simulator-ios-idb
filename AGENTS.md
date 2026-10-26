@@ -115,7 +115,8 @@ it active whenever the server runs.
   run when `IOS_SIM_INTEGRATION=1` is set; otherwise they are skipped. When
   enabled, `globalSetup.ts` creates and boots a disposable simulator
   (`mcp-integration-<timestamp>`, newest iOS runtime unless `IOS_SIM_RUNTIME` /
-  `IOS_SIM_DEVICE_TYPE` are set) and `globalTeardown.ts` deletes it; existing
+  `IOS_SIM_DEVICE_TYPE` are set) and `globalTeardown.ts` deletes it. Setup also
+  deletes `mcp-integration-*` simulators left by interrupted runs; other
   simulators are not touched. The tests drive `dist/index.js` over the MCP
   stdio transport. Running them still requires the approval above, plus `idb`
   installed and the Python venv active. CI runs them in

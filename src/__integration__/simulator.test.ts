@@ -90,8 +90,9 @@ describeOnSimulator('MCP server against a real iOS Simulator', () => {
   it('takes a screenshot', async () => {
     const outputPath = path.join(artifactsDir, 'screenshot.png');
 
-    await runOk(`take screenshot to ${outputPath}`);
+    const result = await runOk(`take screenshot to ${outputPath}`);
 
+    expect(result.data).toBe(outputPath);
     expect(fs.readFileSync(outputPath).subarray(0, PNG_SIGNATURE.length)).toEqual(PNG_SIGNATURE);
   });
 
@@ -104,18 +105,27 @@ describeOnSimulator('MCP server against a real iOS Simulator', () => {
   });
 
   it('launches and terminates Safari', async () => {
-    await runOk(`launch app ${SAFARI}`);
-    await runOk(`terminate app ${SAFARI}`);
+    const launched = await runOk(`launch app ${SAFARI}`);
+    const terminated = await runOk(`terminate app ${SAFARI}`);
+
+    expect(launched.data).toEqual({ bundleId: SAFARI });
+    expect(terminated.data).toEqual({ bundleId: SAFARI });
   });
 
   it('opens a URL', async () => {
-    await runOk('open url https://example.com');
+    const result = await runOk('open url https://example.com');
+
+    expect(result.data).toEqual({ url: 'https://example.com' });
   });
 
   it('sets the location', async () => {
-    await runOk('set location 40.4168, -3.7038');
+    const result = await runOk('set location 40.4168, -3.7038');
+
+    expect(result.data).toEqual({ latitude: 40.4168, longitude: -3.7038 });
   });
 
+  // A fresh simulator has no crash logs, so this checks the command runs but
+  // not how idb's crash list output is parsed (needs a fixture app, see #76)
   it('lists crash logs', async () => {
     const result = await runOk('list crash logs');
 

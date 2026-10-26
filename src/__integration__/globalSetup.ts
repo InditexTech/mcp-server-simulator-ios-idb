@@ -21,6 +21,7 @@ interface SimRuntime {
 }
 
 const BOOT_TIMEOUT_MS = 10 * 60 * 1000;
+const SIMULATOR_NAME_PREFIX = 'mcp-integration-';
 
 async function simctl(args: string[], timeout = 60000): Promise<string> {
   const { stdout } = await execFileAsync('xcrun', ['simctl', ...args], {
@@ -77,9 +78,39 @@ async function pickRuntimeAndDeviceType(): Promise<{ runtime: string; deviceType
 }
 
 /**
+ * Shuts down and deletes a simulator, reporting failures instead of throwing
+ */
+async function deleteSimulator(udid: string): Promise<void> {
+  // Shutdown fails if the simulator is already off; deleting is what matters
+  await simctl(['shutdown', udid], 120000).catch(() => undefined);
+  try {
+    await simctl(['delete', udid], 120000);
+  } catch (error) {
+    process.stderr.write(`Could not delete simulator ${udid}: ${error}\n`);
+  }
+}
+
+/**
+ * Deletes simulators left behind by earlier runs that never reached
+ * globalTeardown (e.g. interrupted with Ctrl-C)
+ */
+async function deleteLeftoverSimulators(): Promise<void> {
+  const { devices } = JSON.parse(await simctl(['list', '--json', 'devices'])) as {
+    devices: Record<string, Array<{ udid: string; name: string }>>;
+  };
+  const leftovers = Object.values(devices)
+    .flat()
+    .filter(device => device.name.startsWith(SIMULATOR_NAME_PREFIX));
+  for (const device of leftovers) {
+    process.stderr.write(`Deleting leftover simulator ${device.name} (${device.udid})\n`);
+    await deleteSimulator(device.udid);
+  }
+}
+
+/**
  * Creates and boots a disposable simulator for the integration tests and
- * exposes its UDID through IOS_SIM_INTEGRATION_UDID. Existing simulators are
- * never touched; globalTeardown deletes this one.
+ * exposes its UDID through IOS_SIM_INTEGRATION_UDID. Only simulators named
+ * mcp-integration-* are created or deleted; globalTeardown deletes this one.
  */
 export default async function globalSetup(): Promise<void> {
   if (process.env.IOS_SIM_INTEGRATION !== '1') {
@@ -87,8 +118,9 @@ export default async function globalSetup(): Promise<void> {
     return;
   }
 
+  await deleteLeftoverSimulators();
   const { runtime, deviceType } = await pickRuntimeAndDeviceType();
-  const name = `mcp-integration-${Date.now()}`;
+  const name = `${SIMULATOR_NAME_PREFIX}${Date.now()}`;
   process.stderr.write(`\nCreating simulator ${name} (${deviceType}, ${runtime})\n`);
   const udid = await simctl(['create', name, deviceType, runtime]);
   process.env.IOS_SIM_INTEGRATION_UDID = udid;
@@ -97,7 +129,8 @@ export default async function globalSetup(): Promise<void> {
     // Boots the device if needed and waits until it has finished booting
     await simctl(['bootstatus', udid, '-b'], BOOT_TIMEOUT_MS);
   } catch (error) {
-    await simctl(['delete', udid]).catch(() => undefined);
+    process.stderr.write(`Simulator ${udid} failed to boot: ${error}\n`);
+    await deleteSimulator(udid);
     delete process.env.IOS_SIM_INTEGRATION_UDID;
     throw error;
   }

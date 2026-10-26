@@ -5,6 +5,7 @@ on:
     paths:
       - 'src/**'
       - 'package*.json'
+      - 'tsconfig.json'
       - 'jest.integration.config.js'
       - 'scripts/install_dependencies.sh'
       - '.github/workflows/integration.yml'
@@ -16,7 +17,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: integration-${{ github.ref }}
+  group: integration-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -43,7 +44,7 @@ jobs:
           source venv/bin/activate
           python -m pip install --upgrade pip
           echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
-          echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
+          echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
 
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
