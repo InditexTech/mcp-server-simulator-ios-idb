@@ -1,0 +1,16 @@
+src/orchestrator/__tests__/CommandRegressionMatrix.test.ts
+  h_54a1c5973b9675 1-257
+src/orchestrator/__tests__/CommandWiring.test.ts
+  h_54a1c5973b9675 18-68,71,73-84,86-88,90,92-94,96-98,100-136,138-164,166-194,196-202,204-224,226-256,258-293,295-317,319-321,323-327,329-330,333-335,337-340,343-346,348-357,359-361,363-370,372,375-376,378,380-381
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "c2d1c707304b69750afbce9f0624f15375e126bb",
+  "prompts": {},
+  "humans": {
+    "h_54a1c5973b9675": {
+      "author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
