@@ -1,0 +1,74 @@
+.github/ISSUE_TEMPLATE/1-bug.yml
+  h_c93d154c7c7074 1-50
+.github/ISSUE_TEMPLATE/2-feature.yml
+  h_c93d154c7c7074 1-33
+.github/ISSUE_TEMPLATE/3-other.yml
+  h_c93d154c7c7074 1-37
+.github/ISSUE_TEMPLATE/config.yml
+  h_c93d154c7c7074 1-3
+.github/PULL_REQUEST_TEMPLATE.md
+  h_c93d154c7c7074 1-2,4-5,7,9,11,13-17,19,21
+.github/inditextech-ci-java.json
+  h_c93d154c7c7074 1-17
+.github/inditextech-ci-sync-manifest.json
+  h_c93d154c7c7074 1-75
+.github/workflows/code-maven_java-PR_verify.yml
+  h_c93d154c7c7074 1-2,4,8-15,18-19,22,25,27-28,31,34-61,63-64,66-69,71-74,76-80,82-84,86,88-89,91-92,94-97,99-100,102-104,106,108-118
+.github/workflows/code-maven_java-QA_e2e_karate.yml
+  h_c93d154c7c7074 76,117,137,173-183,235,251-252,255,283,285,294-295,299,307,327-328,335,403-406,422,434-437,453,455,462,465,467,474-477,494-497
+.github/workflows/code-maven_java-QA_integration.yml
+  h_c93d154c7c7074 58,121,138,141,143,146
+.github/workflows/code-maven_java-QA_mutation.yml
+  h_c93d154c7c7074 58,121,136-137,140
+.github/workflows/code-maven_java-QA_unit.yml
+  h_c93d154c7c7074 58,121,138,141,143,146
+.github/workflows/code-maven_java-build_snapshot.yml
+  h_c93d154c7c7074 1-278
+.github/workflows/code-maven_java-release-core.yml
+  h_c93d154c7c7074 1-1510
+.github/workflows/code-maven_java-release.yml
+  h_c93d154c7c7074 1-2,4-5,12-13,15,18-26,28-30,33-44,46-60,62-63,66,68-69,71-74,77-95,97-114,116-124,126-130,132-134,136,138-139,141-142,144-147,149-150,152-153,155-156,158-161,163-164,166-212,214-215,217-218,220,222-225,227-232,235-244
+.github/workflows/code-maven_java-sonarcloud-analysis.yml
+  h_c93d154c7c7074 1-2,4-5,10-20,23-24,27-49,51,53-54,57,59-86,88-89,91-94,96-99,101-105,107-109,111,113-114,116-117,119-122,124-125,127-131,133-142,144-145,147-219,221-222,224-235
+.github/workflows/code-release_preview.yml
+  h_c93d154c7c7074 1-2,4,8-16,19-20,25-31,33-36,38-39,43,45-72,74-85,87-91,93-95,97,99-100,102-103,105-108,110-118,120-124,126-129,133,135-141,143-151,153-175,177-224,226-241
+.github/workflows/codeql.yml
+  h_c93d154c7c7074 1-4,7-8,10-21,24-74,76-88,90-104
+.github/workflows/docouture-publish.yml
+  h_c93d154c7c7074 148
+.github/workflows/docouture-release.yml
+  h_c93d154c7c7074 253
+.github/workflows/pr-verify.yml
+  h_c93d154c7c7074 1-2,4-6,11-13,16-64,66-78,80-81,84-85,87
+.github/workflows/push-verify.yml
+  h_c93d154c7c7074 1-2,4-6,9,11-13,16-24,26-29,31-32,34-35,37-50,52-62,64-67
+.github/workflows/scorecard-analysis.yml
+  h_c93d154c7c7074 1-104
+.github/workflows/sync-to-develop.yml
+  h_c93d154c7c7074 1-4,7-12,15-20,22-27,29-36,38-57,60-61,64-70,72-92,94-96,98-101,103-117,120,122-125,128-136,138-139,142-149,151-155,157,159-170,172-177,179-192,194-233,236-240,242-243,245-248
+.sync-exclude
+  h_c93d154c7c7074 1-6
+CODE_OF_CONDUCT.md
+  h_c93d154c7c7074 2,7,9,11,13
+NOTICE
+  h_c93d154c7c7074 1-3
+REUSE.toml
+  h_c93d154c7c7074 39-44,162-174
+SECURITY.md
+  h_c93d154c7c7074 1-2,4-5,7,9,11,13-41
+code/pom.xml
+  h_c93d154c7c7074 126
+repolinter.json
+  h_c93d154c7c7074 1-258
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e0b6bd0f31b76f8e9fa2f63b69e6a6fde84d4cb0",
+  "prompts": {},
+  "humans": {
+    "h_c93d154c7c7074": {
+      "author": "Jesus Manuel Piñeiro Cid <jesusmpc@inditex.com>"
+    }
+  }
+}

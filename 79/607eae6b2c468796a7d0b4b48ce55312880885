@@ -1,0 +1,19 @@
+package-lock.json
+  s_8257c7bfc23fa9::t_dd657843a325dc 14,4755-4757,4764
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "79607eae6b2c468796a7d0b4b48ce55312880885",
+  "prompts": {},
+  "sessions": {
+    "s_8257c7bfc23fa9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ed58ce9e4ffeEpfeEGSjMBTtQw",
+        "model": "inditex/KAIA/glm-5.3-flash"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}

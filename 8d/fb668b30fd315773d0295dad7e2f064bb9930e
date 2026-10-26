@@ -1,0 +1,21 @@
+.github/workflows/docs-build_snapshot.yml
+  s_07508c577e35a6::t_e2c74540cb82f2 28,57,133
+.github/workflows/docs-release.yml
+  s_07508c577e35a6::t_63f17ca498a677 61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8dfb668b30fd315773d0295dad7e2f064bb9930e",
+  "prompts": {},
+  "sessions": {
+    "s_07508c577e35a6": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "67de6347-ddef-4ca3-a853-379ba9080a30",
+        "model": "unknown"
+      },
+      "human_author": "Vanesa López Beade <vanesalbe@ext.inditex.com>"
+    }
+  }
+}

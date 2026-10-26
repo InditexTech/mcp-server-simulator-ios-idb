@@ -1,0 +1,31 @@
+code/package-lock.json
+  s_84bb5b3c900b57::t_426db62546d5c4 30,3845-3847,3850,3852,3857-3874,3883-3891
+code/package.json
+  s_84bb5b3c900b57::t_cc9c81330b84dd 84
+code/src/api/v2/controllers/postUploadImage.ts
+  s_84bb5b3c900b57::t_24c3262e82caed 6,46-47
+code/src/workloads/jobs/flip-image/job.ts
+  s_84bb5b3c900b57::t_213f4a49314ad1 267
+code/src/workloads/jobs/grayscale-image/job.ts
+  s_84bb5b3c900b57::t_2730465319b9a7 254
+code/src/workloads/jobs/negate-image/job.ts
+  s_84bb5b3c900b57::t_63a5f484a788ed 252
+code/src/workloads/jobs/remove-image-background/job.ts
+  s_84bb5b3c900b57::t_996eefba2c5ad6 22,257
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "157814a31f5efd1d02564a0ca7dce43b132415f8",
+  "prompts": {},
+  "sessions": {
+    "s_84bb5b3c900b57": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f8583e9adffele2aA145C1By32",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Jesus Manuel Piñeiro Cid <jesusmpc@inditex.com>"
+    }
+  }
+}

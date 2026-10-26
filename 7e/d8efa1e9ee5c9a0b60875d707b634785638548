@@ -1,0 +1,14 @@
+docs/src/modules/ROOT/pages/index.adoc
+  h_c93d154c7c7074 113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "7ed8efa1e9ee5c9a0b60875d707b634785638548",
+  "prompts": {},
+  "humans": {
+    "h_c93d154c7c7074": {
+      "author": "Jesus Manuel Piñeiro Cid <jesusmpc@inditex.com>"
+    }
+  }
+}

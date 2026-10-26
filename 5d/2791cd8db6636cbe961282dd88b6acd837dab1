@@ -1,0 +1,31 @@
+code/Dockerfile
+  s_5b044b4aeed76f::t_369fb697938a90 19
+code/package-lock.json
+  s_84bb5b3c900b57::t_a29a71942072ca 37,1117-1119,1125,1147-1149,1152,1163-1165,1168,1173-1175,1178,1189-1191,1194,1209-1211,1214,6574-6585,6595,6679-6681,6684
+code/package.json
+  s_5b044b4aeed76f::t_eb8bda6f8c536b 44,91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "5d2791cd8db6636cbe961282dd88b6acd837dab1",
+  "prompts": {},
+  "sessions": {
+    "s_5b044b4aeed76f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f84600277ffe3v2iHw4md2YsHG",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Jesus Manuel Piñeiro Cid <jesusmpc@inditex.com>"
+    },
+    "s_84bb5b3c900b57": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f8583e9adffele2aA145C1By32",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Jesus Manuel Piñeiro Cid <jesusmpc@inditex.com>"
+    }
+  }
+}

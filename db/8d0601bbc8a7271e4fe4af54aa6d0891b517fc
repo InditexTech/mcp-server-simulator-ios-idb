@@ -1,0 +1,27 @@
+AGENTS.md
+  s_8257c7bfc23fa9::t_c855fe5571a860 1-137
+ARCHITECTURE.md
+  s_8257c7bfc23fa9::t_9a6c2c4ef83e55 1-208
+README.md
+  s_8257c7bfc23fa9::t_a67a0c0ea77739 13,137-149,151-155,158-162,164,168,171,180-185,188,191-193,309-310
+jest.config.js
+  s_8257c7bfc23fa9::t_3eb24e1ff4b100 1,9
+package-lock.json
+  s_8257c7bfc23fa9::t_75726fd908f846 14,18-19,24,204-206,211,218-220,488-490,497,694-696,769-781,1107-1109,1560-1857,1969-2288,2290-2297,2299-2305,2307-2313,2316-2322,2324-2331,2785-2797,2918-2920,2981-2983,3001-3005,3015-3017,3019,3083-3085,3379-3381,3675-3677,3679,3681-3699,4886-4892,5137-5139,5381-5383,5387,6096-6098,6102,6105,6107-6127,6185-6187,6216-6218,6225
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "db8d0601bbc8a7271e4fe4af54aa6d0891b517fc",
+  "prompts": {},
+  "sessions": {
+    "s_8257c7bfc23fa9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ed58ce9e4ffeEpfeEGSjMBTtQw",
+        "model": "inditex/KAIA/glm-5.3-flash"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}

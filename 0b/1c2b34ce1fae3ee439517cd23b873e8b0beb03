@@ -1,0 +1,16 @@
+.github/workflows/docs-build_snapshot.yml
+  h_e3804906c674bd 15-18,51-54
+.github/workflows/docs-release.yml
+  h_e3804906c674bd 31-33,53-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "0b1c2b34ce1fae3ee439517cd23b873e8b0beb03",
+  "prompts": {},
+  "humans": {
+    "h_e3804906c674bd": {
+      "author": "Ivan Alvarez Sabin <ivanasabi@ext.inditex.com>"
+    }
+  }
+}

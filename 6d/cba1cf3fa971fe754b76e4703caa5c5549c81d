@@ -1,0 +1,14 @@
+REUSE.toml
+  h_8fe143308bc629 12-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "6dcba1cf3fa971fe754b76e4703caa5c5549c81d",
+  "prompts": {},
+  "humans": {
+    "h_8fe143308bc629": {
+      "author": "Mariano Alonso Ortiz <marianoao@inditex.com>"
+    }
+  }
+}

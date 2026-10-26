@@ -1,0 +1,21 @@
+docs/package-lock.json
+  s_0065b5f3a7cb36::t_51c1354cecb8d9 18-19,935-941,1334-1349,1481-1495,1976-1985,2213-2222,2428-2443,2529-2541,2549-2555,2605-2624,2651-2670,3153-3162,3218-3234,3318-3402,3413-3422,3829-3851,4100-4112,4153-4162,4393-4408,4515-4530
+docs/patches/@inditextech+docouture-antora-extensions+1.1.1.patch
+  s_0065b5f3a7cb36::t_738aca5e027529 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "79222fc2baa089c2a604a64e72c837377c4d1536",
+  "prompts": {},
+  "sessions": {
+    "s_0065b5f3a7cb36": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2c46a4b8ffeo1e9DOL3BPnUKm",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Jesus Manuel Piñeiro Cid <jesusmpc@inditex.com>"
+    }
+  }
+}

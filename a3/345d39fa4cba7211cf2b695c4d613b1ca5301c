@@ -1,0 +1,16 @@
+.github/workflows/PR-verify.yml
+  h_8fe143308bc629 16,22,35,53,58-59,66,72,86,92
+.github/workflows/sonar-branch-analysis.yml
+  h_8fe143308bc629 19,24,37,54,59-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "a3345d39fa4cba7211cf2b695c4d613b1ca5301c",
+  "prompts": {},
+  "humans": {
+    "h_8fe143308bc629": {
+      "author": "Mariano Alonso Ortiz <marianoao@inditex.com>"
+    }
+  }
+}

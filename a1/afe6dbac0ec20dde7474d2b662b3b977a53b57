@@ -1,0 +1,16 @@
+.github/workflows/docouture-publish.yml
+  h_c93d154c7c7074 148
+.github/workflows/docouture-release.yml
+  h_c93d154c7c7074 253
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a1afe6dbac0ec20dde7474d2b662b3b977a53b57",
+  "prompts": {},
+  "humans": {
+    "h_c93d154c7c7074": {
+      "author": "Jesus Manuel Piñeiro Cid <jesusmpc@inditex.com>"
+    }
+  }
+}

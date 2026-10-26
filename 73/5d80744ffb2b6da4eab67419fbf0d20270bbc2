@@ -1,0 +1,51 @@
+.tool-versions
+  s_50fb7fe3e64678::t_ecf7e99ac1d9e0 1
+docs/src/antora.yml
+  s_edc033a2de2cdb::t_b4ac83bf70d723 85,87-110
+docs/src/modules/ROOT/images/home-images.md
+  s_15467cf267c78b::t_5ae8ecac6a4fd1 3-59
+docs/src/modules/ROOT/pages/index.adoc
+  s_15467cf267c78b::t_00853d59d9defa 2,10-12,33,41,49,57,69,80,91,101
+REUSE.toml
+  s_8ea51d7084c1fd::t_8a07c629e47373 91-97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "735d80744ffb2b6da4eab67419fbf0d20270bbc2",
+  "prompts": {},
+  "sessions": {
+    "s_15467cf267c78b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fa2835db3ffeBUPmHhfTCRvriu",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Jesus Manuel Piñeiro Cid <jesusmpc@inditex.com>"
+    },
+    "s_50fb7fe3e64678": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fa2606880ffevvke7pXhgWgc6H",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Jesus Manuel Piñeiro Cid <jesusmpc@inditex.com>"
+    },
+    "s_8ea51d7084c1fd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05d5d-99c9-7103-99d5-8e733bd8e1de",
+        "model": "unknown"
+      },
+      "human_author": "Jesus Manuel Piñeiro Cid <jesusmpc@inditex.com>"
+    },
+    "s_edc033a2de2cdb": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fa2cf07cbffeG1Ggc7euzMRkWn",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Jesus Manuel Piñeiro Cid <jesusmpc@inditex.com>"
+    }
+  }
+}

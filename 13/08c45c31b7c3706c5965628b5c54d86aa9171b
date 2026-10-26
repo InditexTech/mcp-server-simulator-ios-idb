@@ -1,0 +1,19 @@
+.github/workflows/code-verify.yml
+  s_775892c4663db7::t_a40d826b28299f 3-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "1308c45c31b7c3706c5965628b5c54d86aa9171b",
+  "prompts": {},
+  "sessions": {
+    "s_775892c4663db7": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "4bd97d05-c828-45db-a998-94843836f2cf",
+        "model": "unknown"
+      },
+      "human_author": "Alejandro Montes <alejandromogarcia@ext.inditex.com>"
+    }
+  }
+}

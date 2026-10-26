@@ -1,0 +1,16 @@
+docs/antora-playbook.local.yml
+  h_c93d154c7c7074 78-84
+docs/antora-playbook.yml
+  h_c93d154c7c7074 144-158,160-163,340-360,362,364,366,368,370,372,374-376,378,380,382,384-386,388,390,392,394-396,398,400,402,404,406-408,410-412,414,416,418,420,422
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6fd1387e5be9666bb1c7364bf13367d8226a8108",
+  "prompts": {},
+  "humans": {
+    "h_c93d154c7c7074": {
+      "author": "Jesus Manuel Piñeiro Cid <jesusmpc@inditex.com>"
+    }
+  }
+}

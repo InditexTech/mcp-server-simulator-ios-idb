@@ -1,0 +1,19 @@
+code/migrations/20260805104500-feature-task-media-associations.cjs
+  s_60c9bbcf69e539::t_d47e553f2b3955 1-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "199ee02ba970a95c3ee444ccf556c60ca09225b8",
+  "prompts": {},
+  "sessions": {
+    "s_60c9bbcf69e539": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "11f687b1-15df-4bbd-9e88-aceac5dca6b2",
+        "model": "unknown"
+      },
+      "human_author": "Alejandro Montes <alejandromogarcia@ext.inditex.com>"
+    }
+  }
+}
