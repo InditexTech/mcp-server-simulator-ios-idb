@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { ParseResult } from '../interfaces/IParser.js';
-import { BaseCommandDefinition } from './BaseCommandDefinition.js';
+import { BaseCommandDefinition, CommandMatch, isBetterMatch } from './BaseCommandDefinition.js';
 
 export class CommandRegistry {
   private commandHandlers: BaseCommandDefinition[] = [];
@@ -12,11 +12,16 @@ export class CommandRegistry {
   }
 
   parseInstruction(text: string): ParseResult {
+    let best: CommandMatch | null = null;
     for (const handler of this.commandHandlers) {
-      const result = handler.parseCommand(text);
-      if (result) {
-        return result;
+      const match = handler.findBestMatch(text);
+      if (match && (!best || isBetterMatch(match.index, match.length, best))) {
+        best = match;
       }
+    }
+    
+    if (best) {
+      return best.result;
     }
     
     throw new Error(`Could not understand the instruction: ${text}`);

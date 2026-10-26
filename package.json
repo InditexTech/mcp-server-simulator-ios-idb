@@ -19,7 +19,6 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
-    "uuid": "^14.0.2",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -27,7 +26,6 @@
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.6.5",
-    "@types/uuid": "^11.0.0",
     "jest": "^30.5.2",
     "typescript": "^7.0.2"
   }

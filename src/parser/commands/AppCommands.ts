@@ -8,10 +8,10 @@ export class AppCommands extends BaseCommandDefinition {
     {
       command: 'install app',
       patterns: [
-        /instalar\s+(la\s+)?app(\s+en\s+la\s+ruta)?\s+(?<appPath>[^\s,]+)/i,
-        /instalar\s+(la\s+)?aplicación(\s+en\s+la\s+ruta)?\s+(?<appPath>[^\s,]+)/i,
-        /install\s+(the\s+)?app(\s+at)?\s+(?<appPath>[^\s,]+)/i,
-        /install\s+(the\s+)?application(\s+at)?\s+(?<appPath>[^\s,]+)/i
+        /\binstalar\s+(la\s+)?app(\s+en\s+la\s+ruta)?\s+(?<appPath>[^\s,]+)/i,
+        /\binstalar\s+(la\s+)?aplicación(\s+en\s+la\s+ruta)?\s+(?<appPath>[^\s,]+)/i,
+        /\binstall\s+(the\s+)?app(\s+at)?\s+(?<appPath>[^\s,]+)/i,
+        /\binstall\s+(the\s+)?application(\s+at)?\s+(?<appPath>[^\s,]+)/i
       ],
       description: 'Installs an application on the simulator',
       requiredParameters: ['appPath'],
