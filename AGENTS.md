@@ -24,6 +24,7 @@ repository):
 | `npm run build` | Compiles TypeScript to `dist/` with `tsc` |
 | `npm test` | Runs Jest with ts-jest (`NODE_OPTIONS=--experimental-vm-modules`) |
 | `npm run test:coverage` | Same as `npm test` with coverage |
+| `npm run test:integration` | Builds, then runs the simulator integration tests (opt-in, see [Testing](#testing)) |
 | `npm start` | Runs `node dist/index.js` (the MCP stdio server) |
 
 ### ⚠️ Dependency installation has heavy side effects
@@ -109,6 +110,16 @@ it active whenever the server runs.
   explicitly approved operation only: require explicit user/agent approval
   before running anything that boots, installs, taps, or otherwise mutates
   simulator state. Default to mocking.
+- Integration tests live in `src/__integration__/` and run with
+  `npm run test:integration` (config: `jest.integration.config.js`). They only
+  run when `IOS_SIM_INTEGRATION=1` is set; otherwise they are skipped. When
+  enabled, `globalSetup.ts` creates and boots a disposable simulator
+  (`mcp-integration-<timestamp>`, newest iOS runtime unless `IOS_SIM_RUNTIME` /
+  `IOS_SIM_DEVICE_TYPE` are set) and `globalTeardown.ts` deletes it; existing
+  simulators are not touched. The tests drive `dist/index.js` over the MCP
+  stdio transport. Running them still requires the approval above, plus `idb`
+  installed and the Python venv active. CI runs them in
+  `.github/workflows/integration.yml`.
 
 ## Never edit generated directories
 
