@@ -227,7 +227,10 @@ describe('PR #71 regression matrix', () => {
   // by create session, not lose it.
   it('threads the active session through subsequent commands', async () => {
     await expectRoutedTo('create session', 'createSimulatorSession', {});
-    idbManager.createSimulatorSession.mockResolvedValueOnce('sess_ABC');
+    // Re-point the session factory to a distinguishable id for the flow test.
+    const sessionFactory = idbManager.createSimulatorSession;
+    sessionFactory.mockReset();
+    sessionFactory.mockResolvedValue('sess_ABC' as unknown as never);
     const created = await orchestrator.processInstruction('create session');
     expect(created.success).toBe(true);
     expect(created.data).toBe('sess_ABC');
