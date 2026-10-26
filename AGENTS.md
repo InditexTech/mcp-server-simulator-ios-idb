@@ -22,7 +22,8 @@ repository):
 | Command | What it does |
 |---|---|
 | `npm run build` | Compiles TypeScript to `dist/` with `tsc` |
-| `npm test` | Runs Jest with ts-jest (`NODE_OPTIONS=--experimental-vm-modules`) |
+| `npm run typecheck` | Checks source and test types without emitting files |
+| `npm test` | Runs Jest with SWC (`NODE_OPTIONS=--experimental-vm-modules`) |
 | `npm run test:coverage` | Same as `npm test` with coverage |
 | `npm start` | Runs `node dist/index.js` (the MCP stdio server) |
 
@@ -31,17 +32,18 @@ repository):
 `npm install` and `npm ci` both trigger the `postinstall` script
 (`scripts/install_dependencies.sh`), which:
 
-1. Hard-fails unless running on **macOS** with **Homebrew** available.
-2. Runs `brew tap facebook/fb && brew install idb-companion`.
-3. Hard-fails unless a **Python virtual environment is already active**
-   (`$VIRTUAL_ENV` must be set), then runs
-   `python3 -m pip install --upgrade pip` followed by
-   `python3 -m pip install fb-idb` into it.
+1. Hard-fails unless running on **macOS 15+ / Apple Silicon** with
+   **Homebrew** and a selected **Xcode 26+** installation.
+2. Runs `brew tap facebook/fb && brew install facebook/fb/idb` to install the
+   official client + companion metapackage (currently 1.7.6). When supported,
+   explicitly trusts only the `idb`, `idb-cli` and `idb-companion` formulae.
+3. Verifies matching client/companion versions and that PATH resolves the
+   Homebrew binaries rather than another installation.
 
 Do not run these installers as part of agent work unless installing
-dependencies is explicitly the task. Before running them manually, create and
-activate the venv (`python3 -m venv venv && source venv/bin/activate`) and keep
-it active whenever the server runs.
+dependencies is explicitly the task. Python is managed by Homebrew; no project
+venv is required. Deactivate an old venv if it shadows `idb`, but do not delete it
+automatically. Native Homebrew versions are not fixed by the npm lockfile.
 
 ## Language and module conventions
 
@@ -50,7 +52,8 @@ it active whenever the server runs.
 - **Relative imports must end in `.js`** (e.g. `import { IDBManager } from
   '../idb/IDBManager.js'`) — this is required by NodeNext ESM resolution even
   for `.ts` source files. Do not write extensionless relative imports.
-- Node.js >= 20; `package.json` declares `"os": "darwin"` in its `engines`
+- Node.js >= 24.22.1 and npm >= 12.2.0; CI uses Node 24.22.1 / npm 12.2.0.
+  `package.json` declares `"os": "darwin"` in its `engines`
   field.
 - Keep the SPDX copyright and license header lines at the top of source
   files, consistent with existing files and [REUSE.toml](REUSE.toml).
@@ -98,11 +101,12 @@ it active whenever the server runs.
 
 ## Testing
 
-- Tests live in `src/**/__tests__/` (Jest + ts-jest, ESM via
+- Tests live in `src/**/__tests__/` (Jest + SWC, ESM via
   `--experimental-vm-modules`):
   - `src/idb/__tests__/IDBManager.test.ts`
   - `src/orchestrator/__tests__/MCPOrchestrator.test.ts`
   - `src/parser/__tests__/NLParser.test.ts`
+- SWC only transpiles; run `npm run typecheck` separately to check test types.
 - Existing unit tests spy on `IDBManager`'s private `executeCommand` (or mock
   collaborators) and never touch real simulators.
 - Tests that drive a **real simulator** through `idb` / `xcrun simctl` are an

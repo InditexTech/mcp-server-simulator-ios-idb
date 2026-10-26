@@ -7,14 +7,17 @@
   "scripts": {
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
+    "typecheck": "tsc --noEmit",
     "build": "tsc",
     "start": "node dist/index.js",
     "postinstall": "chmod +x ./scripts/install_dependencies.sh && ./scripts/install_dependencies.sh"
   },
   "engines": {
-    "node": ">=20.0.0",
+    "node": ">=24.22.1",
+    "npm": ">=12.2.0",
     "os": "darwin"
   },
+  "packageManager": "npm@12.2.0",
   "author": "arturono[at]inditex[dot]com",
   "license": "Apache-2.0",
   "dependencies": {
@@ -25,7 +28,7 @@
     "@swc/core": "^1.16.18",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
-    "@types/node": "^26.6.5",
+    "@types/node": "^24.19.2",
     "jest": "^30.5.2",
     "typescript": "^7.0.2"
   }
