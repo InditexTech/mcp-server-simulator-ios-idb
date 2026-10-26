@@ -1,0 +1,16 @@
+src/idb/__tests__/IDBManager.test.ts
+  h_54a1c5973b9675 13-214
+src/orchestrator/__tests__/CommandRegressionMatrix.test.ts
+  h_54a1c5973b9675 230-233
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "7ca108278dc0515e3f7a4ae9edd4d21290a27984",
+  "prompts": {},
+  "humans": {
+    "h_54a1c5973b9675": {
+      "author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
