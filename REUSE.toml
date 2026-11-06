@@ -17,6 +17,7 @@ path = [
     "repolinter.json",
     "tsconfig.json",
     "jest.config.js",
+    "jest.integration.config.js",
     "glama.json",
     "sonar-project.properties",
 ]

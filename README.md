@@ -91,6 +91,9 @@ npm start
 
 # Run tests
 npm test
+
+# Run integration tests against a disposable iOS Simulator (requires idb)
+IOS_SIM_INTEGRATION=1 npm run test:integration
 ```
 
 The installation process will automatically:
