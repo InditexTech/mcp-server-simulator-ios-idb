@@ -97,10 +97,11 @@ describe('IDBManager', () => {
     manager['sessions'].set('session', 'simulator-udid');
     const executeCommand = jest
       .spyOn(manager as any, 'executeCommand')
+      .mockResolvedValueOnce('{"installedAppBundleId": "com.acme.shop", "uuid": null}')
       .mockResolvedValue('');
 
     await expect(manager.installApp('session', 'package.json')).resolves.toEqual({
-      bundleId: 'com.example.package',
+      bundleId: 'com.acme.shop',
       name: 'package',
       installedPath: 'package.json'
     });
@@ -111,7 +112,7 @@ describe('IDBManager', () => {
 
     expect(executeCommand).toHaveBeenCalledWith(
       'idb',
-      ['install', '--udid', 'simulator-udid', '--', 'package.json']
+      ['install', '--udid', 'simulator-udid', '--json', '--', 'package.json']
     );
     expect(executeCommand).toHaveBeenCalledWith(
       'idb',
@@ -124,6 +125,16 @@ describe('IDBManager', () => {
     expect(executeCommand).toHaveBeenCalledWith(
       'idb',
       ['uninstall', '--udid', 'simulator-udid', '--', 'com.example.app']
+    );
+  });
+
+  it('fails when idb install does not report the bundle ID', async () => {
+    const manager = new IDBManager();
+    manager['sessions'].set('session', 'simulator-udid');
+    jest.spyOn(manager as any, 'executeCommand').mockResolvedValue('Installed: com.acme.shop None');
+
+    await expect(manager.installApp('session', 'package.json')).rejects.toThrow(
+      'Could not read the bundle ID from the idb install output: Installed: com.acme.shop None'
     );
   });
 
