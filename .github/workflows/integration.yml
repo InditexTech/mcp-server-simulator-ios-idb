@@ -143,8 +143,12 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: integration-artifacts-${{ github.event_name }}-${{ github.run_number }}
-          path: |
-            logs/
-            ${{ runner.temp }}/integration-artifacts/
+          # Privacy whitelist: only the suite-owned disposable artifacts
+          # directory (screenshots the suite explicitly captured plus the
+          # run summary written by the harness). The repo's generic logs/
+          # directory produced by the MCP server is deliberately NOT
+          # uploaded: its content is not sanitized and may contain host
+          # data. Nothing outside IOS_SIM_ARTIFACTS_DIR is published.
+          path: ${{ runner.temp }}/integration-artifacts/
           if-no-files-found: ignore
           retention-days: 7
