@@ -17,6 +17,7 @@ import { fileURLToPath } from 'url';
 import { IDBManager } from '../idb/IDBManager.js';
 import { NLParser } from '../parser/NLParser.js';
 import { MCPOrchestrator } from '../orchestrator/MCPOrchestrator.js';
+import { buildToolResult } from './toolResponse.js';
 
 // Log configuration
 // Get the directory name using ESM approach
@@ -136,14 +137,7 @@ class MCPSimulatorServer {
         try {
           const result = await this.orchestrator.processInstruction(instruction);
           
-          return {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify(result),
-              },
-            ],
-          };
+          return buildToolResult(result);
         } catch (error) {
           logToFile(`Error processing instruction: ${error}`, 'error');
           
