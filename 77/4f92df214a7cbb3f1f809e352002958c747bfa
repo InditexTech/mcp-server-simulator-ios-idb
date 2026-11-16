@@ -1,0 +1,29 @@
+src/__integration__/support/state.js
+  s_d3fd0bad8f61c4::t_5ff58ede9cc4e0 7-9,11-33,36,40
+src/__tests__/simulatorHarnessCleanup.test.ts
+  s_e04643152d8fcc::t_ac4ad1efb40e38 1-209
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "774f92df214a7cbb3f1f809e352002958c747bfa",
+  "prompts": {},
+  "sessions": {
+    "s_d3fd0bad8f61c4": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1bfc3d00ffe66b2mrU7qZvDI8",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    },
+    "s_e04643152d8fcc": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1b260383ffezb1npa95H21YNX",
+        "model": "inditex/KAIA/glm-5.3-flash"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
