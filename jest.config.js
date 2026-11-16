@@ -1,4 +1,4 @@
-/** @type {import('@jest/types').Config.InitialOptions} */
+/** @type {import('jest').Config} */
 export default {
   testEnvironment: 'node',
   extensionsToTreatAsEsm: ['.ts'],
@@ -6,7 +6,13 @@ export default {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   transform: {
-    '^.+\\.tsx?$': '@swc/jest',
+    '^.+\\.tsx?$': ['@swc/jest', {
+      jsc: {
+        parser: { syntax: 'typescript' },
+        target: 'es2020',
+      },
+      module: { type: 'es6' },
+    }],
   },
   testMatch: [
     '**/__tests__/**/*.test.ts',

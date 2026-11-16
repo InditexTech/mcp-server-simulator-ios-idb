@@ -6,14 +6,15 @@ on:
     branches: ["main"]
 
 env:
-  NODE_VERSION: '20.x'
-  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '24.22.1'
+  NPM_VERSION: '12.2.0'
 
 jobs:
   verify:
     if: github.event.pull_request.merged == true
     name: Verify
-    runs-on: macos-latest
+    runs-on: macos-26
+    timeout-minutes: 15
     permissions:
       contents: read
       pull-requests: read
@@ -23,29 +24,23 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Python
-        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Create and activate Python virtual environment
-        run: |
-          python -m venv venv
-          source venv/bin/activate
-          python -m pip install --upgrade pip
-          echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
-          echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
-
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: Setup npm
         run: |
-          source venv/bin/activate
-          npm ci
+          npm install --global npm@${{ env.NPM_VERSION }}
+          node --version
+          npm --version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check types
+        run: npm run typecheck
 
       - name: Build
         run: npm run build
