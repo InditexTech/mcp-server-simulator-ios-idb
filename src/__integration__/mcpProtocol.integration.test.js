@@ -151,6 +151,36 @@ describe('built-in app behavior', () => {
     const opened = await processInstruction(client, 'open url https://example.com/mcp-integration');
     expect(opened.structured.success).toBe(true);
   });
+
+  // Scenario shape from PR #77 (Rodrigo Bustamante), adapted to this
+  // suite's harness and response assert style.
+  it('sets the location and reports the requested coordinates back', async () => {
+    ({ client, transport } = await startMcpServer());
+    await processInstruction(client, `create session with ${state.name}`);
+    const set = await processInstruction(client, 'set location 40.4168, -3.7038');
+    expect(set.structured.success).toBe(true);
+    // Smoke assertion only: this proves the adapter reports the requested
+    // coordinates; it does not independently verify GPS effects.
+    expect(set.structured.data).toEqual({ latitude: 40.4168, longitude: -3.7038 });
+  });
+
+  it('lists crash logs as a JSON array of typed entries', async () => {
+    ({ client, transport } = await startMcpServer());
+    await processInstruction(client, `create session with ${state.name}`);
+    const crashes = await processInstruction(client, 'list crash logs');
+    expect(crashes.structured.success).toBe(true);
+    // Contract shape: idb crash list lines parse into JSON objects with
+    // name/bundle_id/date. NOTE: on iOS 27 runtimes idb mixes HOST macOS
+    // crash logs into the response (verified directly against `idb crash
+    // list --udid <fresh disposable sim>`), so the exact set of entries
+    // cannot be asserted here; a strict empty-array expectation would not
+    // survive that known idb behavior. We assert the parsed contract only.
+    expect(Array.isArray(crashes.structured.data)).toBe(true);
+    for (const crash of crashes.structured.data) {
+      expect(typeof crash.name).toBe('string');
+      expect(Object.prototype.hasOwnProperty.call(crash, 'date')).toBe(true);
+    }
+  });
 });
 
 describe('unsupported commands must fail honestly through MCP', () => {
