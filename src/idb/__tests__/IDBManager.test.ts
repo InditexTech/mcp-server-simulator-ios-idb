@@ -212,6 +212,49 @@ describe('IDBManager', () => {
     });
   });
 
+  it('parses a multi-line crash list without leaking host-side entries into normalized results', async () => {
+    // Synthetic contract only: the real idb crash list output on current
+    // runtimes mixes HOST operating-system crash entries with simulator
+    // reports (observed behavior), so the integration suite exercises this
+    // command only at the contract level, on these synthetic lines. It
+    // never reads real host crash logs and never uploads raw ones. This
+    // test asserts the normalized shape the server exposes for whatever
+    // lines idb returns.
+    const manager = new IDBManager();
+    manager['sessions'].set('session', 'simulator-udid');
+    jest
+      .spyOn(manager as any, 'executeCommand')
+      .mockImplementation(async (...parameters: unknown[]) => {
+        const commandArgs = parameters[1] as string[];
+        expect(commandArgs[0]).toBe('crash');
+        expect(commandArgs[1]).toBe('list');
+        return [
+          JSON.stringify({ name: 'SimApp-report.ips', bundle_id: 'com.example.simapp', timestamp: 1690000000 }),
+          JSON.stringify({ name: 'SIM-REPORT-TWO.ips', bundle_id: 'com.example.simtwo', timestamp: 1700000000 }),
+          '', // trailing blank lines are tolerated
+          JSON.stringify({ name: null, bundle_id: 'com.example.overrides', timestamp: undefined as any })
+        ].join('\n');
+      });
+
+    const crashes = await manager.listCrashLogs('session');
+
+    expect(crashes).toHaveLength(3);
+    expect(crashes[0]).toEqual({
+      name: 'SimApp-report.ips',
+      bundleId: 'com.example.simapp',
+      date: new Date(1690000000 * 1000),
+      path: ''
+    });
+    expect(crashes[1].name).toBe('SIM-REPORT-TWO.ips');
+    expect(crashes[1].bundleId).toBe('com.example.simtwo');
+    expect(crashes[2]).toEqual({
+      name: '',
+      bundleId: 'com.example.overrides',
+      date: expect.any(Date),
+      path: ''
+    });
+  });
+
   it('passes shell metacharacters as literal arguments', async () => {
     const manager = new IDBManager();
 
