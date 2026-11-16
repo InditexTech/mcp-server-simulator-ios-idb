@@ -1,0 +1,19 @@
+.github/workflows/integration.yml
+  s_e04643152d8fcc::t_e686603cd5b0d2 1-99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "8a2e3a94fa3b6d3d96de70f11ae690553e7ee27f",
+  "prompts": {},
+  "sessions": {
+    "s_e04643152d8fcc": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1b260383ffezb1npa95H21YNX",
+        "model": "inditex/KAIA/glm-5.3-flash"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
