@@ -36,6 +36,7 @@ struct FixtureApp: App {
 
 struct ContentView: View {
     @State private var enteredText: String = ""
+    @State private var lastOpenedUrl: String = ""
 
     var body: some View {
         VStack(spacing: 16) {
@@ -47,8 +48,15 @@ struct ContentView: View {
                 .accessibilityIdentifier("fixtureTextField")
             Text(String(format: "Value: %@", enteredText))
                 .accessibilityIdentifier("fixtureEchoLabel")
+            Text(lastOpenedUrl)
+                .accessibilityIdentifier("fixtureOpenUrlLabel")
         }
         .padding(24)
+        .onOpenURL { url in
+            // Observable side effect for open-url verification: the fixture
+            // renders the URL it received in the bordered label above.
+            lastOpenedUrl = url.absoluteString
+        }
     }
 }
 `,
@@ -72,6 +80,17 @@ struct ContentView: View {
     <string>1.0</string>
     <key>CFBundleVersion</key>
     <string>1</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>com.inditex.mcp.fixture.demo.url</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>mcpfixture</string>
+            </array>
+        </dict>
+    </array>
     <key>UILaunchScreen</key>
     <dict/>
     <key>LSRequiresIPhoneOS</key>

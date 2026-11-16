@@ -145,11 +145,59 @@ describe('built-in app behavior', () => {
     expect(terminated.structured.success).toBe(true);
   });
 
-  it('opens a deep-link URL without error', async () => {
+  // Network-independent open-url: the fixture registers the mcpfixture://
+  // scheme in CFBundleURLTypes and renders whatever it receives via
+  // onOpenURL, so the test observes the real routing effect (fixture label)
+  // instead of trusting the response echo. No external network involved.
+  it('opens a fixture-registered URL and the app renders it on screen', async () => {
     ({ client, transport } = await startMcpServer());
+    // Install and launch the fixture first: the custom scheme only routes
+    // to the app that registered it.
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-it-fixture-'));
+    const appPath = await buildFixtureApp(tmp);
     await processInstruction(client, `create session with ${state.name}`);
-    const opened = await processInstruction(client, 'open url https://example.com/mcp-integration');
+    const installed = await processInstruction(client, `install app ${appPath}`);
+    expect(installed.structured.success).toBe(true);
+    const launched = await processInstruction(client, `launch app ${FIXTURE_BUNDLE_ID}`);
+    expect(launched.structured.success).toBe(true);
+
+    // Bounded readiness: poll the onOpenURL marker via a real accessibility
+    // read; no fixed long sleep, no network dependency.
+    let lastObserved = null;
+    const deadline = Date.now() + 60_000;
+    let sawLaunchedAppMarker = false;
+    while (Date.now() < deadline && !sawLaunchedAppMarker) {
+      const elements = JSON.parse(await describeOwnedElements());
+      sawLaunchedAppMarker = Array.isArray(elements) && elements.some(
+        el => el.AXUniqueId === 'fixtureEchoLabel'
+      );
+      if (!sawLaunchedAppMarker) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+    if (!sawLaunchedAppMarker) {
+      // Honest failure: ready-state couldn't be established; report the last
+      // observation (or its absence), never a canned pass.
+      throw new Error(`fixture readiness failed: fixtureEchoLabel never observed (last: ${JSON.stringify(lastObserved)})`);
+    }
+
+    const requestedUrl = 'mcpfixture://open/round-validation';
+    const opened = await processInstruction(client, `open url ${requestedUrl}`);
     expect(opened.structured.success).toBe(true);
+
+    // Real side effect: the fixture's onOpenURL reproduces the URL it got.
+    let observed = null;
+    while (Date.now() < deadline && observed !== requestedUrl) {
+      const elements = JSON.parse(await describeOwnedElements());
+      const label = Array.isArray(elements)
+        ? elements.find(el => el.AXUniqueId === 'fixtureOpenUrlLabel')
+        : null;
+      if (label && typeof label.AXLabel === 'string') observed = label.AXLabel;
+      if (observed !== requestedUrl) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+    expect(observed).toBe(requestedUrl);
   });
 
   // Scenario shape from PR #77 (Rodrigo Bustamante), adapted to this
@@ -238,4 +286,19 @@ describe('fixture app install/uninstall with the real bundle ID', () => {
 
 function defined(x) {
   return x !== undefined && x !== null;
+}
+
+/**
+ * Reads real UI accessibility elements from the owned disposable device.
+ * Used to verify observable side effects of open-url instructions without
+ * trusting the server response alone.
+ */
+async function describeOwnedElements() {
+  const { execFile } = await import('node:child_process');
+  const { promisify } = await import('node:util');
+  const execFileAsync = promisify(execFile);
+  const { stdout } = await execFileAsync('idb', [
+    'ui', 'describe-all', '--udid', state.udid, '--json'
+  ], { timeout: 120_000 });
+  return stdout;
 }
