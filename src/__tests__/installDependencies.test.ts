@@ -30,6 +30,7 @@ describe('native dependency installer', () => {
         TEST_INSTALLED_COMPANIONS: '1.7.6',
         TEST_TRUST_SUPPORTED: '1',
         TEST_BREW_FAIL: '',
+        TEST_INITIAL_TAP: '',
         ...overrides,
       },
     }
@@ -38,6 +39,13 @@ describe('native dependency installer', () => {
   const run = (overrides: Record<string, string> = {}) => execute(
     'bash', [path.resolve('scripts/install_dependencies.sh')], overrides
   );
+
+  const writeReceipts = (tap: string) => {
+    for (const prefix of ['kegs/idb', 'cli', 'companion']) {
+      mkdirSync(path.join(directory, prefix), { recursive: true });
+      writeFileSync(path.join(directory, prefix, 'INSTALL_RECEIPT.json'), JSON.stringify({ source: { tap } }, null, 2));
+    }
+  };
 
   const selectCompanion = (version: string) => {
     const keg = path.join(directory, 'Cellar/idb-companion', version);
@@ -64,21 +72,44 @@ if [[ "$1" == "$TEST_BREW_FAIL" ]]; then
   echo "Simulated Homebrew $1 failure" >&2
   exit 1
 fi
+STATE="$TEST_ROOT/tap_state"
+[[ -f "$STATE" ]] || printf '%s' "\${TEST_INITIAL_TAP:-}" > "$STATE"
 case "$*" in
-  'tap facebook/fb') touch "$TEST_ROOT/tapped" ;;
+  'tap') cat "$STATE"; [[ ! -s "$STATE" ]] || echo ;;
+  'tap facebook/fb')
+    if [[ "$(cat "$STATE")" == "facebook/fb" ]]; then
+      if [[ -f "$TEST_ROOT/trusted" ]]; then
+        echo 'Refusing automatic redirect: meta/fb formulae already trusted.' >&2
+        exit 1
+      fi
+      printf 'meta/fb' > "$STATE"
+    else
+      printf 'facebook/fb' > "$STATE"
+    fi ;;
+  'tap meta/fb') printf 'meta/fb' > "$STATE" ;;
   'command trust') [[ "$TEST_TRUST_SUPPORTED" == "1" ]] ;;
-  'trust --formula facebook/fb/idb facebook/fb/idb-cli facebook/fb/idb-companion')
-    [[ "$TEST_TRUST_SUPPORTED" == "1" && -f "$TEST_ROOT/tapped" ]]
+  'trust --formula meta/fb/idb meta/fb/idb-cli meta/fb/idb-companion')
+    [[ "$TEST_TRUST_SUPPORTED" == "1" && "$(cat "$STATE")" == "meta/fb" ]]
     touch "$TEST_ROOT/trusted" ;;
-  'install facebook/fb/idb')
-    [[ -f "$TEST_ROOT/tapped" ]]
+  'install meta/fb/idb')
+    [[ "$(cat "$STATE")" == "meta/fb" ]]
+    if grep -q '"tap": "facebook/fb"' "$TEST_ROOT/kegs/idb/INSTALL_RECEIPT.json" 2> /dev/null; then
+      printf 'Error: idb was installed from the facebook/fb tap\\nbut you are trying to install it from the meta/fb tap.\\n' >&2
+      exit 1
+    fi
     if [[ "$TEST_TRUST_SUPPORTED" == "1" && ! -f "$TEST_ROOT/trusted" ]]; then
-      echo 'Refusing to load formula facebook/fb/idb-cli from untrusted tap facebook/fb.' >&2
+      echo 'Refusing to load formula meta/fb/idb-cli from untrusted tap meta/fb.' >&2
       exit 1
     fi ;;
-  '--prefix facebook/fb/idb-cli') echo "$TEST_ROOT/cli" ;;
-  '--prefix facebook/fb/idb-companion') echo "$TEST_ROOT/companion" ;;
-  'list --versions facebook/fb/idb facebook/fb/idb-cli facebook/fb/idb-companion')
+  '--prefix meta/fb/idb')
+    if [[ "$TEST_TRUST_SUPPORTED" == "1" && ! -f "$TEST_ROOT/trusted" ]]; then
+      echo 'Refusing to load formula meta/fb/idb from untrusted tap meta/fb.' >&2
+      exit 1
+    fi
+    echo "$TEST_ROOT/kegs/idb" ;;
+  '--prefix meta/fb/idb-cli') echo "$TEST_ROOT/cli" ;;
+  '--prefix meta/fb/idb-companion') echo "$TEST_ROOT/companion" ;;
+  'list --versions meta/fb/idb meta/fb/idb-cli meta/fb/idb-companion')
     echo "idb 1.7.6"
     echo "idb-cli $TEST_CLIENT"
     echo "idb-companion $TEST_INSTALLED_COMPANIONS" ;;
@@ -100,15 +131,61 @@ esac`);
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('idb dependencies installed successfully');
     const calls = readFileSync(path.join(directory, 'brew.log'), 'utf8');
-    expect(calls).toContain('install facebook/fb/idb');
-    expect(calls).toContain('trust --formula facebook/fb/idb facebook/fb/idb-cli facebook/fb/idb-companion');
+    expect(calls).toContain('install meta/fb/idb');
+    expect(calls).toContain('trust --formula meta/fb/idb meta/fb/idb-cli meta/fb/idb-companion');
     expect(calls).not.toContain('trust --tap');
-    expect(calls.indexOf('trust --formula')).toBeLessThan(calls.indexOf('install facebook/fb/idb'));
+    expect(calls.indexOf('trust --formula')).toBeLessThan(calls.indexOf('install meta/fb/idb'));
+  });
+
+  it('skips tapping when meta/fb is already tapped and restores formula trust', () => {
+    const result = run({ TEST_INITIAL_TAP: 'meta/fb' });
+    expect(result.status).toBe(0);
+    const calls = readFileSync(path.join(directory, 'brew.log'), 'utf8');
+    expect(calls).not.toContain('tap meta/fb');
+    expect(calls).toContain('trust --formula meta/fb/idb meta/fb/idb-cli meta/fb/idb-companion');
+    expect(calls).toContain('install meta/fb/idb');
+  });
+
+  it('migrates a legacy facebook/fb tap to meta/fb before declaring trust', () => {
+    const result = run({ TEST_INITIAL_TAP: 'facebook/fb' });
+    expect(result.status).toBe(0);
+    const calls = readFileSync(path.join(directory, 'brew.log'), 'utf8');
+    expect(calls).toContain('tap facebook/fb');
+    expect(calls.indexOf('tap facebook/fb')).toBeLessThan(calls.indexOf('trust --formula'));
+    expect(calls.indexOf('trust --formula')).toBeLessThan(calls.indexOf('install meta/fb/idb'));
+    expect(readFileSync(path.join(directory, 'tap_state'), 'utf8')).toBe('meta/fb');
+  });
+
+  it('installs when existing receipts already record the meta/fb tap', () => {
+    writeReceipts('meta/fb');
+    const result = run({ TEST_INITIAL_TAP: 'meta/fb' });
+    expect(result.status).toBe(0);
+    expect(readFileSync(path.join(directory, 'brew.log'), 'utf8')).toContain('install meta/fb/idb');
+  });
+
+  it('models Homebrew refusing a formula whose receipt records the legacy tap', () => {
+    writeReceipts('facebook/fb');
+    expect(execute(path.join(bin, 'brew'), ['tap', 'meta/fb']).status).toBe(0);
+    const result = execute(path.join(bin, 'brew'), ['install', 'meta/fb/idb']);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('idb was installed from the facebook/fb tap');
+  });
+
+  it('fails fast with migration commands when installed receipts record the legacy facebook/fb tap', () => {
+    writeReceipts('facebook/fb');
+    const result = run({ TEST_INITIAL_TAP: 'meta/fb' });
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('idb is installed from the facebook/fb tap, not meta/fb');
+    expect(result.stderr).toContain('brew uninstall idb idb-cli idb-companion');
+    const calls = readFileSync(path.join(directory, 'brew.log'), 'utf8');
+    expect(calls).not.toContain('uninstall');
+    expect(calls).not.toContain('install meta/fb/idb');
+    expect(result.stdout).not.toContain('installed successfully');
   });
 
   it('models the CI failure when installing before formula trust is declared', () => {
-    expect(execute(path.join(bin, 'brew'), ['tap', 'facebook/fb']).status).toBe(0);
-    const result = execute(path.join(bin, 'brew'), ['install', 'facebook/fb/idb']);
+    expect(execute(path.join(bin, 'brew'), ['tap', 'meta/fb']).status).toBe(0);
+    const result = execute(path.join(bin, 'brew'), ['install', 'meta/fb/idb']);
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain('untrusted tap');
   });
@@ -126,7 +203,7 @@ esac`);
   it('stops before installation when declaring formula trust fails', () => {
     const result = run({ TEST_BREW_FAIL: 'trust' });
     expect(result.status).not.toBe(0);
-    expect(readFileSync(path.join(directory, 'brew.log'), 'utf8')).not.toContain('install facebook/fb/idb');
+    expect(readFileSync(path.join(directory, 'brew.log'), 'utf8')).not.toContain('install meta/fb/idb');
   });
 
   it.each([
