@@ -8,18 +8,24 @@
  * boots it, and records { udid, name, beforeInventory } into a state file that
  * test modules read. waitForSimulatorReadiness polls real state via simctl;
  * there are no blind sleeps.
+ *
+ * Failure containment: the state directory is a private mkdtemp (0700) and
+ * every failure after the create step — including writeState failures and
+ * boot/readiness timeouts — runs the owned-simulator cleanup in a finally
+ * block so no owned resource outlives a failed setup.
  */
 
 import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import { listSimulators, pollUntil } from './simctl.js';
-import { createOwnedSimulator, cleanupOwnedSimulator } from './simulatorHarness.js';
-import { writeState } from './state.js';
+import { createOwnedSimulator, cleanupOwnedSimulator, cleanupOwnedCompanions } from './simulatorHarness.js';
+import { writeState, STATE_FILE_ENV } from './state.js';
 
 export default async function globalSetup() {
   const runId = randomUUID().slice(0, 8);
-  const stateDir = fs.mkdtempSync(path.join('/private/var/folders/7d/grtmgp2j6dg22_zkk0dt5clw0000gq/T/opencode', `mcp-it-${runId}-`));
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), `mcp-it-${runId}-`), { mode: 0o700 });
 
   const beforeInventory = await listSimulators();
   const bootFailures = [];
@@ -42,19 +48,31 @@ export default async function globalSetup() {
       return devices.find(d => d.udid === ownedUdid)?.state === 'Booted';
     }, 120_000);
 
-    writeState({
-      udid: ownedUdid,
-      name: created.name,
-      runtime: created.runtime,
-      deviceType: created.deviceType,
-      beforeInventory: beforeInventory.map(d => ({ udid: d.udid, state: d.state })),
-      stateDir
-    });
+    try {
+      writeState({
+        udid: ownedUdid,
+        name: created.name,
+        runtime: created.runtime,
+        deviceType: created.deviceType,
+        beforeInventory: beforeInventory.map(d => ({ udid: d.udid, state: d.state })),
+        stateDir
+      });
+    } catch (stateError) {
+      bootFailures.push(`state persistence failed: ${String(stateError)}`);
+      // Fail visibly: the state file may be absent or partial, but the run
+      // aborts and cleanup still runs so the device does not leak.
+      throw stateError;
+    }
   } catch (error) {
     bootFailures.push(String(error));
-    // Do not leak the device when readiness polling fails.
+    // Do not leak the device when readiness polling, state persistence, or
+    // any other step fails. Best effort for every cleanup facet.
     await cleanupOwnedSimulator(ownedUdid);
-    throw new Error(`Owned simulator ${ownedUdid} failed to reach Booted state: ${bootFailures.join('; ')}`);
+    await cleanupOwnedCompanions(ownedUdid).catch(() => []);
+    const rootCause = error instanceof Error ? error : new Error(String(error));
+    rootCause.bootFailures = bootFailures;
+    throw rootCause;
   }
 }
 
+export { STATE_FILE_ENV };

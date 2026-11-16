@@ -6,11 +6,14 @@
  *
  * Shuts down and deletes ONLY the simulator recorded in the run state
  * (exact UDID match, and only if its name still carries the suite's prefix).
- * Runs even when tests failed, and never touches any other device.
+ * Terminates the idb_companion process spawned for the owned UDID with an
+ * exact argv match, then removes the solely owned companion socket path.
+ * Runs even when tests failed, never touches any other device or process,
+ * and reports leftover resources without masking the test outcome.
  */
 
-import { readState } from './state.js';
-import { cleanupOwnedSimulator } from './simulatorHarness.js';
+import { readState, STATE_FILE_ENV } from './state.js';
+import { cleanupOwnedSimulator, cleanupOwnedCompanions } from './simulatorHarness.js';
 
 export default async function globalTeardown() {
   let udid;
@@ -20,9 +23,17 @@ export default async function globalTeardown() {
     // Setup failed before recording state; nothing owned to clean.
     return;
   }
-  const result = await cleanupOwnedSimulator(udid);
-  if (result && result.skipped !== true && !result.deleted) {
+  const simResult = await cleanupOwnedSimulator(udid);
+  const companionResults = await cleanupOwnedCompanions(udid).catch(error => ([{ gone: false, reason: String(error) }]));
+
+  if (simResult && simResult.skipped !== true && !simResult.deleted) {
     // Make the leak visible in CI logs without crashing teardown.
     process.stderr.write(`WARNING: owned simulator ${udid} could not be deleted\n`);
   }
+  for (const result of companionResults) {
+    if (!result.gone) {
+      process.stderr.write(`WARNING: owned companion resource not confirmed removed: ${result.reason || 'unknown'}\n`);
+    }
+  }
+  delete process.env[STATE_FILE_ENV];
 }
