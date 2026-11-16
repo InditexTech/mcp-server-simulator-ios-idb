@@ -11,11 +11,27 @@
 # contract.
 #
 # This check runs AFTER a release is published: it is a post-release
-# verification, not a publication gate. The job evaluates an exact commit:
-# for workflow_dispatch that is the immutable github.sha of the manual run;
-# for release events the tag is resolved to a commit SHA and that SHA is
-# checked out. Tags are recorded for traceability, but the commit SHA is
-# the evaluated ref. The resolved commit is echoed for the run log.
+# verification, not a publication gate, and nothing runs on merge.
+#
+# Ref integrity: for workflow_dispatch the job evaluates the immutable
+# github.sha of the manual run. For release events the workflow checks out
+# the static event-provided tag ref and then, before any build step, asserts
+# that the checked-out commit equals the commit the tag currently points to
+# on origin. Exact-tag handling and limits:
+# - The tag name is untrusted data: it reaches the job through a step-level
+#   `env:` mapping (never interpolated into shell code) and is expanded only
+#   as shell data ("$RELEASE_TAG"), never eval'd. Log lines use printf
+#   instead of interpolating it into workflow commands.
+# - Light-weight tags resolve directly to a commit; annotated tags list both
+#   the tag object and its peeled commit ("^{}"). The script reads the
+#   exact two refs via positional multi-pattern ls-remote and trusts only
+#   the peeled entry; the string match is exact (case-pattern) — no glob or
+#   regex over the tag value.
+# - Tags are mutable server-side, so this job verifies the tag AS OF THE
+#   RUN and documents the resolved commit in the log; it does not claim the
+#   release commit is cryptographically immutable.
+# - If the tag disappears or is repointed between checkout and verification,
+#   the comparison fails and the job aborts (fail-on-mismatch by design).
 
 name: Integration
 
@@ -33,6 +49,7 @@ concurrency:
 
 env:
   NODE_VERSION: '24.22.1'
+  NPM_VERSION: '12.2.0'
 
 jobs:
   simulator:
@@ -43,41 +60,68 @@ jobs:
       # Non-privileged context: static checkout of the event-provided ref.
       # For release events that is the (recorded) tag ref; for
       # workflow_dispatch it is github.sha of the trusted manual run.
-      - name: Checkout resolved commit
+      - name: Checkout event ref
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.sha }}
           persist-credentials: false
 
-      # Privilege boundary: assert the checked-out commit equals the
-      # tag's commit exactly (tag text is untrusted data) before any
-      # cache-backed or build step touches the workspace. Aborts on
-      # mismatch, so nothing built later can come from a repointed tag.
+      # Ref-integrity boundary for release events: verify the checked-out
+      # commit against the tag's current commit on origin BEFORE any
+      # cache-backed or build step runs. RELEASE_TAG is data only.
       - name: Verify checked-out commit matches the release tag
         if: github.event_name == 'release'
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
           set -euo pipefail
-          TAG='${{ github.event.release.tag_name }}'
-          RESOLVED_SHA="$(git ls-remote origin "refs/tags/${TAG}" | awk '{print $1}')"
-          CHECKED_SHA="$(git rev-parse HEAD)"
+          : "${RELEASE_TAG:?}"
+          RESOLVED_SHA=""
+          # Annotated tags list both the tag object and its peeled commit
+          # ("^{}"); light-weight tags only the commit. Trust the peeled
+          # entry; fall back to the unpeeled ref for light-weight tags.
+          while IFS=$'\t' read -r sha ref; do
+            case "$ref" in
+              "refs/tags/${RELEASE_TAG}^{}") RESOLVED_SHA="$sha" ;;
+              "refs/tags/${RELEASE_TAG}")
+                if [[ -z "$RESOLVED_SHA" ]]; then RESOLVED_SHA="$sha"; fi ;;
+            esac
+          done < <(git ls-remote origin "refs/tags/${RELEASE_TAG}" "refs/tags/${RELEASE_TAG}^{}")
           if [[ -z "$RESOLVED_SHA" ]]; then
-            echo "::error::Tag ${TAG} not found on origin"
+            printf '::error::Release tag %s not found on origin\n' "$RELEASE_TAG" >&2
             exit 1
           fi
+          CHECKED_SHA="$(git rev-parse HEAD)"
           if [[ "$RESOLVED_SHA" != "$CHECKED_SHA" ]]; then
-            echo "::error::Checked-out commit ${CHECKED_SHA} does not match tag ${TAG} (${RESOLVED_SHA}); refusing to test a stale or repointed ref"
+            printf '::error::Checked-out commit %s does not match tag %s (%s); refusing to test a stale or repointed tag\n' "$CHECKED_SHA" "$RELEASE_TAG" "$RESOLVED_SHA" >&2
             exit 1
           fi
-          echo "Release ${TAG} resolved to immutable commit ${CHECKED_SHA}"
+          printf 'Release tag %s verified against commit %s\n' "$RELEASE_TAG" "$CHECKED_SHA"
 
-      # npm cache intentionally disabled: setup-node's GitHub cache is the
-      # only cache-poisoning surface flagged by CodeQL for this workflow,
-      # and the cost is a slower install on a release-only cadence.
+      # npm cache intentionally disabled: setup-node's GitHub cache was the
+      # cache-poisoning surface flagged by CodeQL for this workflow, and the
+      # cost is a slower install on a release-only cadence.
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ env.NODE_VERSION }}
+
+      # The repo pins npm (packageManager: npm@12.2.0, engines >= 12.2.0);
+      # setup-node's bundled npm tracks the runner image, so pin it
+      # explicitly and fail fast on drift.
+      - name: Pin npm
+        run: |
+          set -euo pipefail
+          npm install --global "npm@${NPM_VERSION}"
+          INSTALLED_NPM="$(npm --version)"
+          echo "npm: ${INSTALLED_NPM}"
+          if [[ "$INSTALLED_NPM" != "$NPM_VERSION" ]]; then
+            echo "::error::npm ${INSTALLED_NPM} installed but ${NPM_VERSION} required"
+            exit 1
+          fi
+          INSTALLED_NODE="$(node --version)"
+          echo "node: ${INSTALLED_NODE}"
 
       # npm ci runs scripts/install_dependencies.sh, which installs the
       # official meta/fb idb metapackage (client + companion) via Homebrew;
