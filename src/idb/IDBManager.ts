@@ -55,6 +55,18 @@ export class IDBManager implements IIDBManager {
       .map(line => JSON.parse(line) as IDBAppInfo);
   }
 
+  private parseInstalledBundleId(output: string): string {
+    try {
+      const bundleId = JSON.parse(output).installedAppBundleId;
+      if (typeof bundleId === 'string' && bundleId.length > 0) {
+        return bundleId;
+      }
+    } catch {
+      // Reported below
+    }
+    throw new Error(`Could not read the bundle ID from the idb install output: ${output}`);
+  }
+
   private async verifyIDBAvailability(): Promise<void> {
     try {
       await this.executeCommand('idb', ['list-targets']);
@@ -191,14 +203,12 @@ export class IDBManager implements IIDBManager {
       throw new Error(`File does not exist: ${appPath}`);
     }
     
-    await this.executeCommand('idb', ['install', '--udid', udid, '--', appPath]);
-    
-    const appName = path.basename(appPath, path.extname(appPath));
-    const bundleId = `com.example.${appName}`;
+    // idb prints the bundle ID of the installed app; with --json it is a single JSON line
+    const output = await this.executeCommand('idb', ['install', '--udid', udid, '--json', '--', appPath]);
     
     return {
-      bundleId,
-      name: appName,
+      bundleId: this.parseInstalledBundleId(output),
+      name: path.basename(appPath, path.extname(appPath)),
       installedPath: appPath
     };
   }
