@@ -1,0 +1,99 @@
+# SPDX-FileCopyrightText: © 2026 Industria de Diseño Textil S.A. INDITEX
+# SPDX-License-Identifier: Apache-2.0
+
+# Real-simulator integration suite, gated to published releases and manual
+# runs only (no pull_request triggers, no cron schedule).
+#
+# Workflow credit: the job skeleton (concurrency scoping, failure-artifact
+# upload shape) is adapted from the integration workflow proposal in PR #77
+# by Rodrigo Bustamante, reworked for the post-#74 toolchain (macos-26,
+# Node 24.22.1, npm 12.2.0, no project venv) and the release-only trigger
+# contract.
+#
+# This check runs AFTER a release is published: it is a post-release
+# verification, not a publication gate. The job evaluates an exact commit:
+# for workflow_dispatch that is the immutable github.sha of the manual run;
+# for release events the tag is resolved to a commit SHA and that SHA is
+# checked out. Tags are recorded for traceability, but the commit SHA is
+# the evaluated ref. The resolved commit is echoed for the run log.
+
+name: Integration
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: integration-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '24.22.1'
+
+jobs:
+  simulator:
+    name: Simulator integration
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - name: Resolve commit under test
+        id: resolve
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            TAG='${{ github.event.release.tag_name }}'
+            RESOLVED_SHA="$(git ls-remote origin "refs/tags/${TAG}" | awk '{print $1}')"
+            if [[ -z "$RESOLVED_SHA" ]]; then
+              echo "::error::Tag ${TAG} not found on origin"
+              exit 1
+            fi
+            echo "resolved_sha=${RESOLVED_SHA}" >> "$GITHUB_OUTPUT"
+            echo "resolved_ref=release-${TAG}" >> "$GITHUB_OUTPUT"
+          else
+            echo "resolved_sha=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+            echo "resolved_ref=dispatch-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Testing resolved commit (SHA): ${RESOLVED_SHA:-$GITHUB_SHA}"
+
+      - name: Checkout resolved commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ steps.resolve.outputs.resolved_sha }}
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      # npm ci runs scripts/install_dependencies.sh, which installs the
+      # official meta/fb idb metapackage (client + companion) via Homebrew;
+      # no project Python venv is involved since #74.
+      - name: Install dependencies
+        run: npm ci
+
+      # The suite creates its own disposable simulator (mcp-integration-*)
+      # and never touches pre-existing devices; globalTeardown shuts down
+      # and deletes the owned device even when tests fail.
+      - name: Run integration tests
+        env:
+          IOS_SIM_INTEGRATION: '1'
+          IOS_SIM_ARTIFACTS_DIR: ${{ runner.temp }}/integration-artifacts
+        run: npm run test:integration
+
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: integration-artifacts-${{ steps.resolve.outputs.resolved_ref }}
+          path: |
+            logs/
+            ${{ runner.temp }}/integration-artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
