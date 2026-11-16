@@ -1,0 +1,47 @@
+src/__tests__/simulatorHarnessCleanup.test.ts
+  s_e04643152d8fcc::t_ac4ad1efb40e38 172
+src/__integration__/support/globalSetup.js
+  h_54a1c5973b9675 22,71
+  s_0d97cfc1305150::t_de7109c8387b7a 26-35,61-70
+AGENTS.md
+  s_d3fd0bad8f61c4::t_708309b46bc457 118-129
+README.md
+  h_54a1c5973b9675 389-392,395-407
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "104cbb00dc2a2ec5f3a6ecf386ebd7c63d4d4d57",
+  "prompts": {},
+  "humans": {
+    "h_54a1c5973b9675": {
+      "author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  },
+  "sessions": {
+    "s_0d97cfc1305150": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1989bcc8ffexe0VSJorKrQ4qW",
+        "model": "inditex/KAIA/glm-5.3-flash"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    },
+    "s_d3fd0bad8f61c4": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1bfc3d00ffe66b2mrU7qZvDI8",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    },
+    "s_e04643152d8fcc": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1b260383ffezb1npa95H21YNX",
+        "model": "inditex/KAIA/glm-5.3-flash"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
