@@ -1,0 +1,29 @@
+src/__integration__/mcpProtocol.integration.test.js
+  s_d3fd0bad8f61c4::t_503274a70fb723 148-152,154-157,159-185,187-200,290-304
+src/__integration__/support/fixtureApp.js
+  s_3ba64471b3a7ed::t_7e8262d6885056 39,51-52,55-59,83-93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "16dd686015943276c9725c2abf774ff4b883fff2",
+  "prompts": {},
+  "sessions": {
+    "s_3ba64471b3a7ed": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e19aba3d3ffe9muXrfe0byZvZR",
+        "model": "inditex/KAIA/glm-5.3-flash"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    },
+    "s_d3fd0bad8f61c4": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1bfc3d00ffe66b2mrU7qZvDI8",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
