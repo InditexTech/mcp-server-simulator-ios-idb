@@ -34,8 +34,8 @@ repository):
 
 1. Hard-fails unless running on **macOS 15+ / Apple Silicon** with
    **Homebrew** and a selected **Xcode 26+** installation.
-2. Runs `brew tap facebook/fb && brew install facebook/fb/idb` to install the
-   official client + companion metapackage (currently 1.7.6). When supported,
+2. Runs `brew tap meta/fb && brew install meta/fb/idb` to install the
+   official client + companion metapackage (currently 1.7.8). Fails fast, without removing anything, if the installed idb formulae still come from the legacy `facebook/fb` tap. When supported,
    explicitly trusts only the `idb`, `idb-cli` and `idb-companion` formulae.
 3. Verifies matching client/companion versions and that PATH resolves the
    Homebrew binaries rather than another installation.

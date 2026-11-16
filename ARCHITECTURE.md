@@ -173,7 +173,7 @@ pointer.
     requirement.
   - **`idb` CLI** (facebook/idb — UI interaction, app install/launch/
     terminate, screenshots, logs) and **`idb_companion`** come from the official
-    `facebook/fb/idb` Homebrew metapackage, currently 1.7.6. Its `idb-cli`
+    `meta/fb/idb` Homebrew metapackage, currently 1.7.8. Its `idb-cli`
     dependency owns the Python environment; `idb-companion` owns the native
     executable and adjacent resources.
   - **Homebrew** installation runs via `scripts/install_dependencies.sh`
