@@ -1,0 +1,31 @@
+sonar-project.properties
+  s_e04643152d8fcc::t_bb9f3dec2262f1 8,10
+src/__integration__/mcpProtocol.integration.test.js
+  s_e04643152d8fcc::t_46592ac5343deb 48-58,84
+src/__integration__/support/fixtureApp.js
+  s_e04643152d8fcc::t_ff548ae8defcf1 48
+src/__integration__/support/globalSetup.js
+  s_e04643152d8fcc::t_5460bf12bf0e9c 18
+src/__integration__/support/simctl.js
+  s_e04643152d8fcc::t_92b3eb238b618f 73-79,81-83
+src/__integration__/support/simulatorHarness.js
+  s_e04643152d8fcc::t_e1f2062e561390 43,70,99
+src/__integration__/support/state.js
+  s_e04643152d8fcc::t_daf196ce76e770 19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "efed07137d822cf27b072e931dae5fb8b3b09eac",
+  "prompts": {},
+  "sessions": {
+    "s_e04643152d8fcc": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1b260383ffezb1npa95H21YNX",
+        "model": "inditex/KAIA/glm-5.3-flash"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
