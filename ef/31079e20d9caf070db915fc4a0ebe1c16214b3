@@ -1,0 +1,29 @@
+.github/workflows/sonar-branch-analysis.yml
+  s_3d24fe3ecf9cde::t_8ccaef7fa99d2f 9-10,16-17,33,35-43
+AGENTS.md
+  s_3d24fe3ecf9cde::t_b43da79f631ffb 37-38
+ARCHITECTURE.md
+  s_3d24fe3ecf9cde::t_818758ee4299d4 176
+README.md
+  s_3d24fe3ecf9cde::t_5a8605d1170a53 98,103-110
+scripts/install_dependencies.sh
+  s_3d24fe3ecf9cde::t_83fd98286a9701 35-64,68,70,72-73,93,99
+src/__tests__/installDependencies.test.ts
+  s_3d24fe3ecf9cde::t_5f7a774ab437e4 33,43-49,75-76,78-89,91-92,94-99,101,104-107,129-130,132-179,183-184,202
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "ef31079e20d9caf070db915fc4a0ebe1c16214b3",
+  "prompts": {},
+  "sessions": {
+    "s_3d24fe3ecf9cde": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1c21aa50ffe5FYfJiIgQ5Yf10",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
