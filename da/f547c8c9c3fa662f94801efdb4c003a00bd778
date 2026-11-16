@@ -1,0 +1,29 @@
+.github/workflows/PR-verify.yml
+  s_3d24fe3ecf9cde::t_5b6130b8afb482 55
+.github/workflows/sonar-branch-analysis.yml
+  s_3d24fe3ecf9cde::t_3caf6efe07cf03 27,57
+package-lock.json
+  s_3d24fe3ecf9cde::t_774250958abfad 13,17,561-563,902-904,1124-1126,1163-1171,1551-1553,1569-1580,1592-1594,1609-1611,1626-1628,1643-1645,1663-1665,1683-1685,1703-1705,1723-1725,1743-1745,1763-1765,1780-1782,1797-1799,1960-1962,2901-2903,2964-2966,2984-2988,3066-3068,3190-3192,3237-3239,3362-3364,3494-3496,3499,3506-3508,3567-3569,3573-3575,3591-3592,3598,3610-3612,3917-3919,3929-3931,4795-4797,5054-5056,5120-5122
+package.json
+  s_3d24fe3ecf9cde::t_d877efbbf5fe7c 24,28
+src/idb/IDBManager.ts
+  s_3d24fe3ecf9cde::t_4568a6c5cac30f 58-69,206-207,210-211
+src/idb/__tests__/IDBManager.test.ts
+  s_3d24fe3ecf9cde::t_53f9bfb96edc67 100,104,115,131-140
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "daf547c8c9c3fa662f94801efdb4c003a00bd778",
+  "prompts": {},
+  "sessions": {
+    "s_3d24fe3ecf9cde": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1c21aa50ffe5FYfJiIgQ5Yf10",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
