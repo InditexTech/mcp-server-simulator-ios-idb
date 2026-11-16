@@ -1,0 +1,21 @@
+package-lock.json
+  s_d3fd0bad8f61c4::t_37ad04c50eb168 572-575,577,2844-2846,3714-3716,3720,3722,4862-4864,4868-4869,4872,5154-5156
+package.json
+  s_d3fd0bad8f61c4::t_1bea891180b60c 34-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "e615ccbfd2089a86b21348a2c582cdcf091a0338",
+  "prompts": {},
+  "sessions": {
+    "s_d3fd0bad8f61c4": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1bfc3d00ffe66b2mrU7qZvDI8",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
