@@ -386,12 +386,25 @@ Runs only with the dedicated Jest config (`jest.integration.config.js`) and
    (transport → parser → adapters → `IDBManager` → `idb`/`simctl`).
 3. Asserts observable effects: owned device in the inventory, accurate booted
    listing, PNG signature of screenshots, Safari launch/list/terminate,
-   URL opening, and uninstall/`bundleId` truthfulness with a compiled fixture
-   app (`com.inditex.mcp.fixture.demo`).
+   URL opening through the fixture's own `mcpfixture://` scheme (the app
+   renders the URL it receives via `onOpenURL`; no external network), and
+   uninstall/`bundleId` truthfulness with a compiled fixture app
+   (`com.inditex.mcp.fixture.demo`).
 4. Verifies unsupported commands fail honestly over the wire.
 5. Guarantees cleanup: teardown shuts down and deletes the owned device by
-   its exact UDID even when tests fail. Existing simulators are never
-   touched; every run asserts their recorded pre-run state is unchanged.
+   its exact UDID even when tests fail, and terminates the `idb_companion`
+   process spawned for the owned UDID (exact argv match, current user only,
+   PID-reuse fail-closed) plus its `/tmp/idb/<udid>` socket. Existing
+   simulators and other users' processes are never touched; every run
+   asserts their recorded pre-run state is unchanged.
+6. Captures nothing sensitive: the run reads no real crash logs (a crash
+   command smoke was removed on purpose — on current runtimes the CLI mixes
+   host operating-system crash reports into per-device output, so a real
+   smoke would ingest sensitive host data; the command's parsing contract
+   is covered by synthetic unit tests instead), and CI failure artifacts
+   whitelist only the suite-owned artifacts directory (screenshots captured
+   by the suite and the sanitized run summary); the generic `logs/` output
+   of the server is never uploaded.
 
 Requires `idb` and `fb-idb` already installed (`npm ci` on macOS). The run
 takes several minutes (simulator boot + fixture build).

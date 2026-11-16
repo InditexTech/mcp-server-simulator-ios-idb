@@ -36,7 +36,6 @@ const USER = 'fakeuser';
 let probeEnv: NodeJS.ProcessEnv | undefined = undefined;
 
 const runHarnessProbe = (spec: string, call: string, ...args: unknown[]): Promise<any> => {
-  const { spawnSync } = require('node:child_process') as typeof import('node:child_process');
   const script = `
     const mod = await import(${JSON.stringify(spec)});
     const fn = mod[${JSON.stringify(call)}] ?? null;
@@ -61,7 +60,6 @@ const terminateOwnedProcess = (target: unknown, udid: string, user: string) =>
   runHarnessProbe(new URL('../__integration__/support/simulatorHarness.js', import.meta.url).href, 'terminateOwnedProcess', target, udid, user);
 
 const stateWriteAndReadPath = () => {
-  const { spawnSync } = require('node:child_process') as typeof import('node:child_process');
   const script = `
     const mod = await import(${JSON.stringify(new URL('../__integration__/support/state.js', import.meta.url).href)});
     delete process.env[mod.STATE_FILE_ENV];
@@ -171,8 +169,7 @@ describe('terminateOwnedProcess fail-closed behavior', () => {
   it('reports SIGKILL failure instead of claiming success', async () => {
     // The stubbed kill always exits 1 without "No such process", so the
     // harness must report failure, never fake success, on a kill error.
-    const { spawnSync } = require('node:child_process') as typeof import('node:child_process');
-    writeFileSync(path.join(stubbedBin, 'kill'), '#!/bin/bash\necho "kill: Operation not permitted" >&2\nexit 1\n', { mode: 0o755 });
+      writeFileSync(path.join(stubbedBin, 'kill'), '#!/bin/bash\necho "kill: Operation not permitted" >&2\nexit 1\n', { mode: 0o755 });
     // The probe child must resolve ps/kill from the stub directory.
     probeEnv = { ...process.env, PATH: `${stubbedBin}:${process.env.PATH}` };
     try {

@@ -226,11 +226,21 @@ export async function createOwnedSimulator(runId) {
   }
 
   await run('xcrun', ['simctl', 'boot', udid]);
-  await pollUntil(async () => {
-    const devices = await listSimulators();
-    const target = devices.find(d => d.udid === udid);
-    return target?.state === 'Booted';
-  }, 120_000);
+  try {
+    await pollUntil(async () => {
+      const devices = await listSimulators();
+      const target = devices.find(d => d.udid === udid);
+      return target?.state === 'Booted';
+    }, 120_000);
+  } catch (bootError) {
+    // Boot failed (or readiness never reached): the created device is a
+    // broken owned artifact. Delete exactly it before surfacing the
+    // failure, so the setup path never leaks a device even on the boot
+    // itself failing (e.g. launchd_sim crashes on the host).
+    await tryRun('xcrun', ['simctl', 'shutdown', udid]);
+    await tryRun('xcrun', ['simctl', 'delete', udid]);
+    throw bootError;
+  }
 
   return { udid, name: uniqueName, deviceType, runtime };
 }

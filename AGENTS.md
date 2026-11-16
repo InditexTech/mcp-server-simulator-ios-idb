@@ -115,6 +115,18 @@ automatically. Native Homebrew versions are not fixed by the npm lockfile.
   explicitly approved operation only: require explicit user/agent approval
   before running anything that boots, installs, taps, or otherwise mutates
   simulator state. Default to mocking.
+- The opt-in integration suite (`src/__integration__/`) owns a single
+  disposable simulator and its `idb_companion`; teardown removes both with
+  exact-UDID ownership checks (current user only, PID-reuse fail-closed,
+  no generic process kills). Unit tests for that cleanup live in
+  `src/__tests__/simulatorHarnessCleanup.test.ts` and load the ESM
+  harness through a disposable Node child — they never spawn real
+  processes or signal real PIDs.
+- The integration suite reads **no real crash logs** (the parsing contract
+  is covered by synthetic unit tests; a real smoke was removed because the
+  CLI mixes host crash data into per-device output), and CI artifacts
+  publish only the suite-owned artifacts directory, never the server's
+  generic `logs/` directory.
 
 ## Never edit generated directories
 
