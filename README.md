@@ -240,6 +240,7 @@ The NLParser supports the following natural language commands:
 | Boot simulator | Boots a simulator by UDID | "boot simulator 5A321B8F-4D85-4267-9F79-2F5C91D142C2" |
 | Shutdown simulator | Shuts down a simulator | "shutdown simulator 5A321B8F-4D85-4267-9F79-2F5C91D142C2" |
 | Focus simulator | Brings simulator window to front | "focus simulator", "bring simulator to front" |
+| Check simulator | Checks if the current simulator session is booted | "check simulator", "is simulator booted" |
 | List simulator sessions | Lists active simulator sessions | "list simulator sessions", "show active sessions" |
 
 ### 📱 App Management
@@ -250,7 +251,7 @@ The NLParser supports the following natural language commands:
 | Terminate app | Terminates a running app | "terminate app com.example.app" |
 | Uninstall app | Uninstalls an app | "uninstall app com.example.app" |
 | List apps | Lists installed applications | "list apps", "show installed apps" |
-| Check if app installed | Checks if an app is installed | "is app com.example.app installed" |
+| Check if app installed | Checks if an app is installed | "is app com.example.app installed", "check app com.example.app" |
 
 ### 🖱️ UI Interaction
 | Command | Description | Example |
