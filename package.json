@@ -31,5 +31,9 @@
     "@types/node": "^24.19.2",
     "jest": "^30.5.2",
     "typescript": "^7.0.2"
+  },
+  "overrides": {
+    "glob": "^14.0.6",
+    "minimatch": "^11.0.8"
   }
 }
