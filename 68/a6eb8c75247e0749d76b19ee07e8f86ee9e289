@@ -1,0 +1,14 @@
+.github/workflows/integration.yml
+  h_54a1c5973b9675 14-34,52,63,70-72,75-76,79-90,92,95,97,100,102-104,110-125
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "68a6eb8c75247e0749d76b19ee07e8f86ee9e289",
+  "prompts": {},
+  "humans": {
+    "h_54a1c5973b9675": {
+      "author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
