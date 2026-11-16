@@ -101,7 +101,12 @@ case "$*" in
       echo 'Refusing to load formula meta/fb/idb-cli from untrusted tap meta/fb.' >&2
       exit 1
     fi ;;
-  '--prefix meta/fb/idb') echo "$TEST_ROOT/kegs/idb" ;;
+  '--prefix meta/fb/idb')
+    if [[ "$TEST_TRUST_SUPPORTED" == "1" && ! -f "$TEST_ROOT/trusted" ]]; then
+      echo 'Refusing to load formula meta/fb/idb from untrusted tap meta/fb.' >&2
+      exit 1
+    fi
+    echo "$TEST_ROOT/kegs/idb" ;;
   '--prefix meta/fb/idb-cli') echo "$TEST_ROOT/cli" ;;
   '--prefix meta/fb/idb-companion') echo "$TEST_ROOT/companion" ;;
   'list --versions meta/fb/idb meta/fb/idb-cli meta/fb/idb-companion')
@@ -174,7 +179,6 @@ esac`);
     expect(result.stderr).toContain('brew uninstall idb idb-cli idb-companion');
     const calls = readFileSync(path.join(directory, 'brew.log'), 'utf8');
     expect(calls).not.toContain('uninstall');
-    expect(calls).not.toContain('trust --formula');
     expect(calls).not.toContain('install meta/fb/idb');
     expect(result.stdout).not.toContain('installed successfully');
   });

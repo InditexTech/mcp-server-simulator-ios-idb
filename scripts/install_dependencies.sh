@@ -41,6 +41,12 @@ fi
 if ! brew tap | grep -qx 'meta/fb'; then
     brew tap meta/fb
 fi
+if brew command trust > /dev/null 2>&1; then
+    # Recent Homebrew versions require explicit trust for dependencies in a
+    # third-party tap. Trust only the three formulae used by this installer.
+    brew trust --formula meta/fb/idb meta/fb/idb-cli meta/fb/idb-companion
+fi
+
 # Homebrew refuses to install a formula whose installed receipt records another
 # tap (for example facebook/fb before the rename to meta/fb). Detect that read-only
 # and explain the one-time manual migration instead of removing a working install.
@@ -61,11 +67,6 @@ if [[ ${#legacy_formulae[@]} -gt 0 ]]; then
     echo "  brew uninstall ${legacy_formulae[*]}" >&2
     echo "  npm ci" >&2
     exit 1
-fi
-if brew command trust > /dev/null 2>&1; then
-    # Recent Homebrew versions require explicit trust for dependencies in a
-    # third-party tap. Trust only the three formulae used by this installer.
-    brew trust --formula meta/fb/idb meta/fb/idb-cli meta/fb/idb-companion
 fi
 brew install meta/fb/idb
 
