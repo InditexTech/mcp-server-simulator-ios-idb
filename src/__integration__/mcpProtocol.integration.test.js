@@ -45,6 +45,17 @@ afterEach(async () => {
   await completeIfApplicable();
 });
 
+async function expectOwnedOnlyInInventory() {
+  const devices = await listSimulators();
+  const before = new Map(state.beforeInventory.map(d => [d.udid, d.state]));
+  for (const device of devices) {
+    const beforeState = before.get(device.udid);
+    if (device.udid !== ownedUdid() && beforeState === 'Shutdown') {
+      expect(device.state).toBe('Shutdown');
+    }
+  }
+}
+
 function expectOwnedOnly() {
   // Guard: the owned device must be the only simulator this run has BOOTED.
   // Pre-existing inventory recorded in state must stay Shutdown.
@@ -70,19 +81,8 @@ describe('inventory and ownership invariants', () => {
     expect(defined(owned)).toBe(true);
     expect(owned.name).toBe(state.name);
     expect(owned.state).toBe('Booted');
-    await expectOwnedOnlyBeforeReturn();
+    await expectOwnedOnlyInInventory();
   });
-
-  async function expectOwnedOnlyBeforeReturn() {
-    const devices = await listSimulators();
-    const before = new Map(state.beforeInventory.map(d => [d.udid, d.state]));
-    for (const device of devices) {
-      const beforeState = before.get(device.udid);
-      if (device.udid !== ownedUdid() && beforeState === 'Shutdown') {
-        expect(device.state).toBe('Shutdown');
-      }
-    }
-  }
 
   it('lists booted simulators exactly as the owned device', async () => {
     ({ client, transport } = await startMcpServer());

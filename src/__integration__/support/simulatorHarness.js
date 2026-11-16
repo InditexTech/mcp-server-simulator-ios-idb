@@ -40,7 +40,7 @@ export async function selectCompatibleDevice() {
     const supported = (runtime.supportedDeviceTypes || [])
       .map(dt => dt.identifier || dt)
       .filter(id => /iPhone/.test(id) && !/SE/.test(id));
-    const preferred = supported.find(id => /Pro$/.test(id)) || supported[0];
+    const preferred = supported.find(id => id.endsWith('Pro')) || supported[0];
     if (preferred) {
       return { deviceType: preferred, runtime: runtime.identifier, runtimeVersion: runtime.version };
     }
@@ -67,7 +67,7 @@ export async function createOwnedSimulator(runId) {
   // The created device must exist with exactly our name.
   const afterCreate = await listSimulators();
   const owned = afterCreate.find(d => d.udid === udid);
-  if (!owned || owned.name !== uniqueName) {
+  if (owned?.name !== uniqueName) {
     await tryRun('xcrun', ['simctl', 'delete', udid]);
     throw new Error(`Created simulator not found or renamed: ${udid}`);
   }
@@ -96,7 +96,7 @@ export async function cleanupOwnedSimulator(ownedUdid) {
     return;
   }
   const owned = (await listSimulators()).find(d => d.udid === ownedUdid);
-  if (!owned || !owned.name.startsWith(OWNED_NAME_PREFIX)) {
+  if (!owned?.name.startsWith(OWNED_NAME_PREFIX)) {
     // Never delete a device we did not create, even if it looks similar.
     return { skipped: true, reason: `Device ${ownedUdid} is not owned by this suite` };
   }

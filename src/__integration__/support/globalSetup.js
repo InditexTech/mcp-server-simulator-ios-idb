@@ -15,7 +15,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { listSimulators, pollUntil } from './simctl.js';
 import { createOwnedSimulator, cleanupOwnedSimulator } from './simulatorHarness.js';
-import { writeState, statePath } from './state.js';
+import { writeState } from './state.js';
 
 export default async function globalSetup() {
   const runId = randomUUID().slice(0, 8);
@@ -58,4 +58,3 @@ export default async function globalSetup() {
   }
 }
 
-export { statePath };

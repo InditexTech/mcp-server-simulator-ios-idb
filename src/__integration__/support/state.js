@@ -16,9 +16,5 @@ export function readState() {
 }
 
 export function writeState(state) {
-  fs.writeFileSync(stateFile, JSON.stringify(state, null, 2));
-}
-
-export function statePath() {
-  return stateFile;
+  fs.writeFileSync(stateFile, JSON.stringify(state, null, 2), { mode: 0o600 });
 }

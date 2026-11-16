@@ -45,7 +45,7 @@ struct ContentView: View {
                 .textFieldStyle(.roundedBorder)
                 .padding()
                 .accessibilityIdentifier("fixtureTextField")
-            Text("Value: \\(enteredText)")
+            Text(String(format: "Value: %@", enteredText))
                 .accessibilityIdentifier("fixtureEchoLabel")
         }
         .padding(24)

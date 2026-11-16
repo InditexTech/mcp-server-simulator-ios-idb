@@ -70,12 +70,17 @@ export async function pollUntil(predicate, timeoutMs, intervalMs = 2000) {
   const deadline = Date.now() + timeoutMs;
   let lastError;
   while (Date.now() < deadline) {
-    try {
-      if (await predicate()) {
-        return true;
+    // One real re-evaluation per cycle; never blindly advance.
+    const result = await (async () => {
+      try {
+        return await predicate();
+      } catch (error) {
+        lastError = error;
+        return false;
       }
-    } catch (error) {
-      lastError = error;
+    })();
+    if (result) {
+      return true;
     }
     await sleep(intervalMs);
   }
