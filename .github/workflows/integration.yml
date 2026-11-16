@@ -40,37 +40,44 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 60
     steps:
-      - name: Resolve commit under test
-        id: resolve
-        run: |
-          set -euo pipefail
-          if [[ "${{ github.event_name }}" == "release" ]]; then
-            TAG='${{ github.event.release.tag_name }}'
-            RESOLVED_SHA="$(git ls-remote origin "refs/tags/${TAG}" | awk '{print $1}')"
-            if [[ -z "$RESOLVED_SHA" ]]; then
-              echo "::error::Tag ${TAG} not found on origin"
-              exit 1
-            fi
-            echo "resolved_sha=${RESOLVED_SHA}" >> "$GITHUB_OUTPUT"
-            echo "resolved_ref=release-${TAG}" >> "$GITHUB_OUTPUT"
-          else
-            echo "resolved_sha=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
-            echo "resolved_ref=dispatch-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
-          fi
-          echo "Testing resolved commit (SHA): ${RESOLVED_SHA:-$GITHUB_SHA}"
-
+      # Non-privileged context: static checkout of the event-provided ref.
+      # For release events that is the (recorded) tag ref; for
+      # workflow_dispatch it is github.sha of the trusted manual run.
       - name: Checkout resolved commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-          ref: ${{ steps.resolve.outputs.resolved_sha }}
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.sha }}
           persist-credentials: false
 
+      # Privilege boundary: assert the checked-out commit equals the
+      # tag's commit exactly (tag text is untrusted data) before any
+      # cache-backed or build step touches the workspace. Aborts on
+      # mismatch, so nothing built later can come from a repointed tag.
+      - name: Verify checked-out commit matches the release tag
+        if: github.event_name == 'release'
+        run: |
+          set -euo pipefail
+          TAG='${{ github.event.release.tag_name }}'
+          RESOLVED_SHA="$(git ls-remote origin "refs/tags/${TAG}" | awk '{print $1}')"
+          CHECKED_SHA="$(git rev-parse HEAD)"
+          if [[ -z "$RESOLVED_SHA" ]]; then
+            echo "::error::Tag ${TAG} not found on origin"
+            exit 1
+          fi
+          if [[ "$RESOLVED_SHA" != "$CHECKED_SHA" ]]; then
+            echo "::error::Checked-out commit ${CHECKED_SHA} does not match tag ${TAG} (${RESOLVED_SHA}); refusing to test a stale or repointed ref"
+            exit 1
+          fi
+          echo "Release ${TAG} resolved to immutable commit ${CHECKED_SHA}"
+
+      # npm cache intentionally disabled: setup-node's GitHub cache is the
+      # only cache-poisoning surface flagged by CodeQL for this workflow,
+      # and the cost is a slower install on a release-only cadence.
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
 
       # npm ci runs scripts/install_dependencies.sh, which installs the
       # official meta/fb idb metapackage (client + companion) via Homebrew;
@@ -91,7 +98,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: integration-artifacts-${{ steps.resolve.outputs.resolved_ref }}
+          name: integration-artifacts-${{ github.event_name }}-${{ github.run_number }}
           path: |
             logs/
             ${{ runner.temp }}/integration-artifacts/
