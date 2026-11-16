@@ -1,0 +1,45 @@
+.github/workflows/PR-verify.yml
+  s_e04643152d8fcc::t_61520c15042bec 55
+.github/workflows/sonar-branch-analysis.yml
+  s_e04643152d8fcc::t_e0a573012b8a94 9-10,16-17,33,35-43,52
+ARCHITECTURE.md
+  s_e04643152d8fcc::t_6f8f74311245c4 176
+README.md
+  s_e04643152d8fcc::t_0103af61d049b7 102,107-114
+package-lock.json
+  s_bcd913d8ff073d::t_e501c54a478201 13,17,561-563,572-575,577,1028-1030,1435-1437,1453-1464,1476-1478,1493-1495,1510-1512,1527-1529,1547-1549,1567-1569,1587-1589,1607-1609,1627-1629,1647-1649,1664-1666,1681-1683,2835-2837,3722-3724,3728,3730,3793-3795,4870-4872,4876-4877,4880,5162-5164
+package.json
+  s_bcd913d8ff073d::t_5b0f6f7863505c 25,29,35-38
+scripts/install_dependencies.sh
+  s_e04643152d8fcc::t_22823428ccdee5 35-43,47-69,71,73-74,94,100
+src/__tests__/installDependencies.test.ts
+  s_e04643152d8fcc::t_f30e173b521d61 33,43-49,75-76,78-89,91-92,94-99,101,104-112,134-135,137-183,187-188,206
+src/idb/IDBManager.ts
+  s_e04643152d8fcc::t_62619ef18b3a69 58-69,206-207,210-211
+src/idb/__tests__/IDBManager.test.ts
+  s_e04643152d8fcc::t_3baf3a9f3856e6 302,306,317,333-342
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "3aabd9e08972e787e26040cc884c42fc3d134d6b",
+  "prompts": {},
+  "sessions": {
+    "s_bcd913d8ff073d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1b9d27f7ffemjGWKFu3mrhFgy",
+        "model": "inditex/KAIA/glm-5.3-flash"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    },
+    "s_e04643152d8fcc": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1b260383ffezb1npa95H21YNX",
+        "model": "inditex/KAIA/glm-5.3-flash"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
