@@ -1,0 +1,21 @@
+scripts/install_dependencies.sh
+  s_3d24fe3ecf9cde::t_2d4eb9085066fc 44-49
+src/__tests__/installDependencies.test.ts
+  s_3d24fe3ecf9cde::t_17696ba9d028c4 104-109
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "1413aa5aae565323a41810b14f86c3fb375e1cea",
+  "prompts": {},
+  "sessions": {
+    "s_3d24fe3ecf9cde": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1c21aa50ffe5FYfJiIgQ5Yf10",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
