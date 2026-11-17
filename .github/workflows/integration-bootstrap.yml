@@ -1,0 +1,407 @@
+# SPDX-FileCopyrightText: © 2026 Industria de Diseño Textil S.A. INDITEX
+# SPDX-License-Identifier: Apache-2.0
+
+# Manual, dispatch-only bootstrap for the real-simulator integration suite.
+#
+# Refs #76. This workflow exists only so the real integration tests from
+# PR #78 can be run BEFORE that PR merges: workflow files live on the default
+# branch, so a workflow_dispatch definition inside PR #78's integration.yml
+# cannot be invoked until merge. This bootstrap is that bridge:
+#
+# - Manual trigger ONLY (workflow_dispatch). No pull_request, no schedule,
+#   no push: it contributes nothing to PR verification gates and never runs
+#   automatically. PR CI keeps running the existing mock-based suite.
+# - Runs the ACTUAL integration test code from the pinned commit of PR #78
+#   on fresh hosted macos-26 (arm64) VMs, sequentially: run-2 starts only
+#   after run-1 succeeds, each on its own fresh VM, to measure run-to-run
+#   stability rather than averaging within one warm environment.
+# - This is a pre-merge bridge, NOT a publication gate: nothing here merges,
+#   approves, or blocks PR #78, and its own test infra remains unchanged.
+# - Removal of this bootstrap after PR #78 merges (or the scheme evolves)
+#   requires its own explicit approved change; nothing self-deletes.
+#
+# Security model (fail closed):
+# - The dispatch input `pr_head_sha` is UNTRUSTED DATA: it is accepted only
+#   when it is exactly 40 lowercase hex characters AND equals ALLOWED_SHA,
+#   the single commit this bootstrap was approved to test.
+# - The job additionally queries the GitHub API (read-only, GITHUB_TOKEN
+#   `contents: read` scope) and fails closed unless PR #78 is still OPEN,
+#   lives in InditexTech/mcp-server-simulator-ios-idb itself (no forks),
+#   and its live head commit still equals ALLOWED_SHA.
+# - The checkout ref is the compile-time literal ALLOWED_SHA, never the raw
+#   input: no workflow expression, no event data, and no user-controlled
+#   string ever reaches checkout, git, or a shell. The verification output
+#   is asserted against the checked-out commit purely as a redundant gate.
+# - No pull_request_target and no arbitrary-ref fetch of untrusted code.
+# - No caches (npm or otherwise), no persisted checkout credentials, no
+#   secrets beyond the built-in read-only GITHUB_TOKEN, no id-token, no
+#   environment access, and no added third-party actions.
+
+name: Integration bootstrap (manual, pre-merge)
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_head_sha:
+        description: >-
+          Head commit of PR #78 to test. Must equal the pinned ALLOWED_SHA;
+          any other value is rejected. Kept as an explicit, auditable input
+          rather than an implicit constant (the validation gate below still
+          pins the effective target).
+        required: true
+        default: '4a9c279091183626d9988f3834a5d544b5c4c7f7'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: integration-bootstrap-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # The one commit this bootstrap is approved to exercise: the head of
+  # PR #78 as verified at approval time. Updating this constant is an
+  # explicit workflow change, not a runtime decision.
+  ALLOWED_SHA: '4a9c279091183626d9988f3834a5d544b5c4c7f7'
+  ALLOWED_REPO: 'InditexTech/mcp-server-simulator-ios-idb'
+  ALLOWED_ISSUE: '78'
+  NODE_VERSION: '24.22.1'
+  NPM_VERSION: '12.2.0'
+
+jobs:
+  run-1:
+    name: Real-simulator integration run 1 (fresh VM)
+    runs-on: macos-26
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      # Read-only, untrusted-input gate BEFORE any checkout of test code.
+      # PR_HEAD_SHA travels only as an env value (never interpolated into
+      # shell code). jq and gh are preinstalled on hosted runners.
+      - name: Verify dispatch input against the approved PR head
+        env:
+          PR_HEAD_SHA: ${{ inputs.pr_head_sha }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          : "${PR_HEAD_SHA:?}"
+          : "${ALLOWED_SHA:?}"
+          : "${ALLOWED_REPO:?}"
+          if ! [[ "${PR_HEAD_SHA}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::pr_head_sha must be exactly 40 lowercase hex characters" >&2
+            exit 1
+          fi
+          if [[ "${PR_HEAD_SHA}" != "${ALLOWED_SHA}" ]]; then
+            echo "::error::pr_head_sha does not match the approved bootstrap target; refusing to run" >&2
+            exit 1
+          fi
+          gh api "repos/${ALLOWED_REPO}/pulls/${ALLOWED_ISSUE}" > "$RUNNER_TEMP/pr.json"
+          PR_STATE="$(jq -r '.state // ""' "$RUNNER_TEMP/pr.json")"
+          PR_DRAFT="$(jq -r '.draft // false' "$RUNNER_TEMP/pr.json")"
+          PR_HEAD_REPO="$(jq -r '.head.repo.full_name // ""' "$RUNNER_TEMP/pr.json")"
+          PR_HEAD="$(jq -r '.head.sha // ""' "$RUNNER_TEMP/pr.json")"
+          if [[ "${PR_STATE}" != "open" ]]; then
+            echo "::error::PR #${ALLOWED_ISSUE} is '${PR_STATE}', not open; refusing to run a pre-merge bootstrap" >&2
+            exit 1
+          fi
+          if [[ "${PR_HEAD_REPO}" != "${ALLOWED_REPO}" ]]; then
+            echo "::error::PR head repository '${PR_HEAD_REPO}' is not '${ALLOWED_REPO}'" >&2
+            exit 1
+          fi
+          if [[ "${PR_HEAD}" != "${ALLOWED_SHA}" ]]; then
+            echo "::error::PR #${ALLOWED_ISSUE} head is now ${PR_HEAD}; it no longer matches the approved target" >&2
+            exit 1
+          fi
+          echo "PR #${ALLOWED_ISSUE} verified: open, ${PR_HEAD_REPO}, head ${PR_HEAD}"
+          {
+            echo "target_sha=${ALLOWED_SHA}"
+          } >> "$GITHUB_OUTPUT"
+
+      # Static, compile-time literal checkout of the approved commit.
+      - name: Checkout approved PR head (pinned commit)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: 4a9c279091183626d9988f3834a5d544b5c4c7f7
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Assert checked-out commit is the verified target
+        run: |
+          set -euo pipefail
+          CHECKED="$(git rev-parse HEAD)"
+          if [[ "${CHECKED}" != "4a9c279091183626d9988f3834a5d544b5c4c7f7" ]]; then
+            echo "::error::checked-out commit ${CHECKED} is not the approved target" >&2
+            exit 1
+          fi
+          echo "Checked out approved commit ${CHECKED}"
+
+      # No setup-node cache on purpose (small, one-off bridge; updates to the
+      # runner image caches belong to the platform).
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # The repo pins npm (packageManager: npm@12.2.0, engines >= 24.22.1);
+      # pin explicitly and fail fast on drift (pattern from integration.yml
+      # on PR #78).
+      - name: Pin and assert toolchain versions
+        run: |
+          set -euo pipefail
+          npm install --global "npm@${NPM_VERSION}"
+          INSTALLED_NPM="$(npm --version)"
+          echo "npm: ${INSTALLED_NPM}"
+          if [[ "${INSTALLED_NPM}" != "${NPM_VERSION}" ]]; then
+            echo "::error::npm ${INSTALLED_NPM} installed but ${NPM_VERSION} required" >&2
+            exit 1
+          fi
+          INSTALLED_NODE="$(node --version)"
+          echo "node: ${INSTALLED_NODE}"
+          if [[ "${INSTALLED_NODE}" != "v${NODE_VERSION}" ]]; then
+            echo "::error::node ${INSTALLED_NODE} installed but v${NODE_VERSION} required" >&2
+            exit 1
+          fi
+
+      # npm ci triggers scripts/install_dependencies.sh, which installs the
+      # official meta/fb idb metapackage via Homebrew (no project venv since
+      # #74). Log the actual tool strings for the record.
+      - name: Install dependencies (idb toolchain via postinstall)
+        run: |
+          set -euo pipefail
+          npm ci
+          echo "uname: $(uname -m)"
+          echo "macOS: $(sw_vers -productVersion)"
+          echo "xcode: $(xcodebuild -version 2>/dev/null | head -2 | tr '\n' ' ')"
+          echo "idb client: $(command -v idb || echo 'NOT FOUND')"
+          echo "idb companion: $(command -v idb_companion || echo 'NOT FOUND')"
+
+      # Required on a fresh checkout: the suite spawns dist/index.js via the
+      # MCP stdio client, so dist/ must exist before any test runs.
+      - name: Build
+        run: npm run build
+
+      - name: Run real-simulator integration suite (run 1)
+        env:
+          IOS_SIM_INTEGRATION: '1'
+          IOS_SIM_ARTIFACTS_DIR: ${{ runner.temp }}/integration-artifacts
+        run: npm run test:integration -- --verbose
+
+      # Independent read-only leftover report: confirm the suite's OWN
+      # simulator and companion processes are gone after teardown, using
+      # only values from the suite's sanitized run summary (UDID validated
+      # as UUID-shape, pids validated as integers — all data via env, never
+      # interpolated into shell code). Result is reported; it does not mask
+      # or alter the test outcome.
+      - name: Report owned-resource cleanup state
+        if: always()
+        env:
+          IOS_SIM_ARTIFACTS_DIR: ${{ runner.temp }}/integration-artifacts
+        run: |
+          set -euo pipefail
+          : "${IOS_SIM_ARTIFACTS_DIR:?}"
+          SUMMARY="${IOS_SIM_ARTIFACTS_DIR}/mcp-integration-summary.json"
+          {
+            echo "## Owned-resource cleanup report (run 1)"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [[ ! -f "${SUMMARY}" ]]; then
+            echo "No run summary produced (setup or earlier step failed before teardown wrote one)." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          UDID="$(node -e '
+            const s = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+            const u = s.udid || "";
+            process.stdout.write(/^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$/.test(u) ? u : "");
+          ' "${SUMMARY}")"
+          PIDS="$(node -e '
+            const s = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+            const out = (s.companionCleanup || []).map(r => r.pid).filter(p => Number.isInteger(p));
+            process.stdout.write(out.join(" "));
+          ' "${SUMMARY}")"
+          if [[ -z "${UDID}" ]]; then
+            echo "Owned UDID absent or malformed in summary; cannot check simulator state." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          SIM_LEFTOVER="$(xcrun simctl list devices | grep -F -- "${UDID}" || true)"
+          if [[ -n "${SIM_LEFTOVER}" ]]; then
+            echo "- Simulator ${UDID}: LEFTOVER (simctl still lists it)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- Simulator ${UDID}: gone (cleanup confirmed)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          for PID in ${PIDS}; do
+            if ps -p "${PID}" > /dev/null 2>&1; then
+              echo "- Companion pid ${PID}: LEFTOVER (process still alive)" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "- Companion pid ${PID}: gone (cleanup confirmed)" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+
+      # Privacy whitelist: only the suite-owned sanitized artifacts directory
+      # (run summary JSON with this run's UDID and cleanup outcomes). The
+      # MCP server's generic logs/ directory is deliberately NOT uploaded:
+      # it is not sanitized. Failure-only, 7-day retention.
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: integration-bootstrap-run-1-${{ github.run_number }}
+          path: ${{ runner.temp }}/integration-artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  run-2:
+    name: Real-simulator integration run 2 (fresh VM)
+    needs: run-1
+    runs-on: macos-26
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - name: Verify dispatch input against the approved PR head
+        env:
+          PR_HEAD_SHA: ${{ inputs.pr_head_sha }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          : "${PR_HEAD_SHA:?}"
+          : "${ALLOWED_SHA:?}"
+          : "${ALLOWED_REPO:?}"
+          if ! [[ "${PR_HEAD_SHA}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::pr_head_sha must be exactly 40 lowercase hex characters" >&2
+            exit 1
+          fi
+          if [[ "${PR_HEAD_SHA}" != "${ALLOWED_SHA}" ]]; then
+            echo "::error::pr_head_sha does not match the approved bootstrap target; refusing to run" >&2
+            exit 1
+          fi
+          gh api "repos/${ALLOWED_REPO}/pulls/${ALLOWED_ISSUE}" > "$RUNNER_TEMP/pr.json"
+          PR_STATE="$(jq -r '.state // ""' "$RUNNER_TEMP/pr.json")"
+          PR_HEAD_REPO="$(jq -r '.head.repo.full_name // ""' "$RUNNER_TEMP/pr.json")"
+          PR_HEAD="$(jq -r '.head.sha // ""' "$RUNNER_TEMP/pr.json")"
+          if [[ "${PR_STATE}" != "open" ]]; then
+            echo "::error::PR #${ALLOWED_ISSUE} is '${PR_STATE}', not open; refusing to run a pre-merge bootstrap" >&2
+            exit 1
+          fi
+          if [[ "${PR_HEAD_REPO}" != "${ALLOWED_REPO}" ]]; then
+            echo "::error::PR head repository '${PR_HEAD_REPO}' is not '${ALLOWED_REPO}'" >&2
+            exit 1
+          fi
+          if [[ "${PR_HEAD}" != "${ALLOWED_SHA}" ]]; then
+            echo "::error::PR #${ALLOWED_ISSUE} head is now ${PR_HEAD}; it no longer matches the approved target" >&2
+            exit 1
+          fi
+          echo "PR #${ALLOWED_ISSUE} verified: open, ${PR_HEAD_REPO}, head ${PR_HEAD}"
+          {
+            echo "target_sha=${ALLOWED_SHA}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Checkout approved PR head (pinned commit)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: 4a9c279091183626d9988f3834a5d544b5c4c7f7
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Assert checked-out commit is the verified target
+        run: |
+          set -euo pipefail
+          CHECKED="$(git rev-parse HEAD)"
+          if [[ "${CHECKED}" != "4a9c279091183626d9988f3834a5d544b5c4c7f7" ]]; then
+            echo "::error::checked-out commit ${CHECKED} is not the approved target" >&2
+            exit 1
+          fi
+          echo "Checked out approved commit ${CHECKED}"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Pin and assert toolchain versions
+        run: |
+          set -euo pipefail
+          npm install --global "npm@${NPM_VERSION}"
+          INSTALLED_NPM="$(npm --version)"
+          echo "npm: ${INSTALLED_NPM}"
+          if [[ "${INSTALLED_NPM}" != "${NPM_VERSION}" ]]; then
+            echo "::error::npm ${INSTALLED_NPM} installed but ${NPM_VERSION} required" >&2
+            exit 1
+          fi
+          INSTALLED_NODE="$(node --version)"
+          echo "node: ${INSTALLED_NODE}"
+          if [[ "${INSTALLED_NODE}" != "v${NODE_VERSION}" ]]; then
+            echo "::error::node ${INSTALLED_NODE} installed but v${NODE_VERSION} required" >&2
+            exit 1
+          fi
+
+      - name: Install dependencies (idb toolchain via postinstall)
+        run: |
+          set -euo pipefail
+          npm ci
+          echo "uname: $(uname -m)"
+          echo "macOS: $(sw_vers -productVersion)"
+          echo "xcode: $(xcodebuild -version 2>/dev/null | head -2 | tr '\n' ' ')"
+          echo "idb client: $(command -v idb || echo 'NOT FOUND')"
+          echo "idb companion: $(command -v idb_companion || echo 'NOT FOUND')"
+
+      - name: Build
+        run: npm run build
+
+      - name: Run real-simulator integration suite (run 2)
+        env:
+          IOS_SIM_INTEGRATION: '1'
+          IOS_SIM_ARTIFACTS_DIR: ${{ runner.temp }}/integration-artifacts
+        run: npm run test:integration -- --verbose
+
+      - name: Report owned-resource cleanup state
+        if: always()
+        env:
+          IOS_SIM_ARTIFACTS_DIR: ${{ runner.temp }}/integration-artifacts
+        run: |
+          set -euo pipefail
+          : "${IOS_SIM_ARTIFACTS_DIR:?}"
+          SUMMARY="${IOS_SIM_ARTIFACTS_DIR}/mcp-integration-summary.json"
+          {
+            echo "## Owned-resource cleanup report (run 2)"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [[ ! -f "${SUMMARY}" ]]; then
+            echo "No run summary produced (setup or earlier step failed before teardown wrote one)." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          UDID="$(node -e '
+            const s = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+            const u = s.udid || "";
+            process.stdout.write(/^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$/.test(u) ? u : "");
+          ' "${SUMMARY}")"
+          PIDS="$(node -e '
+            const s = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+            const out = (s.companionCleanup || []).map(r => r.pid).filter(p => Number.isInteger(p));
+            process.stdout.write(out.join(" "));
+          ' "${SUMMARY}")"
+          if [[ -z "${UDID}" ]]; then
+            echo "Owned UDID absent or malformed in summary; cannot check simulator state." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          SIM_LEFTOVER="$(xcrun simctl list devices | grep -F -- "${UDID}" || true)"
+          if [[ -n "${SIM_LEFTOVER}" ]]; then
+            echo "- Simulator ${UDID}: LEFTOVER (simctl still lists it)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- Simulator ${UDID}: gone (cleanup confirmed)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          for PID in ${PIDS}; do
+            if ps -p "${PID}" > /dev/null 2>&1; then
+              echo "- Companion pid ${PID}: LEFTOVER (process still alive)" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "- Companion pid ${PID}: gone (cleanup confirmed)" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: integration-bootstrap-run-2-${{ github.run_number }}
+          path: ${{ runner.temp }}/integration-artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
