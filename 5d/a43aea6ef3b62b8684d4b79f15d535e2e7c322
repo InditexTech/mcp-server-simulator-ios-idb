@@ -1,0 +1,21 @@
+src/__integration__/support/state.js
+  s_e04643152d8fcc::t_3ee502f65a616e 6-9,20-28,32-42
+src/__tests__/simulatorHarnessCleanup.test.ts
+  s_e04643152d8fcc::t_1ad16cd26a27c1 13,15-18,43,45-47,55-59,68-142,144-167,169,171-174,177-184,186-193,195-197,200-202,209-214,216-222,224,228-242,244,246-293,296-303,307-370,372-375,378-380,383-389,393-413
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "5da43aea6ef3b62b8684d4b79f15d535e2e7c322",
+  "prompts": {},
+  "sessions": {
+    "s_e04643152d8fcc": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1b260383ffezb1npa95H21YNX",
+        "model": "inditex/KAIA/glm-5.3-flash"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
