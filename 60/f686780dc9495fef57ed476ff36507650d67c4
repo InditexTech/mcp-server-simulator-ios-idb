@@ -1,0 +1,19 @@
+src/__integration__/mcpProtocol.integration.test.js
+  s_1a6461ae31d304::t_350e4eb1474dfe 204-210,212-213,216
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "60f686780dc9495fef57ed476ff36507650d67c4",
+  "prompts": {},
+  "sessions": {
+    "s_1a6461ae31d304": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e15a55f70ffeR6oerPX1uL0ON6",
+        "model": "inditex/KAIA/glm-5.3-flash"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
