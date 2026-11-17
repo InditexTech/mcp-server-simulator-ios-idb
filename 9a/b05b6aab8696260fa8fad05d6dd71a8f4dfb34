@@ -1,0 +1,19 @@
+.github/workflows/integration-bootstrap.yml
+  s_167523b7998b58::t_f40490ed1037ae 1-407
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "9ab05b6aab8696260fa8fad05d6dd71a8f4dfb34",
+  "prompts": {},
+  "sessions": {
+    "s_167523b7998b58": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e16b8864dffeu286O0PuQm0rtY",
+        "model": "inditex/KAIA/glm-5.3-flash"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
