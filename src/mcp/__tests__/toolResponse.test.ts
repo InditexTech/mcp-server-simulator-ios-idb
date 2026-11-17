@@ -69,24 +69,30 @@ describe('buildToolResult', () => {
     expect(serialized).not.toContain(`"data":[${pngHeader[0]},`);
   });
 
-  it('keeps the failure state of a failed command next to the image', () => {
-    const result = {
+  it('returns a single JSON text block when a screenshot command fails or writes to a path', () => {
+    const failedResult = {
       success: false,
-      data: pngHeader,
-      error: 'Command failed after the screenshot was taken',
+      error: 'Error executing command: idb companion is not running',
+      timestamp: 1700000000000
+    };
+    const savedPathResult = {
+      success: true,
+      data: '/tmp/screenshot.png',
       timestamp: 1700000000000
     };
 
-    const [, text] = buildToolResult(result).content as ContentBlock[];
+    const failedResponse = buildToolResult(failedResult);
+    const savedPathResponse = buildToolResult(savedPathResult);
 
-    expect(JSON.parse(text.text as string)).toEqual({
-      success: false,
-      error: 'Command failed after the screenshot was taken',
-      timestamp: 1700000000000,
-      data: {
-        mimeType: 'image/png',
-        byteLength: pngHeader.byteLength
-      }
+    expect(failedResponse.content).toHaveLength(1);
+    expect(failedResponse.content[0]).toEqual({
+      type: 'text',
+      text: JSON.stringify(failedResult)
+    });
+    expect(savedPathResponse.content).toHaveLength(1);
+    expect(savedPathResponse.content[0]).toEqual({
+      type: 'text',
+      text: JSON.stringify(savedPathResult)
     });
   });
 });

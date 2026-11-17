@@ -276,6 +276,8 @@ The NLParser supports the following natural language commands:
 | Stop recording | Stops video recording (not implemented yet) | "stop recording", "stop video recording" |
 | Get logs | Retrieves system or app logs | "get logs", "get logs for com.example.app" |
 
+Omitting `outputPath` (plain "take screenshot") returns native MCP `image/png` content instead of a JSON Buffer.
+
 ### 🐛 Debug
 | Command | Description | Example |
 |---------|-------------|---------|
