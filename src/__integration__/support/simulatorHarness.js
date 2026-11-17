@@ -108,7 +108,8 @@ export async function listOwnedCompanionProcesses(udid, userName) {
  * @returns {Promise<{gone: boolean, reason?: string}>}
  */
 export async function terminateOwnedProcess(target, udid, userName) {
-  const killArgs = [String(target.pid), '-TERM'];
+  // macOS kill syntax: signal BEFORE pid (`kill -TERM <pid>`).
+  const killArgs = ['-TERM', String(target.pid)];
   try {
     await execFileAsync('kill', killArgs);
   } catch (error) {

@@ -273,14 +273,22 @@ function defined(x) {
 /**
  * Reads real UI accessibility elements from the owned disposable device.
  * Used to verify observable side effects of open-url instructions without
- * trusting the server response alone.
+ * trusting the server response alone. Retries transient idb accessibility
+ * failures (e.g. "no frontmost application" right after launch) inside the
+ * caller's bounded polling — never unbounded.
  */
 async function describeOwnedElements() {
   const { execFile } = await import('node:child_process');
   const { promisify } = await import('node:util');
   const execFileAsync = promisify(execFile);
-  const { stdout } = await execFileAsync('idb', [
-    'ui', 'describe-all', '--udid', state.udid, '--json'
-  ], { timeout: 120_000 });
-  return stdout;
+  try {
+    const { stdout } = await execFileAsync('idb', [
+      'ui', 'describe-all', '--udid', state.udid, '--json'
+    ], { timeout: 120_000 });
+    return stdout;
+  } catch (error) {
+    // Transient accessibility-service unavailability: surface as an empty
+    // element list so the caller's bounded poll can retry later.
+    return '[]';
+  }
 }
