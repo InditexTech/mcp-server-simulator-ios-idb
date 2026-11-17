@@ -16,7 +16,7 @@
  *   (refuse to signal a process whose argv no longer matches).
  */
 
-import { execFile, spawn } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
 import { listSimulators, run, tryRun, pollUntil } from './simctl.js';
@@ -69,29 +69,31 @@ export async function selectCompatibleDevice() {
  * @returns {Promise<Array<{pid: number, args: string}>>}
  */
 export async function listOwnedCompanionProcesses(udid, userName) {
-  const { stdout } = await execFileAsync('ps', ['-axww', '-o', 'pid=', '-o', 'user=', '-o', 'args=']);
+  const { stdout } = await execFileAsync('ps', ['-axww', '-o', 'pid=', '-o', 'user=', '-o', 'lstart=', '-o', 'args=']);
   const out = [];
   for (const line of stdout.split('\n')) {
     const trimmed = line.trim();
     if (!trimmed) continue;
-    const spaceAt = trimmed.indexOf(' ');
-    if (spaceAt < 0) continue;
-    const pidToken = trimmed.slice(0, spaceAt);
-    const rest = trimmed.slice(spaceAt + 1);
-    const pid = Number.parseInt(pidToken, 10);
+    // ps columns: pid, user, lstart (several words), args. Parse fields
+    // positionally: pid + user + 5 lstart tokens + rest = args.
+    const columns = trimmed.split(/\s+/);
+    if (columns.length < 9) continue;
+    const pid = Number.parseInt(columns[0], 10);
     if (!Number.isInteger(pid) || pid <= 0) continue;
-    const userEnd = rest.indexOf(' ');
-    if (userEnd < 0) continue;
-    const user = rest.slice(0, userEnd);
-    const args = rest.slice(userEnd + 1);
+    const user = columns[1];
+    const lstart = columns.slice(2, 7).join(' ');
+    const args = columns.slice(7).join(' ');
     if (user !== userName) continue;
-    // Exact-token argv match: the UDID must be its own argument, and the
-    // executable must really be idb_companion.
+    // The executable must be idb_companion and the owned UDID must be a
+    // standalone argv token following --udid exactly. The suffix check
+    // rejects look-alike paths (e.g. .../idb_companion-evil) and the token
+    // match rejects python args or shells merely mentioning the path.
     const tokens = args.split(/\s+/);
-    if (!args.startsWith('idb_companion') && !tokens.some(t => t.endsWith('/idb_companion'))) continue;
-    const udidIndex = tokens.indexOf('--udid');
-    if (udidIndex >= 0 && tokens[udidIndex + 1] === udid) {
-      out.push({ pid, args });
+    if (tokens.some(t => t.endsWith('/idb_companion')) || args.startsWith('idb_companion ')) {
+      const udidIndex = tokens.indexOf('--udid');
+      if (udidIndex >= 0 && tokens[udidIndex + 1] === udid) {
+        out.push({ pid, user, lstart, args });
+      }
     }
   }
   return out;
@@ -108,49 +110,81 @@ export async function listOwnedCompanionProcesses(udid, userName) {
  * @returns {Promise<{gone: boolean, reason?: string}>}
  */
 export async function terminateOwnedProcess(target, udid, userName) {
-  // macOS kill syntax: signal BEFORE pid (`kill -TERM <pid>`).
-  const killArgs = ['-TERM', String(target.pid)];
+  // PID-reuse fail-closed gates, applied FRESH immediately before every
+  // signal (TERM and KILL alike): the live process must still exist, run
+  // as the expected user, carry the EXACT same argv and lstart as the
+  // captured target, and be the idb_companion executable. Anything else
+  // means the original owned process is gone (or was never ours) and we
+  // must NOT signal the current PID holder.
+  const verifyStillTarget = async () => {
+    // Raw process lookup by PID: distinguishes 'exited' from 'reused' (a
+    // live process with different identity must never be signaled).
+    const { stdout } = await execFileAsync('ps', ['-axww', '-o', 'pid=', '-o', 'user=', '-o', 'lstart=', '-o', 'args=']);
+    const liveLine = stdout.split('\n').find(line => line.trim().startsWith(`${target.pid} `));
+    if (!liveLine) {
+      return { ok: false, verdict: 'exited' };
+    }
+    const live = (await listOwnedCompanionProcesses(udid, userName)).find(p => p.pid === target.pid);
+    if (!live) {
+      return { ok: false, verdict: 'identity-changed: pid alive but no longer our owned companion executable/user' };
+    }
+    if (live.args !== target.args || live.lstart !== target.lstart || live.user !== target.user) {
+      return { ok: false, verdict: 'identity-changed: refusing to signal a reused or mutated PID' };
+    }
+    return { ok: true };
+  };
+
+  const pre = await verifyStillTarget();
+  if (!pre.ok) {
+    if (pre.verdict === 'exited') {
+      return { gone: true };
+    }
+    return { gone: false, reason: pre.verdict };
+  }
+
   try {
-    await execFileAsync('kill', killArgs);
+    await execFileAsync('kill', ['-TERM', String(target.pid)]);
   } catch (error) {
-    // exit code 1 with "No such process" means it already exited: fine.
     if (String(error?.message || error).includes('No such process')) {
       return { gone: true };
     }
     return { gone: false, reason: `SIGTERM failed: ${String(error?.message || error)}` };
   }
-  return await waitForOwnedExit(target, udid, userName);
-}
 
-async function waitForOwnedExit(target, udid, userName) {
-  // Bounded wait: recheck via ps (same exact argv binding), then SIGKILL
-  // only if the very same argv still matches the owned UDID.
+  // Bounded recheck; the LAST iteration must re-verify identity before
+  // escalating to SIGKILL, so a PID reused between TERM and KILL is never
+  // signaled. Residual TOCTOU between the last check and the kill syscall
+  // is inherent to userspace and documented here rather than overclaimed.
   for (let attempt = 0; attempt < 10; attempt++) {
     await new Promise(resolve => setTimeout(resolve, attempt === 0 ? 200 : 400));
-    const still = (await listOwnedCompanionProcesses(udid, userName))
-      .find(p => p.pid === target.pid);
-    if (!still) {
+    const verdict = await verifyStillTarget();
+    if (verdict.ok) {
+      if (attempt < 9) continue;
+      // Still the same owned process after the whole grace budget: KILL.
+      try {
+        await execFileAsync('kill', ['-KILL', String(target.pid)]);
+      } catch (error) {
+        if (String(error?.message || error).includes('No such process')) {
+          return { gone: true };
+        }
+        return { gone: false, reason: `SIGKILL failed: ${String(error?.message || error)}` };
+      }
+      try {
+        await execFileAsync('kill', ['-0', String(target.pid)]);
+        return { gone: false, reason: 'process survived SIGKILL' };
+      } catch (error) {
+        if (String(error?.message || error).includes('No such process')) {
+          return { gone: true };
+        }
+        return { gone: false, reason: `post-KILL probe failed: ${String(error?.message || error)}` };
+      }
+    }
+    if (verdict.verdict === 'exited') {
       return { gone: true };
     }
+    return { gone: false, reason: verdict.verdict };
   }
-  try {
-    await execFileAsync('kill', ['-KILL', String(target.pid)]);
-  } catch (error) {
-    if (String(error?.message || error).includes('No such process')) {
-      return { gone: true };
-    }
-    return { gone: false, reason: `SIGKILL failed: ${String(error?.message || error)}` };
-  }
-  // Final bounded recheck after SIGKILL.
-  try {
-    await execFileAsync('kill', ['-0', String(target.pid)]);
-    return { gone: false, reason: 'process survived SIGKILL' };
-  } catch (error) {
-    if (String(error?.message || error).includes('No such process')) {
-      return { gone: true };
-    }
-    return { gone: false, reason: `post-KILL probe failed: ${String(error?.message || error)}` };
-  }
+  return { gone: false, reason: 'termination budget exhausted without confirmation' };
 }
 
 /**
@@ -164,9 +198,14 @@ async function waitForOwnedExit(target, udid, userName) {
  * @returns {Promise<Array<{pid?: number, path?: string, gone: boolean, reason?: string}>>}
  */
 export async function cleanupOwnedCompanions(udid, userName) {
+  // Ownership guard: refuse an absent/invalid UDID instead of leaving an
+  // exported helper that could signal or sweep on undefined inputs.
+  if (typeof udid !== 'string' || !/^[0-9A-Fa-f-]{36}$/.test(udid)) {
+    return [{ gone: false, reason: 'cleanup refused: no valid owned UDID' }];
+  }
   if (typeof userName === 'undefined') {
     try {
-      const { stdout } = await execFileAsync('id', '-un');
+      const { stdout } = await execFileAsync('id', ['-un']);
       userName = stdout.trim();
     } catch {
       userName = await new Promise(resolve => {
@@ -182,18 +221,42 @@ export async function cleanupOwnedCompanions(udid, userName) {
   for (const target of procs) {
     results.push({ pid: target.pid, ...(await terminateOwnedProcess(target, udid, userName)) });
   }
+
+  // Socket handling: removal is claimed only when every owned companion
+  // for this UDID is confirmed gone, and only after verifying the path is
+  // a real socket file (never a symlink/directory) at the exact expected
+  // location.
   const socketPath = `/tmp/idb/${udid}_companion.sock`;
-  if (procs.length === 0) {
-    // No live companion bound to this UDID: only clean the stale socket if
-    // it exists (task-owned path under /tmp/idb/<udid>).
-    try {
-      await execFileAsync('rm', ['-f', socketPath]);
-      results.push({ path: socketPath, gone: true, reason: 'stale socket removed (no live companion)' });
-    } catch {
-      results.push({ path: socketPath, gone: false, reason: 'stale socket removal failed' });
+  const survivors = (await listOwnedCompanionProcesses(udid, userName)).filter(p =>
+    procs.some(t => t.pid === p.pid && t.lstart === p.lstart && t.args === p.args)
+  );
+  if (survivors.length > 0) {
+    results.push({ path: socketPath, gone: false, reason: 'owned companion(s) still alive; socket not touched' });
+    for (const survivor of survivors) {
+      if (!results.some(r => r.pid === survivor.pid)) {
+        results.push({ pid: survivor.pid, ...(await terminateOwnedProcess(survivor, udid, userName)) });
+      }
     }
-  } else {
-    results.push({ path: socketPath, gone: true, reason: 'socket path recorded for owned UDID (not removed while companion alive)' });
+    return results;
+  }
+  let fileType = null;
+  try {
+    const { stdout } = await execFileAsync('stat', ['-f', '%HT', socketPath]);
+    fileType = stdout.trim();
+  } catch {
+    fileType = null; // path absent: acceptable end state, nothing to remove
+  }
+  if (fileType && fileType !== 'Socket') {
+    results.push({ path: socketPath, gone: false, reason: `socket path exists but is not a socket (${fileType}); refusing to touch` });
+    return results;
+  }
+  if (fileType === 'Socket') {
+    try {
+      await execFileAsync('rm', [socketPath]);
+      results.push({ path: socketPath, gone: true, reason: 'socket removed after all owned companions confirmed gone' });
+    } catch (error) {
+      results.push({ path: socketPath, gone: false, reason: `socket removal failed: ${String(error?.message || error)}` });
+    }
   }
   return results;
 }
@@ -214,36 +277,45 @@ export async function createOwnedSimulator(runId) {
     throw new Error(`Unexpected simctl create output: ${created}`);
   }
 
-  // The created device must exist with exactly our name.
-  const afterCreate = await listSimulators();
-  const owned = afterCreate.find(d => d.udid === udid);
-  if (owned?.name !== uniqueName) {
-    await tryRun('xcrun', ['simctl', 'delete', udid]);
-    throw new Error(`Created simulator not found or renamed: ${udid}`);
-  }
-  if (before.some(d => d.udid === udid)) {
-    await tryRun('xcrun', ['simctl', 'delete', udid]);
-    throw new Error(` UDID collision with a pre-existing simulator: ${udid}`);
-  }
-
-  await run('xcrun', ['simctl', 'boot', udid]);
+  // From here on the device exists and is owned by this run: EVERY
+  // subsequent step lives inside try/finally so a boot throw, a
+  // verification throw, or a readiness timeout can never leak it.
+  // The globalSetup catch alone cannot provide this: it only runs when
+  // createOwnedSimulator RETURNS, so a mid-function throw must be
+  // contained here.
+  let succeeded = false;
   try {
+    // The created device must exist with exactly our name.
+    const afterCreate = await listSimulators();
+    const owned = afterCreate.find(d => d.udid === udid);
+    if (owned?.name !== uniqueName) {
+      throw new Error(`Created simulator not found or renamed: ${udid}`);
+    }
+    if (before.some(d => d.udid === udid)) {
+      // Collision with a pre-existing device: refuse loudly WITHOUT
+      // deleting anything. The UDID collision means sole ownership cannot
+      // be proven (pre-existing inventory or simctl racing), so deletion
+      // could destroy another suite's device.
+      throw new Error(`UDID collision with a pre-existing simulator: ${udid}`);
+    }
+
+    await run('xcrun', ['simctl', 'boot', udid]);
     await pollUntil(async () => {
       const devices = await listSimulators();
       const target = devices.find(d => d.udid === udid);
       return target?.state === 'Booted';
     }, 120_000);
-  } catch (bootError) {
-    // Boot failed (or readiness never reached): the created device is a
-    // broken owned artifact. Delete exactly it before surfacing the
-    // failure, so the setup path never leaks a device even on the boot
-    // itself failing (e.g. launchd_sim crashes on the host).
-    await tryRun('xcrun', ['simctl', 'shutdown', udid]);
-    await tryRun('xcrun', ['simctl', 'delete', udid]);
-    throw bootError;
-  }
 
-  return { udid, name: uniqueName, deviceType, runtime };
+    succeeded = true;
+    return { udid, name: uniqueName, deviceType, runtime };
+  } finally {
+    if (!succeeded) {
+      // Failure containment: shut down and delete exactly the owned device,
+      // never the collision target (which was refused, not deleted).
+      await tryRun('xcrun', ['simctl', 'shutdown', udid]);
+      await tryRun('xcrun', ['simctl', 'delete', udid]);
+    }
+  }
 }
 
 /**

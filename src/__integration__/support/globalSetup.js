@@ -35,7 +35,9 @@ async function idbConnectOwned(ownedUdid) {
 
 export default async function globalSetup() {
   const runId = randomUUID().slice(0, 8);
-  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), `mcp-it-${runId}-`), { mode: 0o700 });
+  // node:fs.mkdtempSync enforces 0700 on the fresh directory by default
+  // (the "mode" argument only ORs in, so it is not used here).
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), `mcp-it-${runId}-`));
 
   const beforeInventory = await listSimulators();
   const bootFailures = [];
@@ -45,6 +47,7 @@ export default async function globalSetup() {
     created = await createOwnedSimulator(runId);
   } catch (error) {
     bootFailures.push(String(error));
+    fs.rmSync(stateDir, { recursive: true, force: true });
     throw error;
   }
 
@@ -87,9 +90,23 @@ export default async function globalSetup() {
   } catch (error) {
     bootFailures.push(String(error));
     // Do not leak the device when readiness polling, state persistence, or
-    // any other step fails. Best effort for every cleanup facet.
-    await cleanupOwnedSimulator(ownedUdid);
-    await cleanupOwnedCompanions(ownedUdid).catch(() => []);
+    // any other step fails. Best effort for every cleanup facet; teardown
+    // errors are reported without masking the original failure.
+    const [simOutcome, companionOutcome] = await Promise.allSettled([
+      cleanupOwnedSimulator(ownedUdid),
+      cleanupOwnedCompanions(ownedUdid)
+    ]);
+    if (simOutcome.status === 'rejected') {
+      bootFailures.push(`owned-simulator cleanup threw: ${String(simOutcome.reason)}`);
+    }
+    if (companionOutcome.status === 'rejected') {
+      bootFailures.push(`owned-companion cleanup threw: ${String(companionOutcome.reason)}`);
+    }
+    const simResult = simOutcome.status === 'fulfilled' ? simOutcome.value : null;
+    if (simResult && simResult.skipped !== true && simResult.deleted !== true) {
+      bootFailures.push(`owned simulator ${ownedUdid} NOT confirmed deleted`);
+    }
+    fs.rmSync(stateDir, { recursive: true, force: true });
     const rootCause = error instanceof Error ? error : new Error(String(error));
     rootCause.bootFailures = bootFailures;
     throw rootCause;

@@ -19,9 +19,10 @@ import { cleanupOwnedSimulator, cleanupOwnedCompanions } from './simulatorHarnes
 
 /**
  * Writes a sanitized run summary into IOS_SIM_ARTIFACTS_DIR (or nothing, if
- * unset). Content is strictly owned-run metadata: UDID, device name, cleanup
- * outcome and pre-existing device inventory states. Never host crash data,
- * host logs, user files, or anything not produced by this run's own harness.
+ * unset). Content is strictly OWNED-RUN metadata: this run's UDID, device
+ * name, and cleanup outcome — deliberately NOT the pre-existing device
+ * inventory and no host paths, so nothing user-identifiable or
+ * environment-revealing is published with failure artifacts.
  */
 function writeRunSummary(state, simResult, companionResults) {
   const artifactsDir = process.env.IOS_SIM_ARTIFACTS_DIR;
@@ -43,8 +44,7 @@ function writeRunSummary(state, simResult, companionResults) {
         path: result.path ?? null,
         gone: result.gone ?? false,
         reason: result.reason ?? null
-      })),
-      preExistingInventory: (state.beforeInventory || []).map(d => ({ udid: d.udid, state: d.state }))
+      }))
     };
     fs.writeFileSync(path.join(artifactsDir, 'mcp-integration-summary.json'), JSON.stringify(summary, null, 2), { mode: 0o600 });
   } catch (error) {
@@ -54,29 +54,63 @@ function writeRunSummary(state, simResult, companionResults) {
   }
 }
 
+/**
+ * Global teardown. Independently runs EVERY cleanup facet (simulator,
+ * companions, summary) via allSettled so one failure cannot skip the
+ * others, and THROWS an aggregated error when owned resources could not be
+ * removed — the run must not exit 0 with leaked resources.
+ */
 export default async function globalTeardown() {
-  let udid;
   let state;
+  let readStateFailed = false;
   try {
     state = readState();
-    ({ udid } = state);
   } catch {
-    // Setup failed before recording state; nothing owned to clean.
-    return;
+    // Setup failed before recording state; nothing owned is known, and the
+    // owned UDID is required for the fail-closed cleanup — no sweep is
+    // performed.
+    readStateFailed = true;
   }
-  const simResult = await cleanupOwnedSimulator(udid);
-  const companionResults = await cleanupOwnedCompanions(udid).catch(error => ([{ gone: false, reason: String(error) }]));
+  const errors = [];
+  if (!readStateFailed && state?.udid) {
+    const [simOutcome, companionOutcome] = await Promise.allSettled([
+      cleanupOwnedSimulator(state.udid),
+      cleanupOwnedCompanions(state.udid)
+    ]);
+    const simResult = simOutcome.status === 'fulfilled' ? simOutcome.value : null;
+    if (simOutcome.status === 'rejected') {
+      errors.push(`simulator cleanup failed: ${String(simOutcome.reason)}`);
+    }
+    let companionResults = [];
+    if (companionOutcome.status === 'fulfilled') {
+      companionResults = companionOutcome.value;
+    } else {
+      errors.push(`companion cleanup failed: ${String(companionOutcome.reason)}`);
+    }
+    writeRunSummary(state, simResult, companionResults);
 
-  writeRunSummary(state, simResult, companionResults);
-
-  if (simResult && simResult.skipped !== true && !simResult.deleted) {
-    // Make the leak visible in CI logs without crashing teardown.
-    process.stderr.write(`WARNING: owned simulator ${udid} could not be deleted\n`);
-  }
-  for (const result of companionResults) {
-    if (!result.gone) {
-      process.stderr.write(`WARNING: owned companion resource not confirmed removed: ${result.reason || 'unknown'}\n`);
+    if (simResult && simResult.skipped !== true && simResult.deleted !== true) {
+      errors.push(`owned simulator ${state.udid} could not be deleted`);
+    }
+    for (const result of companionResults) {
+      if (!result.gone) {
+        errors.push(`owned companion resource not confirmed removed: ${result.reason || 'unknown'}`);
+      }
+    }
+    const stateDir = state.stateDir;
+    if (stateDir && typeof stateDir === 'string' && path.basename(stateDir).startsWith('mcp-it-')) {
+      // Remove ONLY this run's own private state directory (created by
+      // globalSetup); never an arbitrary or shared path.
+      try {
+        fs.rmSync(stateDir, { recursive: true, force: true });
+      } catch (error) {
+        errors.push(`private state dir removal failed: ${String(error)}`);
+      }
     }
   }
   delete process.env[STATE_FILE_ENV];
+  if (errors.length > 0) {
+    // Fail visibly: a run must never exit 0 while owned resources leaked.
+    throw new Error(`teardown incomplete: ${errors.join('; ')}`);
+  }
 }
