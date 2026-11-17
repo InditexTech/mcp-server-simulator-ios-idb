@@ -1,0 +1,39 @@
+.github/workflows/integration-bootstrap.yml
+  s_6b6f6869a23d84::t_21787efb34ccb9 1-418
+README.md
+  s_6b6f6869a23d84::t_799aea27aca209 247,258,284-285
+src/adapters/ParserToOrchestrator.ts
+  s_6b6f6869a23d84::t_6445cd3bd86df5 80-83
+src/idb/IDBManager.ts
+  s_6b6f6869a23d84::t_1e84dbe53274b9 332-336
+src/idb/__tests__/AppInstalled.test.ts
+  s_6b6f6869a23d84::t_2d2824783fbde2 1-59
+src/mcp/__tests__/toolResponse.test.ts
+  s_6b6f6869a23d84::t_836237231b72ef 1-98
+src/mcp/mcp-server.ts
+  s_6b6f6869a23d84::t_a9c47513533995 20,140
+src/mcp/toolResponse.ts
+  s_6b6f6869a23d84::t_8df583905c1d6c 1-52
+src/parser/__tests__/VerificationCommands.test.ts
+  s_6b6f6869a23d84::t_d4771bc0cbc144 1-128
+src/parser/commands/AppCommands.ts
+  s_6b6f6869a23d84::t_541b0fb9d0eecc 102-124
+src/parser/commands/SimulatorCommands.ts
+  s_6b6f6869a23d84::t_4c3d6af93ef7b4 140-160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "7e18217c8c2769f9e410b73bcca042ce450f1c41",
+  "prompts": {},
+  "sessions": {
+    "s_6b6f6869a23d84": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1621e7e7ffei0xj7D369qNd70",
+        "model": "inditex/KAIA/glm-5.3-flash"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
