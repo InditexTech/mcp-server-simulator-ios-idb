@@ -138,6 +138,27 @@ export class SimulatorCommands extends BaseCommandDefinition {
       }
     },
     {
+      command: 'check simulator',
+      patterns: [
+        /(verificar|comprobar)\s+(si\s+)?(el\s+)?simulador\s+(est[aá]\s+)?(arrancado|encendido|iniciado|activo)\s*[?.!]*$/i,
+        /(verificar|comprobar)\s+(si\s+)?(el\s+)?simulador\s*[?.!]*$/i,
+        /(check|verify)\s+(if\s+)?(the\s+)?simulator\s+(is\s+)?(booted|running|active)\s*[?.!]*$/i,
+        /(check|verify)\s+(if\s+)?(the\s+)?simulator\s*[?.!]*$/i,
+        /is\s+(the\s+)?simulator\s+(booted|running|active)\s*[?.!]*$/i
+      ],
+      description: 'Checks whether the current simulator session is booted',
+      requiredParameters: [],
+      optionalParameters: ['sessionId'],
+      examples: [
+        'verificar simulador',
+        'comprobar si el simulador está arrancado',
+        'check simulator',
+        'verify the simulator is booted',
+        'is simulator booted'
+      ],
+      parameterExtractors: {}
+    },
+    {
       command: 'focus simulator',
       patterns: [
         /enfocar\s+(el\s+)?simulador/i,
