@@ -55,6 +55,30 @@ describe('verification commands', () => {
 
       expect(result.parameters).toEqual({ bundleId: 'com.example.MyApp' });
     });
+
+    it('parses an instruction with if but without the article', async () => {
+      const result = await parser.parseInstruction('check if app com.example.app');
+
+      expect(result.command).toBe('check app');
+      expect(result.parameters).toEqual({ bundleId: 'com.example.app' });
+    });
+
+    it('parses an unaccented Spanish simulator check', async () => {
+      const result = await parser.parseInstruction('comprobar si el simulador esta arrancado');
+
+      expect(result.command).toBe('check simulator');
+      expect(result.parameters).toEqual({});
+    });
+
+    it('rejects an app check without a bundle ID', async () => {
+      await expect(parser.parseInstruction('check the app is installed'))
+        .rejects.toThrow('Could not understand the instruction');
+    });
+
+    it('rejects a simulator check with a trailing UDID', async () => {
+      await expect(parser.parseInstruction('check simulator 5A321B8F-4D85-4267-9F79-2F5C91D142C2'))
+        .rejects.toThrow('Could not understand the instruction');
+    });
   });
 
   describe('adapter', () => {

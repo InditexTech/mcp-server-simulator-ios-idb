@@ -102,11 +102,11 @@ export class AppCommands extends BaseCommandDefinition {
     {
       command: 'check app',
       patterns: [
-        /(verificar|comprobar)\s+(si\s+)?(la\s+)?app\s+(?<bundleId>[^\s,]+)\s+(está\s+)?instalada/i,
-        /(verificar|comprobar)\s+(si\s+)?(la\s+)?app\s+(?<bundleId>[^\s,]+)/i,
-        /(check|verify)\s+(if\s+)?(the\s+)?app\s+(?<bundleId>[^\s,]+)\s+(is\s+)?installed/i,
-        /(check|verify)\s+(the\s+)?app\s+(?<bundleId>[^\s,]+)/i,
-        /is\s+(the\s+)?app\s+(?<bundleId>[^\s,]+)\s+installed/i
+        /(verificar|comprobar)\s+(si\s+)?(la\s+)?app\s+(?<bundleId>[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)+)\s+(est[aá]\s+)?instalada/i,
+        /(verificar|comprobar)\s+(si\s+)?(la\s+)?app\s+(?<bundleId>[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)+)/i,
+        /(check|verify)\s+(if\s+)?(the\s+)?app\s+(?<bundleId>[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)+)\s+(is\s+)?installed/i,
+        /(check|verify)\s+(if\s+)?(the\s+)?app\s+(?<bundleId>[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)+)/i,
+        /is\s+(the\s+)?app\s+(?<bundleId>[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)+)\s+installed/i
       ],
       description: 'Checks whether an application is installed on the simulator',
       requiredParameters: ['bundleId'],

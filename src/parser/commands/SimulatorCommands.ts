@@ -140,11 +140,11 @@ export class SimulatorCommands extends BaseCommandDefinition {
     {
       command: 'check simulator',
       patterns: [
-        /(verificar|comprobar)\s+(si\s+)?(el\s+)?simulador\s+(está\s+)?(arrancado|encendido|iniciado|activo)/i,
-        /(verificar|comprobar)\s+(el\s+)?simulador/i,
-        /(check|verify)\s+(if\s+)?(the\s+)?simulator\s+(is\s+)?(booted|running|active)/i,
-        /(check|verify)\s+(the\s+)?simulator/i,
-        /is\s+(the\s+)?simulator\s+(booted|running|active)/i
+        /(verificar|comprobar)\s+(si\s+)?(el\s+)?simulador\s+(est[aá]\s+)?(arrancado|encendido|iniciado|activo)\s*[?.!]*$/i,
+        /(verificar|comprobar)\s+(si\s+)?(el\s+)?simulador\s*[?.!]*$/i,
+        /(check|verify)\s+(if\s+)?(the\s+)?simulator\s+(is\s+)?(booted|running|active)\s*[?.!]*$/i,
+        /(check|verify)\s+(if\s+)?(the\s+)?simulator\s*[?.!]*$/i,
+        /is\s+(the\s+)?simulator\s+(booted|running|active)\s*[?.!]*$/i
       ],
       description: 'Checks whether the current simulator session is booted',
       requiredParameters: [],
