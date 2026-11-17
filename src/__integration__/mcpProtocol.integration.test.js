@@ -186,9 +186,28 @@ describe('built-in app behavior', () => {
     expect(opened.structured.success).toBe(true);
 
     // Real side effect: the fixture's onOpenURL reproduces the URL it got.
+    // On the first open of a custom scheme on a fresh device, iOS shows a
+    // system confirmation dialog ("open in <app>?"); the bounded poll taps
+    // its confirm button (frame from the same accessibility view) so the
+    // flow is deterministic without weakening the observation.
     let observed = null;
     while (Date.now() < deadline && observed !== requestedUrl) {
       const elements = JSON.parse(await describeOwnedElements());
+      const confirm = Array.isArray(elements)
+        ? elements.find(el => el.AXLabel === 'Abrir' && el.type === 'Button')
+        : null;
+      if (confirm) {
+        const frame = confirm.frame || {};
+        const x = Math.round((frame.x ?? 0) + (frame.width ?? 0) / 2);
+        const y = Math.round((frame.y ?? 0) + (frame.height ?? 0) / 2);
+        await new Promise((resolve, reject) => {
+          import('node:child_process').then(({ execFile }) => {
+            execFile('idb', ['ui', 'tap', '--udid', state.udid, String(x), String(y)], { timeout: 60_000 }, error => (error ? reject(error) : resolve()));
+          });
+        });
+        await new Promise(resolve => setTimeout(resolve, 4000));
+        continue;
+      }
       const label = Array.isArray(elements)
         ? elements.find(el => el.AXUniqueId === 'fixtureOpenUrlLabel')
         : null;
