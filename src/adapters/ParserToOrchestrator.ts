@@ -77,6 +77,10 @@ export class ParserToOrchestrator {
       'approve permissions': CommandType.APPROVE_PERMISSIONS,
       'update contacts': CommandType.UPDATE_CONTACTS,
 
+      // Verification commands
+      'check app': CommandType.IS_APP_INSTALLED,
+      'check simulator': CommandType.IS_SIMULATOR_BOOTED,
+
       // Legacy aliases (mostly Spanish), accepted from custom IParser implementations
       'crear sesión': CommandType.CREATE_SIMULATOR_SESSION,
       'crear simulador': CommandType.CREATE_SIMULATOR_SESSION,

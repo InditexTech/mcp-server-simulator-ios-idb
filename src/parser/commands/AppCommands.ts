@@ -100,6 +100,29 @@ export class AppCommands extends BaseCommandDefinition {
       }
     },
     {
+      command: 'check app',
+      patterns: [
+        /(verificar|comprobar)\s+(si\s+)?(la\s+)?app\s+(?<bundleId>[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)+)\s+(est[aá]\s+)?instalada/i,
+        /(verificar|comprobar)\s+(si\s+)?(la\s+)?app\s+(?<bundleId>[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)+)/i,
+        /(check|verify)\s+(if\s+)?(the\s+)?app\s+(?<bundleId>[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)+)\s+(is\s+)?installed/i,
+        /(check|verify)\s+(if\s+)?(the\s+)?app\s+(?<bundleId>[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)+)/i,
+        /is\s+(the\s+)?app\s+(?<bundleId>[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)+)\s+installed/i
+      ],
+      description: 'Checks whether an application is installed on the simulator',
+      requiredParameters: ['bundleId'],
+      optionalParameters: ['sessionId'],
+      examples: [
+        'verificar app com.example.app',
+        'comprobar si la app com.example.app está instalada',
+        'check app com.example.app',
+        'check if the app com.example.app is installed',
+        'is app com.example.app installed'
+      ],
+      parameterExtractors: {
+        bundleId: (match) => match.groups?.bundleId?.trim()
+      }
+    },
+    {
       command: 'list apps',
       patterns: [
         /listar\s+(las\s+)?apps/i,
