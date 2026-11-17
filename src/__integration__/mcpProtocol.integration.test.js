@@ -201,12 +201,19 @@ describe('built-in app behavior', () => {
     // On the first open of a custom scheme on a fresh device, iOS shows a
     // system confirmation dialog ("open in <app>?"); the bounded poll taps
     // its confirm button (frame from the same accessibility view) so the
-    // flow is deterministic without weakening the observation.
+    // flow is deterministic without weakening the observation. The button
+    // label is locale-dependent ("Abrir" on Spanish-locale simulators,
+    // "Open" on English-locale ones such as fresh CI VMs), so both system
+    // localizations are matched. The echo poll gets its own full window:
+    // reusing the readiness deadline would leave it whatever budget was
+    // left after the launch wait (the deterministic null-echo failure seen
+    // on CI).
     let observed = null;
-    while (Date.now() < deadline && observed !== requestedUrl) {
+    const echoDeadline = Date.now() + 180_000;
+    while (Date.now() < echoDeadline && observed !== requestedUrl) {
       const elements = JSON.parse(await describeOwnedElements());
       const confirm = Array.isArray(elements)
-        ? elements.find(el => el.AXLabel === 'Abrir' && el.type === 'Button')
+        ? elements.find(el => el.type === 'Button' && ['Abrir', 'Open'].includes(el.AXLabel))
         : null;
       if (confirm) {
         const frame = confirm.frame || {};
