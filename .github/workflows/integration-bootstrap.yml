@@ -54,6 +54,11 @@ on:
 
 permissions:
   contents: read
+  # The dispatch verification gate reads PR #78 via the REST API
+  # (GET repos/{owner}/{repo}/pulls/78), which requires
+  # `pull-requests: read`; explicit permissions drop the org default,
+  # so it is granted here and mirrored at job level. Read-only.
+  pull-requests: read
 
 concurrency:
   group: integration-bootstrap-${{ github.ref }}
@@ -76,6 +81,9 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: read
+      # Same API gate as the workflow level: the verification step calls
+      # GET repos/{owner}/{repo}/pulls/78, needing `pull-requests: read`.
+      pull-requests: read
     steps:
       # Read-only, untrusted-input gate BEFORE any checkout of test code.
       # PR_HEAD_SHA travels only as an env value (never interpolated into
@@ -257,6 +265,9 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: read
+      # Same API gate as the workflow level: the verification step calls
+      # GET repos/{owner}/{repo}/pulls/78, needing `pull-requests: read`.
+      pull-requests: read
     steps:
       - name: Verify dispatch input against the approved PR head
         env:
