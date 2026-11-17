@@ -329,13 +329,11 @@ export class IDBManager implements IIDBManager {
     if (!udid) {
       throw new Error(`Session not found: ${sessionId}`);
     }
-    try {
-      const output = await this.executeCommand('idb', ['list-apps', '--udid', udid, '--json']);
-      const apps = this.parseAppList(output);
-      return apps.some(app => app.bundle_id === bundleId);
-    } catch (error) {
-      return false;
-    }
+    // A failure to list the apps is not the same as the app being absent:
+    // let it propagate so the caller can tell a missing app from a broken idb.
+    const output = await this.executeCommand('idb', ['list-apps', '--udid', udid, '--json']);
+    const apps = this.parseAppList(output);
+    return apps.some(app => app.bundle_id === bundleId);
   }
 
   async focusSimulator(sessionId: string): Promise<void> {
