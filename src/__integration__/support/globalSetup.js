@@ -38,22 +38,27 @@ export default async function globalSetup() {
   // node:fs.mkdtempSync enforces 0700 on the fresh directory by default
   // (the "mode" argument only ORs in, so it is not used here).
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), `mcp-it-${runId}-`));
-
-  const beforeInventory = await listSimulators();
+  // The canonical state file LIVES INSIDE this run's private directory and
+  // is handed to test modules through the dedicated env var BEFORE any
+  // state content is written — writes always land in the owned directory
+  // that teardown will remove.
+  const stateFile = path.join(stateDir, 'state.json');
+  process.env[STATE_FILE_ENV] = stateFile;
   const bootFailures = [];
-
   let created;
-  try {
-    created = await createOwnedSimulator(runId);
-  } catch (error) {
-    bootFailures.push(String(error));
-    fs.rmSync(stateDir, { recursive: true, force: true });
-    throw error;
-  }
-
-  const ownedUdid = created.udid;
 
   try {
+    const beforeInventory = await listSimulators();
+
+    try {
+      created = await createOwnedSimulator(runId);
+    } catch (error) {
+      bootFailures.push(String(error));
+      throw error;
+    }
+
+    const ownedUdid = created.udid;
+
     // Real readiness: poll simctl state and idb list-targets presence of the
     // UDID rather than waiting a fixed time.
     await pollUntil(async () => {
@@ -83,34 +88,42 @@ export default async function globalSetup() {
       });
     } catch (stateError) {
       bootFailures.push(`state persistence failed: ${String(stateError)}`);
-      // Fail visibly: the state file may be absent or partial, but the run
-      // aborts and cleanup still runs so the device does not leak.
       throw stateError;
     }
   } catch (error) {
-    bootFailures.push(String(error));
     // Do not leak the device when readiness polling, state persistence, or
-    // any other step fails. Best effort for every cleanup facet; teardown
-    // errors are reported without masking the original failure.
-    const [simOutcome, companionOutcome] = await Promise.allSettled([
-      cleanupOwnedSimulator(ownedUdid),
-      cleanupOwnedCompanions(ownedUdid)
-    ]);
-    if (simOutcome.status === 'rejected') {
-      bootFailures.push(`owned-simulator cleanup threw: ${String(simOutcome.reason)}`);
+    // any other step fails. Best effort for every cleanup facet; failures
+    // are reported without masking the original error.
+    const ownedUdid = typeof created?.udid === 'string' ? created.udid : null;
+    if (ownedUdid) {
+      const [simOutcome, companionOutcome] = await Promise.allSettled([
+        cleanupOwnedSimulator(ownedUdid),
+        cleanupOwnedCompanions(ownedUdid)
+      ]);
+      if (simOutcome.status === 'rejected') {
+        bootFailures.push(`owned-simulator cleanup threw: ${String(simOutcome.reason)}`);
+      }
+      if (companionOutcome.status === 'rejected') {
+        bootFailures.push(`owned-companion cleanup threw: ${String(companionOutcome.reason)}`);
+      }
+      const simResult = simOutcome.status === 'fulfilled' ? simOutcome.value : null;
+      if (simResult && simResult.skipped !== true && simResult.deleted !== true) {
+        bootFailures.push(`owned simulator ${ownedUdid} NOT confirmed deleted`);
+      }
     }
-    if (companionOutcome.status === 'rejected') {
-      bootFailures.push(`owned-companion cleanup threw: ${String(companionOutcome.reason)}`);
+    // Remove this run's private state directory AND its canonical state
+    // file, and clear the env hand-off: nothing must survive a failed setup.
+    try {
+      if (fs.existsSync(process.env[STATE_FILE_ENV] || '')) {
+        fs.rmSync(process.env[STATE_FILE_ENV], { force: true });
+      }
+      fs.rmSync(stateDir, { recursive: true, force: true });
+    } catch (cleanupError) {
+      bootFailures.push(`private state cleanup failed: ${String(cleanupError)}`);
     }
-    const simResult = simOutcome.status === 'fulfilled' ? simOutcome.value : null;
-    if (simResult && simResult.skipped !== true && simResult.deleted !== true) {
-      bootFailures.push(`owned simulator ${ownedUdid} NOT confirmed deleted`);
-    }
-    fs.rmSync(stateDir, { recursive: true, force: true });
+    delete process.env[STATE_FILE_ENV];
     const rootCause = error instanceof Error ? error : new Error(String(error));
     rootCause.bootFailures = bootFailures;
     throw rootCause;
   }
 }
-
-export { STATE_FILE_ENV };

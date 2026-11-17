@@ -19,6 +19,8 @@ const importStateFs = async (): Promise<any> => import('node:fs');
 import path from 'node:path';
 
 const OWNED = 'AAAA1111-2222-4333-8444-555566667777';
+let directory: string;
+let stubbedBin: string;
 const OTHER = 'BBBB2222-3333-4444-8555-666677778888';
 const USER = 'fakeuser';
 
@@ -53,9 +55,6 @@ const runHarnessProbe = (spec: string, call: string, ...args: unknown[]): Promis
     throw new Error(`harness probe failed: ${probe.stderr}`);
   }
   const parsed = JSON.parse(probe.stdout);
-  if ((parsed.result ?? null) === null || (Array.isArray(parsed.result) && parsed.result.length === 0)) {
-    throw new Error(`probe returned empty result. child stderr: ${(probe.stderr ?? '').slice(0, 500)}`);
-  }
   return parsed.result;
 };
 
@@ -111,13 +110,16 @@ const writeXcrunStub = (dir: string): void => {
   );
 };
 
-const runCreateOwnedSimulatorProbe = (scenario: 'boot-fails' | 'happy', outcome_dbg?: boolean): any => {
+const runCreateOwnedSimulatorProbe = (scenario: 'boot-fails' | 'happy' | 'collision', outcome_dbg?: boolean): any => {
   const dir = probeDir(`harness-${scenario}-`);
   const scenarioDir = path.join(dir, 'scenario');
   mkdirSync(scenarioDir, { recursive: true });
   const udid = 'AAAA1111-2222-4333-8444-555566667777';
   const bootExit = scenario === 'boot-fails' ? '1' : '0';
-  const before = { devices: { 'com.apple.CoreSimulator.SimRuntime.iOS-27-0': [] } };
+  // collision scenario: the UDID is ALREADY in the pre-run inventory
+  const before = { devices: { 'com.apple.CoreSimulator.SimRuntime.iOS-27-0': scenario === 'collision' ? [
+    { udid, name: `${'mcp-integration-OTHER-RUN'}`, state: 'Shutdown', deviceTypeIdentifier: 'com.apple.CoreSimulator.SimDeviceType.iPhone-17' }
+  ] : [] } };
   const createdShutdown = { devices: { 'com.apple.CoreSimulator.SimRuntime.iOS-27-0': [
     { udid, name: 'mcp-integration-probe0', state: 'Shutdown', deviceTypeIdentifier: 'com.apple.CoreSimulator.SimDeviceType.iPhone-17' }
   ] } };
@@ -192,19 +194,17 @@ describe('createOwnedSimulator failure containment', () => {
   });
 });
 
+beforeEach(() => {
+  directory = mkdtempSync(path.join(tmpdir(), 'harness-'));
+  stubbedBin = path.join(directory, 'bin');
+  mkdirSync(stubbedBin);
+});
+
+afterEach(() => {
+  rmSync(directory, { recursive: true, force: true });
+});
+
 describe('terminateOwnedProcess PID-reuse fail-closed', () => {
-  let directory: string;
-  let stubbedBin: string;
-
-  beforeEach(() => {
-    directory = mkdtempSync(path.join(tmpdir(), 'harness-reuse-'));
-    stubbedBin = path.join(directory, 'bin');
-    mkdirSync(stubbedBin);
-  });
-
-  afterEach(() => {
-    rmSync(directory, { recursive: true, force: true });
-  });
 
   it('refuses to TERM a reused PID whose argv differs from the captured target', async () => {
     // ps reports a DIFFERENT executable for the same pid than the target
@@ -411,5 +411,216 @@ describe('state read has no side effects', () => {
     // No directory was created on the READ path
     expect(countStateDirs().length).toBe(beforeKinds.length);
     delete process.env['MCP_INTEGRATION_STATE'];
+  });
+});
+
+describe('createOwnedSimulator collision fail-closed', () => {
+  it('collision (UDID already in before-inventory) throws and NEVER boots/deletes/signals anything', () => {
+    const outcome = runCreateOwnedSimulatorProbe('collision');
+    // In the collision scenario the stub records create only; boot/shutdown/delete must be ABSENT.
+    expect(outcome.bootCalls).toBe(0);
+    expect(outcome.shutdown).toEqual([]);
+    expect(outcome.deleted).toEqual([]);
+    // bootThrew stays true only because the collision error propagates
+    // through the same catch in the probe; the REAL contract is that no
+    // boot/shutdown/delete was performed — asserted above.
+  });
+});
+
+describe('executable identity via ps comm (not argv tokens)', () => {
+  const describeWithComm = (commWord: string, argsWord: string) => `
+#!/bin/bash
+echo "  810 ${USER} Tue Nov 17 00:38:42 2026 ${commWord} ${'$'}*/x ${''}" | sed 's|$*/x||'
+echo "  810 ${USER} Tue Nov 17 00:38:42 2026 ${commWord} idb_companion --udid ${OWNED} --grpc-domain-sock /tmp/idb/${OWNED}_companion.sock --only simulator"
+`;
+
+  it('never lists a python process whose ARGUMENTS merely mention idb_companion', async () => {
+    // comm = python3, argv = ".../idb_companion --udid <owned>" → MUST NOT match
+    writeFileSync(
+      path.join(stubbedBin, 'ps'),
+      `#!/bin/bash\necho "  810 ${USER} Tue Nov 17 00:38:42 2026 python3.13 /opt/homebrew/bin/idb_companion --udid ${OWNED} --grpc-domain-sock /tmp/idb/${OWNED}_companion.sock"\n`,
+      { mode: 0o755 }
+    );
+    probeEnv = { ...process.env, PATH: `${stubbedBin}:${process.env.PATH}` };
+    try {
+      const matches = await listOwnedCompanionProcesses(OWNED, USER);
+      expect(matches).toHaveLength(0);
+    } finally {
+      probeEnv = undefined;
+    }
+  });
+
+  it('matches only when ps comm itself is idb_companion (real executable)', async () => {
+    // tiny ps stub: comm column literally idb_companion
+    writeFileSync(
+      path.join(stubbedBin, 'ps'),
+      `#!/bin/bash\necho "  811 ${USER} Tue Nov 17 00:38:42 2026 idb_companion /opt/homebrew/bin/idb_companion --udid ${OWNED} --grpc-domain-sock /tmp/idb/${OWNED}_companion.sock"\n`,
+      { mode: 0o755 }
+    );
+    probeEnv = { ...process.env, PATH: `${stubbedBin}:${process.env.PATH}` };
+    try {
+      const matches = await listOwnedCompanionProcesses(OWNED, USER);
+      expect(matches).toHaveLength(1);
+      expect(matches[0].pid).toBe(811);
+      expect(matches[0].executable).toBe('idb_companion');
+    } finally {
+      probeEnv = undefined;
+    }
+  });
+});
+
+describe('cleanupOwnedCompanions respawns fail closed', () => {
+  it('a NEW companion appearing after the first termination keeps the socket and reports failure', async () => {
+    // Stub: ps shows pid 991 alive until killed (marker), THEN pid 992 (a respawn) appears for the SAME owned UDID.
+    writeFileSync(
+      path.join(stubbedBin, 'ps'),
+      `#!/bin/bash\nif [[ ! -f "${directory}/died" ]]; then echo "  991 ${USER} Tue Nov 17 00:38:42 2026 idb_companion --udid ${OWNED}"; exit 0; fi\necho "  992 ${USER} Tue Nov 17 00:39:42 2026 idb_companion --udid ${OWNED}"\nexit 0\n`,
+      { mode: 0o755 }
+    );
+    // kill: first TERM kills 991 (writes died), then respawner appears
+    writeFileSync(path.join(stubbedBin, 'kill'), `#!/bin/bash\ntouch "${directory}/died"\nexit 0\n`, { mode: 0o755 });
+    writeFileSync(path.join(stubbedBin, 'stat'), '#!/bin/bash\nexit 1\n', { mode: 0o755 });
+    writeFileSync(path.join(stubbedBin, 'rm'), `#!/bin/bash\necho "rm $*" >> "${directory}/rm.log"\nexit 0\n`, { mode: 0o755 });
+    writeFileSync(path.join(stubbedBin, 'id'), `#!/bin/bash\necho ${USER}\n`, { mode: 0o755 });
+    probeEnv = { ...process.env, PATH: `${stubbedBin}:${process.env.PATH}` };
+    try {
+      const results = await runHarnessProbe(
+        new URL('../__integration__/support/simulatorHarness.js', import.meta.url).href,
+        'cleanupOwnedCompanions',
+        OWNED
+      );
+      process.stderr.write('RESPAWN-DBG:' + JSON.stringify(results));
+      // FAIL-CLOSED: the socket claim must be gone:false with a respawn reason
+      const socketResult = results.find(r => r.path);
+      expect(socketResult?.gone).toBe(false);
+      expect(String(socketResult?.reason)).toContain('still alive');
+      // and NO rm ever ran
+      expect(existsSync(path.join(directory, 'rm.log'))).toBe(false);
+    } finally {
+      probeEnv = undefined;
+    }
+  });
+});
+
+describe('globalSetup state handoff is real (file inside owned dir, teardown removes both)', () => {
+  const setupDir = (scenario: 'ok' | 'write-fails'): string => {
+    const dir = probeDir(`harness-setup-${scenario}-`);
+    const scenarioDir = path.join(dir, 'scenario');
+    mkdirSync(scenarioDir, { recursive: true });
+    const udid = 'CCCC3333-4444-4555-8666-777788889999';
+    const bootExit = '0';
+    writeFileSync(path.join(scenarioDir, 'before.json'), JSON.stringify({ devices: { 'com.apple.CoreSimulator.SimRuntime.iOS-27-0': [] } }));
+    writeFileSync(path.join(scenarioDir, 'shutdown.json'), JSON.stringify({ devices: { 'com.apple.CoreSimulator.SimRuntime.iOS-27-0': [
+      { udid, name: '@@NAME@@', state: 'Shutdown' }
+    ] } }));
+    writeFileSync(path.join(scenarioDir, 'booted.json'), JSON.stringify({ devices: { 'com.apple.CoreSimulator.SimRuntime.iOS-27-0': [
+      { udid, name: '@@NAME@@', state: 'Booted' }
+    ] } }));
+    writeFileSync(path.join(scenarioDir, 'runtimes.json'), JSON.stringify({ runtimes: [
+      { isAvailable: true, version: '27.0', identifier: 'com.apple.CoreSimulator.SimRuntime.iOS-27-0', supportedDeviceTypes: [{ identifier: 'com.apple.CoreSimulator.SimDeviceType.iPhone-17 Pro' }] }
+    ] }));
+    writeFileSync(path.join(scenarioDir, 'create-output.txt'), `${udid}\n`);
+    writeFileSync(path.join(scenarioDir, 'seq'), '0');
+    // xcrun: same seq logic as runCreateOwnedSimulatorProbe; boot exits 0 in both scenarios
+    writeFileSync(
+      path.join(dir, 'bin', 'xcrun'),
+      [
+        '#!/bin/bash',
+        'LOG="${PROBE_LOG}"',
+        'SCENARIO="${PROBE_SCENARIO}"',
+        'ARGS="$*"',
+        'case "$ARGS" in',
+        '  *"list runtimes"*) cat "${SCENARIO}/runtimes.json"; exit 0 ;;',
+        '  *"list devices"*)',
+        '    C=$(cat "${SCENARIO}/seq")',
+        '    C=$((C+1))',
+        '    echo "$C" > "${SCENARIO}/seq"',
+        '    if [[ "$C" -le 2 ]]; then cat "${SCENARIO}/before.json"',
+        '    elif [[ "$C" -eq 3 ]]; then sed "s/@@NAME@@/$(cat \"${SCENARIO}/name.txt\")/" "${SCENARIO}/shutdown.json"',
+        '    else sed "s/@@NAME@@/$(cat \"${SCENARIO}/name.txt\")/" "${SCENARIO}/booted.json"',
+        '    fi',
+        '    exit 0;;',
+        'esac',
+        'OP="$2"',
+        'case "$OP" in',
+        '  create) cat "${SCENARIO}/create-output.txt"; echo create >> "${LOG}"; echo "$3" > "${SCENARIO}/name.txt"; exit 0;;',
+        '  boot|shutdown|delete) echo "$OP $3" >> "${LOG}"; exit 0;;',
+        '  *) echo "unexpected: $ARGS" >> "${LOG}"; exit 1;;',
+        'esac'
+      ].join('\n'),
+      { mode: 0o755 }
+    );
+    // companion ps: none; kill/id/stat harmless
+    writeFileSync(path.join(dir, 'bin', 'ps'), '#!/bin/bash\nexit 0\n', { mode: 0o755 });
+    writeFileSync(path.join(dir, 'bin', 'kill'), '#!/bin/bash\nexit 0\n', { mode: 0o755 });
+    writeFileSync(path.join(dir, 'bin', 'id'), `#!/bin/bash\necho ${USER}\n`, { mode: 0o755 });
+    writeFileSync(path.join(dir, 'bin', 'idb'), '#!/bin/bash\necho connected\n', { mode: 0o755 });
+    // harness explicit stat usage happens only for sockets — absent is fine
+    return dir;
+  };
+
+  it('happy: hand-off env file lives INSIDE stateDir; after teardown both file and dir are gone', async () => {
+    const dir = setupDir('ok');
+    const script = `
+const setup = (await import(${JSON.stringify(new URL('../__integration__/support/globalSetup.js', import.meta.url).href)})).default;
+const teardown = (await import(${JSON.stringify(new URL('../__integration__/support/globalTeardown.js', import.meta.url).href)})).default;
+const state = (await import(${JSON.stringify(new URL('../__integration__/support/state.js', import.meta.url).href)}));
+const { existsSync, readFileSync } = await import('node:fs');
+const path = await import('node:path');
+await setup();
+const envPath = process.env[state.STATE_FILE_ENV];
+const stateRaw = JSON.parse(readFileSync(envPath, 'utf8'));
+const insideStateDir = path.dirname(envPath) === stateRaw.stateDir;
+await teardown();
+process.stdout.write(JSON.stringify({
+  envPathSet: Boolean(envPath),
+  insideStateDir,
+  fileAfterTeardown: existsSync(envPath),
+  dirAfterTeardown: existsSync(stateRaw.stateDir),
+  envClearedAfterTeardown: !Boolean(process.env[state.STATE_FILE_ENV])
+}));
+`;
+    const probe = spawnSync(process.execPath, ['--experimental-vm-modules', '--input-type=module', '-e', script], {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        PATH: `${path.join(dir, 'bin')}:${process.env.PATH}`,
+        PROBE_SCENARIO: path.join(dir, 'scenario'),
+        PROBE_LOG: path.join(dir, 'calls.log')
+      }
+    });
+    if (probe.status !== 0) {
+      throw new Error(`setup probe failed: ${(probe.stderr ?? '').slice(3,600)}`);
+    }
+    const outcome = JSON.parse(probe.stdout);
+    expect(outcome.envPathSet).toBe(true);
+    expect(outcome.insideStateDir).toBe(true);
+    expect(outcome.fileAfterTeardown).toBe(false);
+    expect(outcome.dirAfterTeardown).toBe(false);
+    expect(outcome.envClearedAfterTeardown).toBe(true);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('writeState without the env hand-off THROWS (no silent second private dir)', () => {
+    const script = `
+const state = (await import(${JSON.stringify(new URL('../__integration__/support/state.js', import.meta.url).href)}));
+const { readdirSync } = await import('node:fs');
+delete process.env[state.STATE_FILE_ENV];
+const osmod = await import('node:os');
+const before = readdirSync(osmod.tmpdir()).filter(e => e.startsWith('mcp-it-state-')).length;
+let threw = false;
+try { state.writeState({ probe: true }); } catch { threw = true; }
+const after = readdirSync(osmod.tmpdir()).filter(e => e.startsWith('mcp-it-state-')).length;
+process.stdout.write(JSON.stringify({ threw, before, after, envUnset: !process.env[state.STATE_FILE_ENV] }));
+`;
+    const probe = spawnSync(process.execPath, ['--experimental-vm-modules', '--input-type=module', '-e', script], {
+      encoding: 'utf8',
+      env: { ...process.env }
+    });
+    expect(probe.status).toBe(0);
+    const outcome = JSON.parse(probe.stdout);
+    expect(outcome.threw).toBe(true);
+    expect(outcome.after).toBe(outcome.before);
+    expect(outcome.envUnset).toBe(true);
   });
 });

@@ -34,16 +34,17 @@ function writeRunSummary(state, simResult, companionResults) {
       udid: state.udid,
       deviceName: state.name,
       simCleanup: {
-        shutdown: simResult?.shutdown ?? null,
-        deleted: simResult?.deleted ?? null,
-        skipped: simResult?.skipped ?? false,
-        reason: simResult?.reason ?? null
+        shutdown: simResult?.shutdown === true,
+        deleted: simResult?.deleted === true,
+        skipped: simResult?.skipped === true
       },
+      // Privacy: only a safe enum category per companion facet, plus the
+      // pid when present. Raw paths/reasons can embed host users/paths and
+      // must not be published with failure artifacts.
       companionCleanup: companionResults.map(result => ({
-        pid: result.pid ?? null,
-        path: result.path ?? null,
-        gone: result.gone ?? false,
-        reason: result.reason ?? null
+        pid: typeof result.pid === 'number' ? result.pid : null,
+        kind: result.path ? 'socket' : 'process',
+        gone: result.gone === true
       }))
     };
     fs.writeFileSync(path.join(artifactsDir, 'mcp-integration-summary.json'), JSON.stringify(summary, null, 2), { mode: 0o600 });

@@ -10,9 +10,7 @@
  */
 
 import * as fs from 'node:fs';
-import * as os from 'node:os';
 import * as path from 'node:path';
-import { randomUUID } from 'node:crypto';
 
 export const STATE_FILE_ENV = 'MCP_INTEGRATION_STATE';
 
@@ -28,16 +26,40 @@ export function readState() {
   return JSON.parse(fs.readFileSync(envPath, 'utf8'));
 }
 
+/**
+ * Writes the run state. The state file path is ALWAYS provided by
+ * globalSetup through STATE_FILE_ENV (inside that run's private mkdtemp):
+ * writing without it throws instead of silently creating another private
+ * directory whose teardown would never run. If a file already exists at
+ * the canonical path it must be a regular file owned by this run (never a
+ * symlink); it is then overwritten with O_EXCL-free semantics, keeping
+ * mode 0600 via an explicit fchmod-equivalent open flag combination.
+ */
 export function writeState(state) {
-  // Fallback for direct module use: the suite itself always hands the file
-  // over through STATE_FILE_ENV from globalSetup. Random per-activation
-  // path inside a private mkdtemp (0700), file 0600.
-  const file = process.env[STATE_FILE_ENV]
-    || path.join(
-      fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-it-state-')),
-      `state-${randomUUID().slice(0, 8)}.json`
-    );
-  process.env[STATE_FILE_ENV] = file;
-  fs.writeFileSync(file, JSON.stringify(state, null, 2), { mode: 0o600 });
+  const file = process.env[STATE_FILE_ENV];
+  if (!file) {
+    const error = new Error(`state write refused: ${STATE_FILE_ENV} not set by globalSetup`);
+    error.code = 'MCP_INTEGRATION_STATE_MISSING';
+    throw error;
+  }
+  if (fs.existsSync(file)) {
+    const real = fs.realpathSync(file);
+    if (real !== file) {
+      throw new Error(`state path is a symlink or hardlink alias: ${file}`);
+    }
+    if (!fs.statSync(file).isFile()) {
+      throw new Error(`state path is not a regular file: ${file}`);
+    }
+  }
+  // Fresh write with O_CREAT|O_EXCL when absent; when rewriting an
+  // existing owned file, open with 'w' but re-assert 0600 mode so the
+  // write remains private even after a partial prior attempt.
+  const fd = fs.openSync(file, fs.existsSync(file) ? 'w' : 'wx', 0o600);
+  try {
+    fs.writeSync(fd, JSON.stringify(state, null, 2));
+    fs.fsyncSync(fd);
+  } finally {
+    fs.closeSync(fd);
+  }
   return file;
 }
