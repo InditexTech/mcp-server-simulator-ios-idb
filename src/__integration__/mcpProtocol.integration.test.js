@@ -162,15 +162,27 @@ describe('built-in app behavior', () => {
     expect(launched.structured.success).toBe(true);
 
     // Bounded readiness: poll the onOpenURL marker via a real accessibility
-    // read; no fixed long sleep, no network dependency.
+    // read; no fixed long sleep, no network dependency. The 180 s window
+    // is sized for loaded hosts: a single `idb ui describe-all` call is
+    // allowed up to 120 s per attempt, so a 60 s window could be consumed
+    // by one slow attempt (observed on a 2.6-3.2x degraded host in PR #78
+    // validation) before any repeat. Still bounded well within the 420 s
+    // per-test budget.
     let lastObserved = null;
-    const deadline = Date.now() + 60_000;
+    const deadline = Date.now() + 180_000;
     let sawLaunchedAppMarker = false;
     while (Date.now() < deadline && !sawLaunchedAppMarker) {
       const elements = JSON.parse(await describeOwnedElements());
-      sawLaunchedAppMarker = Array.isArray(elements) && elements.some(
-        el => el.AXUniqueId === 'fixtureEchoLabel'
-      );
+      // Bookkeeping for honest diagnostics: record the last observation so
+      // a failure reports what the accessibility view actually contained
+      // instead of an invariant null.
+      lastObserved = {
+        elements: Array.isArray(elements) ? elements.length : 'non-array',
+        fixtureEchoLabelPresent: Array.isArray(elements) && elements.some(
+          el => el.AXUniqueId === 'fixtureEchoLabel'
+        )
+      };
+      sawLaunchedAppMarker = lastObserved.fixtureEchoLabelPresent === true;
       if (!sawLaunchedAppMarker) {
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
