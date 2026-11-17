@@ -1,0 +1,16 @@
+src/__integration__/mcpProtocol.integration.test.js
+  h_54a1c5973b9675 276-278,284-293
+src/__integration__/support/simulatorHarness.js
+  h_54a1c5973b9675 111-112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "f35ae9a9d6ba682ee74b74355032bc457aff88f9",
+  "prompts": {},
+  "humans": {
+    "h_54a1c5973b9675": {
+      "author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
