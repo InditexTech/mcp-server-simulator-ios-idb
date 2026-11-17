@@ -163,6 +163,17 @@ const EXPECTED_BY_EXAMPLE: Record<string, ExpectedOutcome> = {
   'show apps': call('listApps', ''),
   'what apps are installed': call('listApps', ''),
 
+  'check app com.example.app': call('isAppInstalled', '', 'com.example.app'),
+  'check if the app com.example.app is installed': call('isAppInstalled', '', 'com.example.app'),
+  'check simulator': call('isSimulatorBooted', ''),
+  'comprobar si el simulador está arrancado': call('isSimulatorBooted', ''),
+  'comprobar si la app com.example.app está instalada': call('isAppInstalled', '', 'com.example.app'),
+  'is app com.example.app installed': call('isAppInstalled', '', 'com.example.app'),
+  'is simulator booted': call('isSimulatorBooted', ''),
+  'verificar app com.example.app': call('isAppInstalled', '', 'com.example.app'),
+  'verificar simulador': call('isSimulatorBooted', ''),
+  'verify the simulator is booted': call('isSimulatorBooted', ''),
+
   // UI interaction commands
   'tocar 150, 300': call('tap', '', 150, 300),
   'pulsar en 200, 400': call('tap', '', 200, 400),

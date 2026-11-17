@@ -74,8 +74,12 @@ describe('IDBManager', () => {
     manager['sessions'].set('session', 'simulator-udid');
     jest.spyOn(manager as any, 'executeCommand').mockResolvedValue('not json at all');
 
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
     await expect(manager.listApps('session')).rejects.toThrow();
-    await expect(manager.isAppInstalled('session', 'com.example.app')).resolves.toBe(false);
+    // Since main's fix(idb) #94 a listing failure is not the same as the app
+    // being absent: list-apps failures propagate out of isAppInstalled too.
+    await expect(manager.isAppInstalled('session', 'com.example.app')).rejects.toThrow();
   });
 
   it('streams unrestricted system logs and filters them by running app pid', async () => {
