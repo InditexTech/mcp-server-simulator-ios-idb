@@ -1,0 +1,19 @@
+src/__integration__/mcpProtocol.integration.test.js
+  s_d3fd0bad8f61c4::t_461d63017859c7 189-192,196-210
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "18ed4dfc979a0f678f3a945934bfa3e47892e9ca",
+  "prompts": {},
+  "sessions": {
+    "s_d3fd0bad8f61c4": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1bfc3d00ffe66b2mrU7qZvDI8",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
