@@ -16,6 +16,22 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SERVER_ENTRY = path.resolve(__dirname, '../../../dist/index.js');
 
 /**
+ * Per-call request timeout passed to the MCP SDK client.
+ *
+ * The SDK's default request timeout is 60 s (DEFAULT_REQUEST_TIMEOUT_MSEC in
+ * shared/protocol) and the timeout is a PER-CALL RequestOptions field, not a
+ * client-constructor option: an object passed to the Client constructor only
+ * carries ProtocolOptions (enforceStrictCapabilities, capabilities, ...) and
+ * any `timeout` there is silently ignored. This matters because cold simulator
+ * boots under Xcode 27 runtimes have been observed issuing idb launch/install
+ * calls far beyond 60 s (launch_ms=163439 and install_ms=159719 on the idb
+ * companion device log), which made two integration tests fail with
+ * `MCP error -32001: Request timed out` ~62 s into the request while the
+ * companion itself eventually completed the operation successfully.
+ */
+export const MCP_REQUEST_TIMEOUT_MS = 180_000;
+
+/**
  * Starts the server as a subprocess and returns a connected client.
  */
 export async function startMcpServer() {
@@ -24,12 +40,10 @@ export async function startMcpServer() {
     args: [SERVER_ENTRY],
     stderr: 'pipe'
   });
-  const client = new Client(
-    { name: 'mcp-integration-tests', version: '1.0.0' },
-    // idb operations (app launch, screenshot) can be slow on a cold boot;
-    // keep protocol requests well above the SDK's 60 s default.
-    { timeout: 180_000 }
-  );
+  // NOTE: the constructor only accepts ProtocolOptions; per-request timeout
+  // must be set on each request (see MCP_REQUEST_TIMEOUT_MS above). idb
+  // operations (app launch, install) can take minutes on a cold boot.
+  const client = new Client({ name: 'mcp-integration-tests', version: '1.0.0' });
   await client.connect(transport);
   return { client, transport };
 }
@@ -44,7 +58,7 @@ export async function processInstruction(client, instruction) {
   const response = await client.callTool({
     name: 'process-instruction',
     arguments: { instruction }
-  });
+  }, undefined, { timeout: MCP_REQUEST_TIMEOUT_MS });
   const text = /** @type {any} */ (response.content?.find(c => c.type === 'text'))?.text || '';
   const structured = (() => {
     try {

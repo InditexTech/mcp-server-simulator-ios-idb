@@ -47,8 +47,12 @@ export default (() => {
     // Serial only: one owned simulator serves the whole run.
     maxWorkers: 1,
     // Setup/teardown own boot waits and cleanup; per-test timeouts stay large
-    // because idb and simulator operations are slow.
-    testTimeout: 240000,
+    // because idb and simulator operations are slow. Worst cold-boot case
+    // observed per test (session ~47 s + launch_ms=163439, or session ~25 s +
+    // install_ms=159719 + two bounded 60 s polls) exceeds the previous
+    // 240 s ceiling, so 420 s keeps real headroom without weakening any
+    // assertion.
+    testTimeout: 420000,
     globalSetup: '<rootDir>/src/__integration__/support/globalSetup.js',
     globalTeardown: '<rootDir>/src/__integration__/support/globalTeardown.js',
   };

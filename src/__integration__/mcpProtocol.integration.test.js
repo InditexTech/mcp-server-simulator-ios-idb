@@ -18,7 +18,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import os from 'node:os';
 
-jest.setTimeout(240_000);
+jest.setTimeout(420_000);
 
 let state;
 let client;
