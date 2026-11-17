@@ -1,0 +1,20 @@
+jest.integration.config.js
+  h_54a1c5973b9675 50-55
+src/__integration__/mcpProtocol.integration.test.js
+  h_54a1c5973b9675 21
+src/__integration__/support/mcpClient.js
+  h_54a1c5973b9675 18-33,43-46,61
+src/__tests__/mcpClientTimeout.test.ts
+  h_54a1c5973b9675 1-102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "4a9c279091183626d9988f3834a5d544b5c4c7f7",
+  "prompts": {},
+  "humans": {
+    "h_54a1c5973b9675": {
+      "author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
