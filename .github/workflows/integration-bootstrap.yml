@@ -49,7 +49,7 @@ on:
           rather than an implicit constant (the validation gate below still
           pins the effective target).
         required: true
-        default: '4a9c279091183626d9988f3834a5d544b5c4c7f7'
+        default: '60f686780dc9495fef57ed476ff36507650d67c4'
         type: string
 
 permissions:
@@ -68,7 +68,7 @@ env:
   # The one commit this bootstrap is approved to exercise: the head of
   # PR #78 as verified at approval time. Updating this constant is an
   # explicit workflow change, not a runtime decision.
-  ALLOWED_SHA: '4a9c279091183626d9988f3834a5d544b5c4c7f7'
+  ALLOWED_SHA: '60f686780dc9495fef57ed476ff36507650d67c4'
   ALLOWED_REPO: 'InditexTech/mcp-server-simulator-ios-idb'
   ALLOWED_ISSUE: '78'
   NODE_VERSION: '24.22.1'
@@ -131,7 +131,7 @@ jobs:
       - name: Checkout approved PR head (pinned commit)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: 4a9c279091183626d9988f3834a5d544b5c4c7f7
+          ref: 60f686780dc9495fef57ed476ff36507650d67c4
           fetch-depth: 1
           persist-credentials: false
 
@@ -139,7 +139,7 @@ jobs:
         run: |
           set -euo pipefail
           CHECKED="$(git rev-parse HEAD)"
-          if [[ "${CHECKED}" != "4a9c279091183626d9988f3834a5d544b5c4c7f7" ]]; then
+          if [[ "${CHECKED}" != "60f686780dc9495fef57ed476ff36507650d67c4" ]]; then
             echo "::error::checked-out commit ${CHECKED} is not the approved target" >&2
             exit 1
           fi
@@ -310,7 +310,7 @@ jobs:
       - name: Checkout approved PR head (pinned commit)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: 4a9c279091183626d9988f3834a5d544b5c4c7f7
+          ref: 60f686780dc9495fef57ed476ff36507650d67c4
           fetch-depth: 1
           persist-credentials: false
 
@@ -318,7 +318,7 @@ jobs:
         run: |
           set -euo pipefail
           CHECKED="$(git rev-parse HEAD)"
-          if [[ "${CHECKED}" != "4a9c279091183626d9988f3834a5d544b5c4c7f7" ]]; then
+          if [[ "${CHECKED}" != "60f686780dc9495fef57ed476ff36507650d67c4" ]]; then
             echo "::error::checked-out commit ${CHECKED} is not the approved target" >&2
             exit 1
           fi
