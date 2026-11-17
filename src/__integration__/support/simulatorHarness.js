@@ -16,7 +16,8 @@
  *   (refuse to signal a process whose argv no longer matches).
  */
 
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
+import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { promisify } from 'node:util';
 
@@ -25,6 +26,120 @@ import { listSimulators, run, tryRun, pollUntil } from './simctl.js';
 const execFileAsync = promisify(execFile);
 
 const OWNED_NAME_PREFIX = 'mcp-integration-';
+
+/**
+ * Cold-start barrier, not a connect retry loop. CoreSimulator's Booted state
+ * precedes completed data migration/service startup; simctl bootstatus waits
+ * for that completion. Then own the companion launch explicitly and require
+ * both its startup report AND a gRPC response from the exact owned target.
+ *
+ * idb 1.7.8 connect accepts UDID or host/port, NOT --grpc-domain-sock.
+ * Its UDID path reuses a bound /tmp/idb/<UDID>_companion.sock and registers
+ * it. --companion <socket> describe performs a direct gRPC handshake without
+ * lazy autospawn. list-targets presence alone proves neither of these.
+ * The caller owns cleanup on failure (including a partially started child).
+ */
+export async function connectOwnedSimulator(udid, stateDir, { timeoutMs = 120_000 } = {}) {
+  if (typeof udid !== 'string' || !/^[0-9A-Fa-f-]{36}$/.test(udid)) {
+    throw new Error('cold-start refused: no valid owned UDID');
+  }
+  const deadline = Date.now() + timeoutMs;
+  const remaining = () => {
+    const ms = deadline - Date.now();
+    if (ms <= 0) throw new Error(`shared ${timeoutMs} ms startup budget exhausted`);
+    return ms;
+  };
+  const command = async (executable, args) => {
+    const { stdout } = await execFileAsync(executable, args, { timeout: remaining(), killSignal: 'SIGKILL' });
+    return stdout;
+  };
+  const socketPath = `/tmp/idb/${udid}_companion.sock`;
+  const logPath = path.join(stateDir, 'companion-startup.log');
+  let stage = 'boot-services';
+  let child;
+  let childFailure;
+  try {
+    await command('xcrun', ['simctl', 'bootstatus', udid]);
+    stage = 'companion-start';
+    // Same short, UDID-scoped Unix socket used by idb; existing teardown's
+    // process identity and socket guards apply unchanged. No TCP listener.
+    fs.mkdirSync('/tmp/idb', { recursive: true, mode: 0o700 });
+    const logFd = fs.openSync(logPath, 'wx', 0o600);
+    try {
+      child = spawn('idb_companion', ['--udid', udid, '--grpc-domain-sock', socketPath, '--only', 'simulator'], {
+        detached: true, stdio: ['ignore', 'pipe', logFd],
+      });
+    } finally {
+      fs.closeSync(logFd);
+    }
+    // Keep an error listener even after the startup report, and fail if the
+    // child exits during either handshake rather than accepting stale state.
+    child.on('error', error => { childFailure = error; });
+    child.on('exit', (code, signal) => {
+      childFailure = new Error(`owned companion exited (code=${code}, signal=${signal})`);
+    });
+    let clearReportListeners;
+    await new Promise((resolve, reject) => {
+      let output = '';
+      const timer = setTimeout(() => reject(new Error('companion did not report its endpoint before deadline')), remaining());
+      const onError = error => reject(error);
+      const onExit = () => reject(childFailure);
+      const onClose = () => reject(new Error('companion stdout closed without startup report'));
+      const onData = chunk => {
+        output += chunk.toString();
+        if (output.length > 65_536) return reject(new Error('oversized companion startup report'));
+        const newline = output.indexOf('\n');
+        if (newline < 0) return;
+        try {
+          const report = JSON.parse(output.slice(0, newline));
+          if (report.grpc_path !== socketPath) throw new Error('companion reported an unexpected socket; refusing foreign endpoint');
+          resolve();
+        } catch (error) { reject(error); }
+      };
+      child.once('error', onError);
+      child.once('exit', onExit);
+      child.stdout.once('close', onClose);
+      child.stdout.on('data', onData);
+      // Settle cleanup through the enclosing await's finally, not a timer
+      // that could remain live after a successful startup.
+      const clear = () => {
+        clearTimeout(timer);
+        child.removeListener('error', onError);
+        child.removeListener('exit', onExit);
+        child.stdout.removeListener('close', onClose);
+        child.stdout.removeListener('data', onData);
+      };
+      // Promise cleanup is installed before any asynchronous native event.
+      clearReportListeners = clear;
+    }).finally(() => clearReportListeners?.());
+    stage = 'grpc-handshake';
+    const description = JSON.parse(await command('idb', ['--companion', socketPath, 'describe', '--json']));
+    if (description.udid !== udid) throw new Error('gRPC target identity mismatch; refusing foreign companion');
+    if (childFailure) throw childFailure;
+    stage = 'registration';
+    const registered = JSON.parse(await command('idb', ['connect', udid, '--json']));
+    if (registered.udid !== udid) throw new Error('registered target identity mismatch');
+    if (childFailure) throw childFailure;
+    process.stderr.write(`[integration] cold-start ready: boot services, companion report, gRPC and registration verified (${timeoutMs - remaining()} ms)\n`);
+  } catch (error) {
+    // The setup failure path removes the private directory. Preserve only a
+    // bounded tail of THIS companion's diagnostics in the actionable error.
+    let diagnostics = '';
+    if (fs.existsSync(logPath)) {
+      const fd = fs.openSync(logPath, 'r');
+      try {
+        const size = fs.fstatSync(fd).size;
+        const tail = Buffer.alloc(Math.min(size, 2048));
+        fs.readSync(fd, tail, 0, tail.length, Math.max(0, size - tail.length));
+        diagnostics = tail.length ? `; companion stderr tail: ${tail.toString()}` : '';
+      } finally { fs.closeSync(fd); }
+    }
+    throw new Error(`Owned simulator cold-start ${stage} failed within ${timeoutMs} ms: ${error.message}${diagnostics}`, { cause: error });
+  } finally {
+    child?.stdout?.destroy();
+    child?.unref();
+  }
+}
 
 /** @returns {boolean} True when the UDID belongs to the simulator this suite created. */
 export function isOwned(name, udid, ownedUdid) {

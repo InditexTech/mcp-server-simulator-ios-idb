@@ -19,19 +19,9 @@ import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { listSimulators, pollUntil, run } from './simctl.js';
-import { createOwnedSimulator, cleanupOwnedSimulator, cleanupOwnedCompanions } from './simulatorHarness.js';
+import { listSimulators } from './simctl.js';
+import { createOwnedSimulator, cleanupOwnedSimulator, cleanupOwnedCompanions, connectOwnedSimulator } from './simulatorHarness.js';
 import { writeState, STATE_FILE_ENV } from './state.js';
-
-/**
- * Connects the shared idb client to the owned UDID. Failures surface
- * visibly (never a blind success) so the suite cannot proceed against a
- * device without its companion.
- */
-async function idbConnectOwned(ownedUdid) {
-  const output = await run('idb', ['connect', ownedUdid]);
-  return (output || '').trim().split('\n')[0] ?? '';
-}
 
 export default async function globalSetup() {
   const runId = randomUUID().slice(0, 8);
@@ -59,23 +49,13 @@ export default async function globalSetup() {
 
     const ownedUdid = created.udid;
 
-    // Real readiness: poll simctl state and idb list-targets presence of the
-    // UDID rather than waiting a fixed time.
-    await pollUntil(async () => {
-      const devices = await listSimulators();
-      return devices.find(d => d.udid === ownedUdid)?.state === 'Booted';
-    }, 120_000);
-
-    // idb companion cold-start workaround, established by direct
-    // reproducible diagnosis on Xcode 27 runtimes: the first idb_companion
-    // process (auto-spawned by `idb connect` right after a fresh boot)
-    // wedges, and every following idb call against the device times out
-    // (MCP SDK 180s); killing that exact companion and reconnecting makes
-    // the same calls respond in seconds. The restart targets ONLY the
-    // companion whose argv binds it to our owned UDID; no other-process
-    // or global kills are involved.
-    await cleanupOwnedCompanions(ownedUdid).catch(() => []);
-    await idbConnectOwned(ownedUdid);
+    // A pre-connect cleanup is not a restart on a fresh VM. Never ignore a
+    // failed cleanup, and do not spawn until boot services have completed.
+    const cleanup = await cleanupOwnedCompanions(ownedUdid);
+    if (cleanup.some(result => !result.gone)) {
+      throw new Error('Owned companion cleanup failed before cold-start; refusing competing companions');
+    }
+    await connectOwnedSimulator(ownedUdid, stateDir);
 
     try {
       writeState({

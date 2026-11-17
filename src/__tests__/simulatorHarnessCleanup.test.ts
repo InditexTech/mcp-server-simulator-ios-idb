@@ -544,7 +544,7 @@ describe('globalSetup state handoff is real (file inside owned dir, teardown rem
         'OP="$2"',
         'case "$OP" in',
         '  create) cat "${SCENARIO}/create-output.txt"; echo create >> "${LOG}"; echo "$3" > "${SCENARIO}/name.txt"; exit 0;;',
-        '  boot|shutdown|delete) echo "$OP $3" >> "${LOG}"; exit 0;;',
+        '  boot|bootstatus|shutdown|delete) echo "$OP $3" >> "${LOG}"; exit 0;;',
         '  *) echo "unexpected: $ARGS" >> "${LOG}"; exit 1;;',
         'esac'
       ].join('\n'),
@@ -554,7 +554,7 @@ describe('globalSetup state handoff is real (file inside owned dir, teardown rem
     writeFileSync(path.join(dir, 'bin', 'ps'), '#!/bin/bash\nexit 0\n', { mode: 0o755 });
     writeFileSync(path.join(dir, 'bin', 'kill'), '#!/bin/bash\nexit 0\n', { mode: 0o755 });
     writeFileSync(path.join(dir, 'bin', 'id'), `#!/bin/bash\necho ${USER}\n`, { mode: 0o755 });
-    writeFileSync(path.join(dir, 'bin', 'idb'), '#!/bin/bash\necho connected\n', { mode: 0o755 });
+    writeFileSync(path.join(dir, 'bin', 'idb'), `#!/bin/bash\necho '{"udid":"${udid}"}'\n`, { mode: 0o755 });
     // harness explicit stat usage happens only for sockets — absent is fine
     return dir;
   };
@@ -562,6 +562,20 @@ describe('globalSetup state handoff is real (file inside owned dir, teardown rem
   it('happy: hand-off env file lives INSIDE stateDir; after teardown both file and dir are gone', async () => {
     const dir = setupDir('ok');
     const script = `
+// Explicit companion startup is mocked too: this state-handoff test must
+// never spawn a native companion for its synthetic UDID.
+import cp from 'node:child_process';
+import { syncBuiltinESMExports } from 'node:module';
+import { EventEmitter } from 'node:events';
+import { PassThrough } from 'node:stream';
+cp.spawn = () => {
+  const child = new EventEmitter();
+  child.stdout = new PassThrough();
+  child.unref = () => {};
+  setImmediate(() => child.stdout.write(JSON.stringify({ grpc_path: '/tmp/idb/CCCC3333-4444-4555-8666-777788889999_companion.sock' }) + '\\n'));
+  return child;
+};
+syncBuiltinESMExports();
 const setup = (await import(${JSON.stringify(new URL('../__integration__/support/globalSetup.js', import.meta.url).href)})).default;
 const teardown = (await import(${JSON.stringify(new URL('../__integration__/support/globalTeardown.js', import.meta.url).href)})).default;
 const state = (await import(${JSON.stringify(new URL('../__integration__/support/state.js', import.meta.url).href)}));
