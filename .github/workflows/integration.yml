@@ -33,7 +33,7 @@
 # - If the tag disappears or is repointed between checkout and verification,
 #   the comparison fails and the job aborts (fail-on-mismatch by design).
 
-name: Integration
+name: Integration suite (release + manual)
 
 on:
   release:
@@ -53,7 +53,7 @@ env:
 
 jobs:
   simulator:
-    name: Simulator integration
+    name: Integration suite — real simulator verification
     runs-on: macos-26
     timeout-minutes: 60
     steps:
