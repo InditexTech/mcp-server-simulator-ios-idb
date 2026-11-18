@@ -1,0 +1,14 @@
+src/idb/__tests__/IDBManager.test.ts
+  h_54a1c5973b9675 896-900,917-918,938,941,975-985,1000-1010,1014-1022
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "0b285d4e28216897fe77e9a5bb797adc7302e4c1",
+  "prompts": {},
+  "humans": {
+    "h_54a1c5973b9675": {
+      "author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
