@@ -1,0 +1,21 @@
+src/adapters/OrchestratorToIDB.ts
+  s_2f27476b9c31ca::t_44e2e28da05aa2 213-215
+src/idb/interfaces/IIDBManager.ts
+  s_2f27476b9c31ca::t_257c1e4fb1e63d 288,290
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "a3621a0d517b7e062cd62b37abb117d954e84414",
+  "prompts": {},
+  "sessions": {
+    "s_2f27476b9c31ca": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e10dad901ffevL4enZl0y8GQyB",
+        "model": "gemini-4-carbon"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
