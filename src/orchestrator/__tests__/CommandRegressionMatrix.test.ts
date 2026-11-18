@@ -38,9 +38,15 @@ describe('PR #71 regression matrix', () => {
     'inputText',
     'pressKey',
     'pressKeySequence',
+    'describeAllElements',
+    'describePointElement',
     'takeScreenshot',
+    'startVideoRecording',
+    'stopVideoRecording',
     'getSystemLogs',
     'getAppLogs',
+    'startDebugServer',
+    'stopDebugServer',
     'getDebugServerStatus',
     'listCrashLogs',
     'getCrashLog',
@@ -240,8 +246,9 @@ describe('PR #71 regression matrix', () => {
     await expectRoutedTo('end session', 'terminateSimulatorSession', 'sess_ABC');
   });
 
-  // Unsupported commands must fail explicitly, never fall back to another
-  // operation.
+  // Newly implemented optional IIDBManager commands route directly when
+  // supported, and still fail explicitly without fallback when omitted by a
+  // custom IIDBManager implementation.
   it.each([
     ['describe all elements', 'describeAllElements'],
     ['describe point 150, 300', 'describePointElement'],
@@ -249,12 +256,20 @@ describe('PR #71 regression matrix', () => {
     ['stop recording', 'stopVideoRecording'],
     ['start debug com.example.app', 'startDebugServer'],
     ['stop debug', 'stopDebugServer']
-  ])('rejects unsupported "%s" without running any operation', async (instruction, method) => {
+  ])('routes "%s" when supported and rejects without fallback when omitted', async (instruction, method) => {
+    await expectRoutedTo(instruction, method);
+
+    for (const name of MANAGER_METHODS) {
+      idbManager[name].mockClear();
+    }
+    delete idbManager[method];
     const result = await orchestrator.processInstruction(instruction);
     expect(result.success).toBe(false);
     expect(result.error).toBe(`Command not supported by the IDB manager: ${method}`);
     for (const name of MANAGER_METHODS) {
-      expect(idbManager[name]).not.toHaveBeenCalled();
+      if (idbManager[name]) {
+        expect(idbManager[name]).not.toHaveBeenCalled();
+      }
     }
   });
 });
