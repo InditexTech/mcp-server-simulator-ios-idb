@@ -12,8 +12,9 @@
 #   no push: it contributes nothing to PR verification gates and never runs
 #   automatically. PR CI keeps running the existing mock-based suite.
 # - Runs the ACTUAL integration test code from the pinned commit of PR #78
-#   on fresh hosted macos-26 (arm64) VMs, sequentially: run-2 starts only
-#   after run-1 succeeds, each on its own fresh VM, to measure run-to-run
+#   on independent hosted macos-26 (arm64) environments, sequentially: pass 2
+#   starts only after pass 1 succeeds, each on its own independent
+#   environment, to measure run-to-run
 #   stability rather than averaging within one warm environment.
 # - This is a pre-merge bridge, NOT a publication gate: nothing here merges,
 #   approves, or blocks PR #78, and its own test infra remains unchanged.
@@ -37,7 +38,7 @@
 #   secrets beyond the built-in read-only GITHUB_TOKEN, no id-token, no
 #   environment access, and no added third-party actions.
 
-name: Integration bootstrap (manual, pre-merge)
+name: Integration suite pre-merge check (manual)
 
 on:
   workflow_dispatch:
@@ -49,7 +50,7 @@ on:
           rather than an implicit constant (the validation gate below still
           pins the effective target).
         required: true
-        default: '4a9c279091183626d9988f3834a5d544b5c4c7f7'
+        default: '7933147c970579f935b4e28b7bfe0fbdd08e4f3f'
         type: string
 
 permissions:
@@ -68,7 +69,7 @@ env:
   # The one commit this bootstrap is approved to exercise: the head of
   # PR #78 as verified at approval time. Updating this constant is an
   # explicit workflow change, not a runtime decision.
-  ALLOWED_SHA: '4a9c279091183626d9988f3834a5d544b5c4c7f7'
+  ALLOWED_SHA: '7933147c970579f935b4e28b7bfe0fbdd08e4f3f'
   ALLOWED_REPO: 'InditexTech/mcp-server-simulator-ios-idb'
   ALLOWED_ISSUE: '78'
   NODE_VERSION: '24.22.1'
@@ -76,7 +77,7 @@ env:
 
 jobs:
   run-1:
-    name: Real-simulator integration run 1 (fresh VM)
+    name: Integration suite check — pass 1 of 2 (independent environment)
     runs-on: macos-26
     timeout-minutes: 60
     permissions:
@@ -131,7 +132,7 @@ jobs:
       - name: Checkout approved PR head (pinned commit)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: 4a9c279091183626d9988f3834a5d544b5c4c7f7
+          ref: 7933147c970579f935b4e28b7bfe0fbdd08e4f3f
           fetch-depth: 1
           persist-credentials: false
 
@@ -139,7 +140,7 @@ jobs:
         run: |
           set -euo pipefail
           CHECKED="$(git rev-parse HEAD)"
-          if [[ "${CHECKED}" != "4a9c279091183626d9988f3834a5d544b5c4c7f7" ]]; then
+          if [[ "${CHECKED}" != "7933147c970579f935b4e28b7bfe0fbdd08e4f3f" ]]; then
             echo "::error::checked-out commit ${CHECKED} is not the approved target" >&2
             exit 1
           fi
@@ -190,7 +191,7 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Run real-simulator integration suite (run 1)
+      - name: Run integration suite (pass 1)
         env:
           IOS_SIM_INTEGRATION: '1'
           IOS_SIM_ARTIFACTS_DIR: ${{ runner.temp }}/integration-artifacts
@@ -259,7 +260,7 @@ jobs:
           retention-days: 7
 
   run-2:
-    name: Real-simulator integration run 2 (fresh VM)
+    name: Integration suite check — pass 2 of 2 (independent environment)
     needs: run-1
     runs-on: macos-26
     timeout-minutes: 60
@@ -310,7 +311,7 @@ jobs:
       - name: Checkout approved PR head (pinned commit)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: 4a9c279091183626d9988f3834a5d544b5c4c7f7
+          ref: 7933147c970579f935b4e28b7bfe0fbdd08e4f3f
           fetch-depth: 1
           persist-credentials: false
 
@@ -318,7 +319,7 @@ jobs:
         run: |
           set -euo pipefail
           CHECKED="$(git rev-parse HEAD)"
-          if [[ "${CHECKED}" != "4a9c279091183626d9988f3834a5d544b5c4c7f7" ]]; then
+          if [[ "${CHECKED}" != "7933147c970579f935b4e28b7bfe0fbdd08e4f3f" ]]; then
             echo "::error::checked-out commit ${CHECKED} is not the approved target" >&2
             exit 1
           fi
@@ -359,7 +360,7 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Run real-simulator integration suite (run 2)
+      - name: Run integration suite (pass 2)
         env:
           IOS_SIM_INTEGRATION: '1'
           IOS_SIM_ARTIFACTS_DIR: ${{ runner.temp }}/integration-artifacts
