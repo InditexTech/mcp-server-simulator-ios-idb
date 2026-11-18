@@ -1,6 +1,9 @@
 // SPDX-FileCopyrightText: © 2025 Industria de Diseño Textil S.A. INDITEX
 // SPDX-License-Identifier: Apache-2.0
 
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { jest } from '@jest/globals';
 import { IDBManager } from '../IDBManager.js';
 
@@ -19,7 +22,130 @@ describe('IDBManager', () => {
 
     await expect(manager.listAvailableSimulators())
       .rejects.toThrow('idb is not installed or not available in PATH');
-    expect(executeCommand).toHaveBeenCalledWith('idb', ['list-targets']);
+    expect(executeCommand).toHaveBeenCalledWith('idb', ['list-targets', '--only', 'simulator']);
+  });
+
+  it('memoizes simulator-only idb availability checks and re-verifies after ENOENT', async () => {
+    const manager = new IDBManager();
+    const simctlPayload = JSON.stringify({
+      devices: {
+        'com.apple.CoreSimulator.SimRuntime.iOS-18-0': [{
+          udid: 'booted-udid',
+          name: 'iPhone 16',
+          state: 'Booted',
+          deviceTypeIdentifier: 'com.apple.CoreSimulator.SimDeviceType.iPhone-16'
+        }]
+      }
+    });
+
+    const executeCommand = jest
+      .spyOn(manager as any, 'executeCommand')
+      .mockImplementation(async (...parameters: unknown[]) => {
+        const command = parameters[0] as string;
+        const args = parameters[1] as string[];
+        if (command === 'idb' && args[0] === 'list-targets') {
+          return '';
+        }
+        if (command === 'xcrun') {
+          return simctlPayload;
+        }
+        return '';
+      });
+
+    const [firstList, secondList] = await Promise.all([
+      manager.listAvailableSimulators(),
+      manager.listBootedSimulators()
+    ]);
+    await manager.shutdownSimulatorByUDID('booted-udid');
+
+    expect(firstList).toHaveLength(1);
+    expect(secondList).toHaveLength(1);
+    const idbCheckCalls = executeCommand.mock.calls.filter(
+      call => call[0] === 'idb' && (call[1] as string[])[0] === 'list-targets'
+    );
+    expect(idbCheckCalls).toEqual([['idb', ['list-targets', '--only', 'simulator']]]);
+
+    // Non-spawn ENOENT in command arguments (exit code 1) must NOT invalidate the availability cache
+    manager['sessions'].set('session', 'booted-udid');
+    executeCommand.mockRejectedValueOnce(
+      Object.assign(
+        new Error("Error executing command: idb add-media failed: ENOENT: no such file '/tmp/missing.png'"),
+        { code: 1 }
+      )
+    );
+    await expect(manager.addMedia('session', ['/tmp/missing.png'])).rejects.toThrow('missing.png');
+    await manager.listAvailableSimulators();
+    expect(
+      executeCommand.mock.calls.filter(
+        call => call[0] === 'idb' && (call[1] as string[])[0] === 'list-targets'
+      )
+    ).toHaveLength(1);
+
+    // Simulate idb disappearing from PATH mid-session; next simulator check must re-probe idb
+    executeCommand.mockRejectedValueOnce(
+      Object.assign(new Error('Error executing command: spawn idb ENOENT'), { code: 'ENOENT' })
+    );
+    await expect(manager.tap('session', 10, 20)).rejects.toThrow('ENOENT');
+
+    executeCommand.mockRejectedValueOnce(new Error('spawn idb ENOENT'));
+    await expect(manager.listAvailableSimulators())
+      .rejects.toThrow('idb is not installed or not available in PATH');
+    expect(
+      executeCommand.mock.calls.filter(
+        call => call[0] === 'idb' && (call[1] as string[])[0] === 'list-targets'
+      )
+    ).toHaveLength(2);
+  });
+
+  it('deduplicates idb and simctl calls when creating sessions on booted or shutdown simulators', async () => {
+    jest.useFakeTimers();
+    const manager = new IDBManager();
+    let isBooted = false;
+
+    const executeCommand = jest
+      .spyOn(manager as any, 'executeCommand')
+      .mockImplementation(async (...parameters: unknown[]) => {
+        const command = parameters[0] as string;
+        const args = parameters[1] as string[];
+        if (command === 'xcrun' && args[1] === 'boot') {
+          isBooted = true;
+          return '';
+        }
+        if (command === 'xcrun' && args[1] === 'list') {
+          return JSON.stringify({
+            devices: {
+              'com.apple.CoreSimulator.SimRuntime.iOS-18-0': [{
+                udid: 'sim-1',
+                name: 'iPhone 16 Pro',
+                state: isBooted ? 'Booted' : 'Shutdown',
+                deviceTypeIdentifier: 'iPhone'
+              }]
+            }
+          });
+        }
+        return '';
+      });
+
+    // Cold simulator: 1 idb check + 1 initial simctl list + 1 simctl boot + 1 poll simctl list (no pre-boot duplicate list)
+    const coldSessionPromise = manager.createSimulatorSession({ deviceName: 'iphone 16 pro' });
+    await jest.runAllTimersAsync();
+    const coldSessionId = await coldSessionPromise;
+    expect(coldSessionId).toMatch(/^session_/);
+    expect(executeCommand.mock.calls).toEqual([
+      ['idb', ['list-targets', '--only', 'simulator']],
+      ['xcrun', ['simctl', 'list', 'devices', '--json']],
+      ['xcrun', ['simctl', 'boot', 'sim-1']],
+      ['xcrun', ['simctl', 'list', 'devices', '--json']]
+    ]);
+
+    executeCommand.mockClear();
+
+    // Already-booted simulator on warm manager: 0 idb checks + 1 simctl list + 0 boot calls
+    const warmSessionId = await manager.createSimulatorSession({ deviceName: 'iPhone 16 Pro' });
+    expect(warmSessionId).toMatch(/^session_/);
+    expect(executeCommand.mock.calls).toEqual([
+      ['xcrun', ['simctl', 'list', 'devices', '--json']]
+    ]);
   });
 
   it('resolves sessions to UDIDs and refuses unknown sessions', async () => {
@@ -270,13 +396,16 @@ describe('IDBManager', () => {
     expect(output).toBe('$(printf injected); `printf injected`');
   });
 
-  it('reports process execution failures', async () => {
+  it('reports process execution failures and preserves errno code', async () => {
     const manager = new IDBManager();
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
 
     await expect(
       manager['executeCommand']('/path/that/does/not/exist')
-    ).rejects.toThrow('Error executing command:');
+    ).rejects.toMatchObject({
+      message: expect.stringContaining('Error executing command:'),
+      code: 'ENOENT'
+    });
   });
 
   it('uses argument arrays for simulator commands', async () => {
@@ -302,7 +431,7 @@ describe('IDBManager', () => {
       os: 'iOS-18-0',
       deviceType: 'iPhone'
     }]);
-    expect(executeCommand).toHaveBeenNthCalledWith(1, 'idb', ['list-targets']);
+    expect(executeCommand).toHaveBeenNthCalledWith(1, 'idb', ['list-targets', '--only', 'simulator']);
     expect(executeCommand).toHaveBeenNthCalledWith(
       2,
       'xcrun',
@@ -511,6 +640,56 @@ describe('IDBManager', () => {
     ]);
   });
 
+  it('uses an isolated os.tmpdir() directory for buffer screenshots and cleans up without masking primary errors', async () => {
+    const manager = new IDBManager();
+    manager['sessions'].set('session', 'simulator-udid');
+    const pngBytes = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+    let capturedTempDir = '';
+    let leakedCleanupDir = '';
+
+    const executeCommand = jest
+      .spyOn(manager as any, 'executeCommand')
+      .mockImplementationOnce(async (...parameters: unknown[]) => {
+        const args = parameters[1] as string[];
+        const targetPath = args[4];
+        capturedTempDir = path.dirname(targetPath);
+        expect(capturedTempDir.startsWith(os.tmpdir())).toBe(true);
+        expect(capturedTempDir.startsWith(process.cwd())).toBe(false);
+        await fs.promises.writeFile(targetPath, pngBytes);
+        return '';
+      })
+      .mockImplementationOnce(async (...parameters: unknown[]) => {
+        const args = parameters[1] as string[];
+        const targetPath = args[4];
+        capturedTempDir = path.dirname(targetPath);
+        await fs.promises.writeFile(targetPath, pngBytes);
+        throw new Error('idb screenshot failed mid-capture');
+      })
+      .mockImplementationOnce(async (...parameters: unknown[]) => {
+        const args = parameters[1] as string[];
+        leakedCleanupDir = path.dirname(args[4]);
+        throw new Error('primary screenshot failure');
+      });
+
+    const result = await manager.takeScreenshot('session');
+    expect(Buffer.isBuffer(result)).toBe(true);
+    expect(result).toEqual(pngBytes);
+    expect(fs.existsSync(capturedTempDir)).toBe(false);
+
+    await expect(manager.takeScreenshot('session')).rejects.toThrow('idb screenshot failed mid-capture');
+    expect(fs.existsSync(capturedTempDir)).toBe(false);
+
+    // Cleanup failure in finally must never mask the primary screenshot error
+    const realRm = fs.promises.rm.bind(fs.promises);
+    const rmSpy = jest.spyOn(fs.promises, 'rm').mockRejectedValueOnce(new Error('EBUSY cleanup failure'));
+    await expect(manager.takeScreenshot('session')).rejects.toThrow('primary screenshot failure');
+    rmSpy.mockRestore();
+    if (leakedCleanupDir) {
+      await realRm(leakedCleanupDir, { recursive: true, force: true });
+    }
+    expect(executeCommand).toHaveBeenCalledTimes(3);
+  });
+
   it('parses newline-delimited app JSON', async () => {
     const manager = new IDBManager();
     manager['sessions'].set('session', 'simulator-udid');
@@ -645,5 +824,66 @@ describe('IDBManager', () => {
       '1.5',
       '-2.5'
     ]);
+  });
+
+  it('covers session lifecycle, boot short-circuit/timeout, and debugserver failure branches', async () => {
+    jest.useFakeTimers();
+    const manager = new IDBManager();
+    let devicesPayload: Record<string, unknown[]> = {
+      'com.apple.CoreSimulator.SimRuntime.iOS-18-0': [
+        { udid: 'shutdown-udid', name: 'iPhone SE', state: 'Shutdown', deviceTypeIdentifier: 'iPhone' },
+        { udid: 'booted-udid', name: 'iPhone 16', state: 'Booted', deviceTypeIdentifier: 'iPhone' }
+      ]
+    };
+
+    const executeCommand = jest
+      .spyOn(manager as any, 'executeCommand')
+      .mockImplementation(async (...parameters: unknown[]) => {
+        const command = parameters[0] as string;
+        const args = parameters[1] as string[];
+        if (command === 'xcrun' && args[1] === 'list') {
+          return JSON.stringify({ devices: devicesPayload });
+        }
+        if (command === 'idb' && args[0] === 'debugserver') {
+          throw new Error('debugserver failed');
+        }
+        return '';
+      });
+
+    // Default selection prefers Booted over Shutdown
+    const sessionId = await manager.createSimulatorSession();
+    await expect(manager.listSimulatorSessions()).resolves.toEqual([sessionId]);
+    await expect(manager.isSimulatorBooted(sessionId)).resolves.toBe(true);
+    await expect(manager.getDebugServerStatus(sessionId)).resolves.toEqual({ running: false });
+
+    // bootSimulatorByUDID returns immediately when already Booted
+    await manager.bootSimulatorByUDID('booted-udid');
+    expect(executeCommand).not.toHaveBeenCalledWith('xcrun', ['simctl', 'boot', 'booted-udid']);
+
+    // shutdownSimulator delegates by resolved UDID, terminateSimulatorSession removes session
+    await manager.shutdownSimulator(sessionId);
+    expect(executeCommand).toHaveBeenCalledWith('xcrun', ['simctl', 'shutdown', 'booted-udid']);
+    await manager.terminateSimulatorSession(sessionId);
+    await expect(manager.terminateSimulatorSession(sessionId))
+      .rejects.toThrow(`Session not found: ${sessionId}`);
+
+    // Missing named simulator and empty device list errors
+    await expect(manager.createSimulatorSession({ deviceName: 'NonExistent' }))
+      .rejects.toThrow('No simulator found with name NonExistent');
+    devicesPayload = {};
+    await expect(manager.createSimulatorSession())
+      .rejects.toThrow('No available simulators found');
+
+    // Boot timeout when simulator never transitions to Booted
+    devicesPayload = {
+      'com.apple.CoreSimulator.SimRuntime.iOS-18-0': [
+        { udid: 'stuck-udid', name: 'Stuck', state: 'Shutdown', deviceTypeIdentifier: 'iPhone' }
+      ]
+    };
+    const stuckBootAssertion = expect(
+      manager.bootSimulatorByUDID('stuck-udid')
+    ).rejects.toThrow('Timeout waiting for simulator stuck-udid to boot');
+    await jest.runAllTimersAsync();
+    await stuckBootAssertion;
   });
 });
