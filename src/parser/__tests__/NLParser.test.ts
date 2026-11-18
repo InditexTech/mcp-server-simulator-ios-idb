@@ -149,6 +149,58 @@ describe('NLParser', () => {
       expect(result.parameters.text).toBe('hello world');
       expect(result.parameters.mixedValue).toBe('123abc');
     });
+
+    it('should preserve numeric display selectors as strings', async () => {
+      const parsed = await parser.parseInstruction('take a screenshot of display 3');
+      const normalized = await parser.normalizeParameters(parsed);
+      expect(normalized.command).toBe('capture screen');
+      expect(normalized.parameters.display).toBe('3');
+      expect(typeof normalized.parameters.display).toBe('string');
+    });
+  });
+
+  describe('foldable posture and display-selectable commands', () => {
+    it.each([
+      ['fold to 120 degrees', 'set hinge angle', { angle: 120 }],
+      ['fold closed', 'set hinge angle', { angle: 0 }],
+      ['fold half-open', 'set hinge angle', { angle: 90 }],
+      ['plegar a 135.5°', 'set hinge angle', { angle: 135.5 }],
+      ['desplegar el simulador', 'set hinge angle', { angle: 180 }],
+      ['read posture', 'get posture', {}],
+      ['leer la postura del dispositivo', 'get posture', {}],
+      [
+        'set orientation to portrait upside down expecting angle 120 and active display inner',
+        'set orientation',
+        {
+          orientation: 'PORTRAIT_UPSIDE_DOWN',
+          expectedPosture: { angle: 120, activeDisplay: 'inner' }
+        }
+      ],
+      [
+        'cambiar orientación a horizontal derecha verificando ángulo 90 y pantalla interior',
+        'set orientation',
+        {
+          orientation: 'LANDSCAPE_RIGHT',
+          expectedPosture: { angle: 90, activeDisplay: 'inner' }
+        }
+      ],
+      ['take screenshot of all displays', 'capture screen', { display: 'all' }],
+      ['toma captura de todas las pantallas', 'capture screen', { display: 'all' }],
+      [
+        'toma una captura de todas las pantallas en /tmp/duo.png',
+        'capture screen',
+        { display: 'all', outputPath: '/tmp/duo.png' }
+      ],
+      [
+        'take screenshot of inner display',
+        'capture screen',
+        { display: 'inner' }
+      ]
+    ])('parses "%s" into %s', async (instruction, expectedCommand, expectedParams) => {
+      const result = await parser.parseInstruction(instruction);
+      expect(result.command).toBe(expectedCommand);
+      expect(result.parameters).toEqual(expectedParams);
+    });
   });
 
   describe('suggestCompletions', () => {

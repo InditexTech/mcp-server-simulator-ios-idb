@@ -141,10 +141,16 @@ export class OrchestratorToIDB {
 
         // Screenshot and logging commands
         case CommandType.TAKE_SCREENSHOT:
-          result = await this.idbManager.takeScreenshot(
-            sid,
-            command.parameters.outputPath
-          );
+          result = command.parameters.display !== undefined
+            ? await this.idbManager.takeScreenshot(
+                sid,
+                command.parameters.outputPath,
+                command.parameters.display
+              )
+            : await this.idbManager.takeScreenshot(
+                sid,
+                command.parameters.outputPath
+              );
           break;
 
         case CommandType.GET_SYSTEM_LOGS:
@@ -164,6 +170,22 @@ export class OrchestratorToIDB {
         case CommandType.FOCUS_SIMULATOR:
           await this.requireMethod('focusSimulator')(sid);
           result = { sessionId: sid };
+          break;
+
+        case CommandType.SET_HINGE_ANGLE:
+          result = await this.requireMethod('setHingeAngle')(sid, params.angle);
+          break;
+
+        case CommandType.GET_POSTURE:
+          result = await this.requireMethod('getPosture')(sid);
+          break;
+
+        case CommandType.SET_ORIENTATION:
+          result = await this.requireMethod('setOrientation')(
+            sid,
+            params.orientation,
+            params.expectedPosture
+          );
           break;
 
         case CommandType.UNINSTALL_APP:
