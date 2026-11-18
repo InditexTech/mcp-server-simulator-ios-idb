@@ -893,6 +893,11 @@ describe('IDBManager', () => {
       expect(verified.orientation).toBe('LANDSCAPE_LEFT');
       expect(verified.activeDisplay?.role).toBe('inner');
 
+      await expect(manager.setOrientation('duo', 'LANDSCAPE_LEFT', {
+        angle: 90, minAngle: 130, maxAngle: 110
+      })).rejects.toThrow('expected hinge angle 90 degrees, got 120 degrees; expected hinge angle >= 130 degrees, got 120 degrees; expected hinge angle <= 110 degrees, got 120 degrees');
+      await expect(manager.setOrientation('missing', 'PORTRAIT')).rejects.toThrow('Session not found');
+
       // Mismatch on expected active display
       await expect(
         manager.setOrientation('duo', 'LANDSCAPE_LEFT', { activeDisplay: 'outer' })
@@ -909,6 +914,8 @@ describe('IDBManager', () => {
       const manager = new IDBManager();
       const litOuter = createTestPng(4, 6, [220, 100, 40]);
       const blackInner = createTestPng(6, 8, [0, 0, 0]);
+      let enumeration = DUO_ENUMERATE_OUTPUT;
+      let hingeAvailable = true;
 
       jest.spyOn(manager as any, 'executeCommand').mockImplementation(async (...parameters: unknown[]) => {
         const cmd = parameters[0] as string;
@@ -928,9 +935,10 @@ describe('IDBManager', () => {
           });
         }
         if (cmd === 'xcrun' && args[3] === 'enumerate') {
-          return DUO_ENUMERATE_OUTPUT;
+          return enumeration;
         }
         if (cmd === 'idb' && args[0] === 'hinge') {
+          if (!hingeAvailable) throw new Error('hinge unavailable');
           return JSON.stringify({ angle: 0.0 });
         }
         if (cmd === 'xcrun' && args[3] === 'screenshot') {
@@ -964,6 +972,17 @@ describe('IDBManager', () => {
       expect(allInMemory[1].label).toBe('inner (primary-1, 6x8, inactive)');
       expect(allInMemory[1].buffer).toEqual(blackInner);
 
+      for (const [selector, expected] of [
+        ['activa', litOuter], ['exterior', litOuter], ['3', blackInner],
+        ['interior', blackInner], ['CDFAF032-131E-4E5D-8D2D-BC3A5541CF12', blackInner]
+      ] as const) {
+        await expect(manager.takeScreenshot(sessionId, undefined, selector)).resolves.toEqual([
+          expect.objectContaining({ buffer: expected })
+        ]);
+      }
+      await expect(manager.takeScreenshot(sessionId, undefined, 'external-0'))
+        .rejects.toThrow('Display "external-0" not found');
+
       // All displays with single file outputPath writes suffixed files
       const outDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'mcp-duo-test-'));
       try {
@@ -978,9 +997,29 @@ describe('IDBManager', () => {
         expect(saved[1].path).toBe(path.join(outDir, 'capture-inner.png'));
         expect(await fs.promises.readFile(saved[0].path)).toEqual(litOuter);
         expect(await fs.promises.readFile(saved[1].path)).toEqual(blackInner);
+        const directory = await manager.takeScreenshot(sessionId, outDir, 'ambas') as SavedDisplayScreenshot[];
+        expect(directory.map(file => path.basename(file.path))).toEqual([
+          'screenshot-outer.png', 'screenshot-inner.png'
+        ]);
+        const prefix = await manager.takeScreenshot(sessionId, path.join(outDir, 'prefix'), 'all') as SavedDisplayScreenshot[];
+        expect(prefix.map(file => path.basename(file.path))).toEqual(['prefix-outer.png', 'prefix-inner.png']);
+        const single = path.join(outDir, 'explicit.png');
+        await expect(manager.takeScreenshot(sessionId, single, 'inner')).resolves.toEqual([
+          expect.objectContaining({ path: single })
+        ]);
+        expect(await fs.promises.readFile(single)).toEqual(blackInner);
       } finally {
         await fs.promises.rm(outDir, { recursive: true, force: true });
       }
+
+      hingeAvailable = false;
+      await expect(manager.takeScreenshot(sessionId)).resolves.toEqual(litOuter);
+      await expect(manager.takeScreenshot(sessionId, undefined, 'active')).resolves.toEqual([
+        expect.objectContaining({ buffer: litOuter })
+      ]);
+      enumeration = '';
+      await expect(manager.takeScreenshot(sessionId, undefined, 'all'))
+        .rejects.toThrow('No integrated displays reported by simulator');
     });
   });
 });
