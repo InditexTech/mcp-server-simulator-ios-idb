@@ -1,0 +1,39 @@
+README.md
+  s_6a35af9c4a300b::t_f24df0a6e41186 249-251,282,287
+src/adapters/OrchestratorToIDB.ts
+  s_6a35af9c4a300b::t_72e1d7981ccf8c 144-153,175-190
+src/adapters/ParserToOrchestrator.ts
+  s_6a35af9c4a300b::t_e64ddd9cff783e 37-39,222-227
+src/mcp/__tests__/toolResponse.test.ts
+  s_6a35af9c4a300b::t_4ad0e76eb726ed 98-185
+src/mcp/toolResponse.ts
+  s_6a35af9c4a300b::t_031d58d47ad551 6,10-23,28-31,36-67
+src/orchestrator/__tests__/CommandWiring.test.ts
+  s_6a35af9c4a300b::t_f4e808193c9f30 43-45,140-153,236-237,240-241,335-349
+src/orchestrator/interfaces/IOrchestratorCommand.ts
+  s_6a35af9c4a300b::t_a6c4bd68367bd3 20-22
+src/parser/NLParser.ts
+  s_6a35af9c4a300b::t_276832823df6a9 27-29
+src/parser/__tests__/NLParser.test.ts
+  s_6a35af9c4a300b::t_4b7e1facbecaf9 152-203
+src/parser/commands/CaptureCommands.ts
+  s_6a35af9c4a300b::t_853a27af1cba93 6-70,76-80,82,84,89-90,92-94,97-98
+src/parser/commands/SimulatorCommands.ts
+  s_6a35af9c4a300b::t_77eb1100cd1b61 5-112,289-378
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "72a3d10c26ca7e9fac725231b19e9bcb679bb1d8",
+  "prompts": {},
+  "sessions": {
+    "s_6a35af9c4a300b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e11041965ffetIOCbGfS000cD1",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
