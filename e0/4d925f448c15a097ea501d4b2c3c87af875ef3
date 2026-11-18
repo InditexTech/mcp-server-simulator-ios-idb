@@ -1,0 +1,19 @@
+src/__tests__/simulatorHarnessCleanup.test.ts
+  s_d4bb01294329b7::t_917cd6a43c140b 641-779
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "e04d925f448c15a097ea501d4b2c3c87af875ef3",
+  "prompts": {},
+  "sessions": {
+    "s_d4bb01294329b7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e154e8bd4ffeECMToPeJVp2CER",
+        "model": "inditex/KAIA/glm-5.3-flash"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
