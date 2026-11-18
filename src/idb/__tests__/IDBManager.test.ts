@@ -1,8 +1,104 @@
 // SPDX-FileCopyrightText: © 2025 Industria de Diseño Textil S.A. INDITEX
 // SPDX-License-Identifier: Apache-2.0
 
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import * as zlib from 'node:zlib';
 import { jest } from '@jest/globals';
 import { IDBManager } from '../IDBManager.js';
+import { LabelledScreenshot, SavedDisplayScreenshot } from '../interfaces/IIDBManager.js';
+
+function createTestPng(width: number, height: number, rgb: [number, number, number]): Buffer {
+  const rowBytes = width * 4;
+  const raw = Buffer.alloc((1 + rowBytes) * height);
+  for (let y = 0; y < height; y++) {
+    const rowStart = y * (1 + rowBytes);
+    raw[rowStart] = 0; // filter None
+    for (let x = 0; x < width; x++) {
+      const px = rowStart + 1 + x * 4;
+      raw[px] = rgb[0];
+      raw[px + 1] = rgb[1];
+      raw[px + 2] = rgb[2];
+      raw[px + 3] = 255;
+    }
+  }
+
+  const ihdrData = Buffer.alloc(13);
+  ihdrData.writeUInt32BE(width, 0);
+  ihdrData.writeUInt32BE(height, 4);
+  ihdrData[8] = 8; // bit depth
+  ihdrData[9] = 6; // RGBA
+  ihdrData[10] = 0;
+  ihdrData[11] = 0;
+  ihdrData[12] = 0;
+
+  const chunk = (type: string, data: Buffer): Buffer => {
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(data.length, 0);
+    const typeBuf = Buffer.from(type, 'ascii');
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(zlib.crc32(Buffer.concat([typeBuf, data])) >>> 0, 0);
+    return Buffer.concat([len, typeBuf, data, crc]);
+  };
+
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', ihdrData),
+    chunk('IDAT', zlib.deflateSync(raw)),
+    chunk('IEND', Buffer.alloc(0))
+  ]);
+}
+
+const DUO_ENUMERATE_OUTPUT = [
+  'Port:',
+  '    Class: DisplayAdapter',
+  '    Connected Screens:',
+  '    (5) Resizable:',
+  '        Screen ID: 5',
+  '        Name: Resizable',
+  '        Unique ID: E9A92A27-4AC1-4601-B055-1B4FD35EA889',
+  '        Device Name: resizable',
+  '        Screen Type: Scene',
+  '        Pixel Size: {7680, 4320}',
+  '    (1) LCD:',
+  '        Screen ID: 1',
+  '        Name: LCD',
+  '        Unique ID: EC1AFD70-A528-4ADB-A96A-FBE73DB53DF3',
+  '        Device Name: primary',
+  '        Screen Type: Integrated',
+  '        Pixel Size: {1398, 2034}',
+  '        UI Orientation: Portrait',
+  '    (2) TVOut:',
+  '        Screen ID: 2',
+  '        Name: TVOut',
+  '        Unique ID: D782E534-2E35-4C1B-B97B-422EB583CA51',
+  '        Device Name: external-0',
+  '        Screen Type: TVOut',
+  '        Pixel Size: {720, 480}',
+  '    (3) LCD-1:',
+  '        Screen ID: 3',
+  '        Name: LCD-1',
+  '        Unique ID: CDFAF032-131E-4E5D-8D2D-BC3A5541CF12',
+  '        Device Name: primary-1',
+  '        Screen Type: Integrated',
+  '        Pixel Size: {2007, 2853}',
+  '        UI Orientation: Landscape Left'
+].join('\n');
+
+const SINGLE_SCREEN_ENUMERATE_OUTPUT = [
+  'Port:',
+  '    Class: DisplayAdapter',
+  '    Connected Screens:',
+  '    (1) LCD:',
+  '        Screen ID: 1',
+  '        Name: LCD',
+  '        Unique ID: 11111111-2222-3333-4444-555555555555',
+  '        Device Name: primary',
+  '        Screen Type: Integrated',
+  '        Pixel Size: {1206, 2622}',
+  '        UI Orientation: Portrait'
+].join('\n');
 
 describe('IDBManager', () => {
   afterEach(() => {
@@ -645,5 +741,246 @@ describe('IDBManager', () => {
       '1.5',
       '-2.5'
     ]);
+  });
+
+  describe('foldable posture, orientation verification, and display-selectable screenshots', () => {
+    it('sets hinge angle, polls until settled, and rejects invalid or mismatched angles', async () => {
+      const manager = new IDBManager();
+      manager['sessions'].set('session', 'duo-udid');
+      manager['settleMaxAttempts'] = 3;
+      manager['settleIntervalMs'] = 0;
+
+      const blackOuter = createTestPng(4, 6, [0, 0, 0]);
+      const litInner = createTestPng(8, 6, [40, 120, 200]);
+      const measuredAngles = [45.0, 120.0, 120.0];
+
+      const executeCommand = jest
+        .spyOn(manager as any, 'executeCommand')
+        .mockImplementation(async (...parameters: unknown[]) => {
+          const cmd = parameters[0] as string;
+          const args = parameters[1] as string[];
+          if (cmd === 'idb' && args[0] === 'hinge' && args[1] === '--udid') {
+            const next = measuredAngles.shift() ?? 120.0;
+            return JSON.stringify({ angle: next });
+          }
+          if (cmd === 'xcrun' && args[3] === 'enumerate') {
+            return DUO_ENUMERATE_OUTPUT;
+          }
+          if (cmd === 'xcrun' && args[3] === 'screenshot') {
+            const displayArg = args.find(a => a.startsWith('--display=')) ?? '';
+            const outPath = args[args.length - 1];
+            await fs.promises.writeFile(
+              outPath,
+              displayArg.endsWith('primary-1') ? litInner : blackOuter
+            );
+            return '';
+          }
+          return '';
+        });
+
+      await expect(manager.setHingeAngle('session', -5)).rejects.toThrow(
+        'Hinge angle must be a finite number between 0 and 180 degrees'
+      );
+      await expect(manager.setHingeAngle('session', 200)).rejects.toThrow(
+        'Hinge angle must be a finite number between 0 and 180 degrees'
+      );
+
+      const res = await manager.setHingeAngle('session', 120);
+      expect(executeCommand).toHaveBeenCalledWith('idb', ['hinge', '120', '--udid', 'duo-udid']);
+      expect(res.angle).toBe(120);
+      expect(res.measuredAngle).toBe(120);
+      expect(res.activeDisplay?.role).toBe('inner');
+      expect(res.activeDisplay?.active).toBe(true);
+
+      measuredAngles.splice(0, measuredAngles.length, 30.0, 30.0, 30.0);
+      await expect(manager.setHingeAngle('session', 180)).rejects.toThrow(
+        'Hinge angle mismatch: requested 180 degrees, measured 30 degrees'
+      );
+    });
+
+    it('reads posture on foldable simulators and degrades cleanly on single-display simulators', async () => {
+      const manager = new IDBManager();
+      manager['sessions'].set('duo', 'duo-udid');
+      manager['sessions'].set('phone', 'phone-udid');
+
+      const litOuter = createTestPng(4, 6, [180, 90, 30]);
+      const blackInner = createTestPng(6, 8, [0, 0, 0]);
+
+      const executeCommand = jest
+        .spyOn(manager as any, 'executeCommand')
+        .mockImplementation(async (...parameters: unknown[]) => {
+          const cmd = parameters[0] as string;
+          const args = parameters[1] as string[];
+          const udid = cmd === 'xcrun' ? args[2] : args[2];
+          if (cmd === 'xcrun' && args[3] === 'enumerate') {
+            return udid === 'duo-udid' ? DUO_ENUMERATE_OUTPUT : SINGLE_SCREEN_ENUMERATE_OUTPUT;
+          }
+          if (cmd === 'idb' && args[0] === 'rotation') {
+            return JSON.stringify({ orientation: 'PORTRAIT' });
+          }
+          if (cmd === 'idb' && args[0] === 'hinge') {
+            return JSON.stringify({ angle: 0.0 });
+          }
+          if (cmd === 'xcrun' && args[3] === 'screenshot') {
+            const displayArg = args.find(a => a.startsWith('--display=')) ?? '';
+            const outPath = args[args.length - 1];
+            await fs.promises.writeFile(
+              outPath,
+              displayArg.endsWith('primary') ? litOuter : blackInner
+            );
+            return '';
+          }
+          return '';
+        });
+
+      const duoPosture = await manager.getPosture('duo');
+      expect(duoPosture.foldable).toBe(true);
+      expect(duoPosture.angle).toBe(0);
+      expect(duoPosture.orientation).toBe('PORTRAIT');
+      expect(duoPosture.displays).toHaveLength(2);
+      expect(duoPosture.activeDisplay?.role).toBe('outer');
+      expect(duoPosture.displays.find(d => d.role === 'inner')?.active).toBe(false);
+
+      const phonePosture = await manager.getPosture('phone');
+      expect(phonePosture.foldable).toBe(false);
+      expect(phonePosture.angle).toBeNull();
+      expect(phonePosture.orientation).toBe('PORTRAIT');
+      expect(phonePosture.activeDisplay?.role).toBe('main');
+      expect(executeCommand).not.toHaveBeenCalledWith('idb', ['hinge', '--udid', 'phone-udid', '--json']);
+    });
+
+    it('verifies orientation and expected posture, failing explicitly on mismatch', async () => {
+      const manager = new IDBManager();
+      manager['sessions'].set('duo', 'duo-udid');
+      manager['settleMaxAttempts'] = 2;
+      manager['settleIntervalMs'] = 0;
+
+      const blackOuter = createTestPng(4, 6, [0, 0, 0]);
+      const litInner = createTestPng(6, 8, [10, 200, 50]);
+      let reportedOrientation = 'LANDSCAPE_LEFT';
+
+      jest.spyOn(manager as any, 'executeCommand').mockImplementation(async (...parameters: unknown[]) => {
+        const cmd = parameters[0] as string;
+        const args = parameters[1] as string[];
+        if (cmd === 'xcrun' && args[3] === 'enumerate') {
+          return DUO_ENUMERATE_OUTPUT;
+        }
+        if (cmd === 'idb' && args[0] === 'rotation') {
+          if (args[1] === '--udid') {
+            return JSON.stringify({ orientation: reportedOrientation });
+          }
+          return '';
+        }
+        if (cmd === 'idb' && args[0] === 'hinge') {
+          return JSON.stringify({ angle: 120.0 });
+        }
+        if (cmd === 'xcrun' && args[3] === 'screenshot') {
+          const displayArg = args.find(a => a.startsWith('--display=')) ?? '';
+          const outPath = args[args.length - 1];
+          await fs.promises.writeFile(
+            outPath,
+            displayArg.endsWith('primary-1') ? litInner : blackOuter
+          );
+          return '';
+        }
+        return '';
+      });
+
+      const verified = await manager.setOrientation('duo', 'LANDSCAPE_LEFT', {
+        angle: 120,
+        activeDisplay: 'inner'
+      });
+      expect(verified.orientation).toBe('LANDSCAPE_LEFT');
+      expect(verified.activeDisplay?.role).toBe('inner');
+
+      // Mismatch on expected active display
+      await expect(
+        manager.setOrientation('duo', 'LANDSCAPE_LEFT', { activeDisplay: 'outer' })
+      ).rejects.toThrow('Posture mismatch: expected active display "outer", got "inner (primary-1)"');
+
+      // Mismatch when simulator refuses to rotate
+      reportedOrientation = 'PORTRAIT';
+      await expect(
+        manager.setOrientation('duo', 'PORTRAIT_UPSIDE_DOWN')
+      ).rejects.toThrow('Posture mismatch: expected orientation PORTRAIT_UPSIDE_DOWN, got PORTRAIT');
+    });
+
+    it('captures active display by default on foldable sessions and supports per-display + suffixed all-displays screenshots', async () => {
+      const manager = new IDBManager();
+      const litOuter = createTestPng(4, 6, [220, 100, 40]);
+      const blackInner = createTestPng(6, 8, [0, 0, 0]);
+
+      jest.spyOn(manager as any, 'executeCommand').mockImplementation(async (...parameters: unknown[]) => {
+        const cmd = parameters[0] as string;
+        const args = parameters[1] as string[];
+        if (cmd === 'xcrun' && args[1] === 'list') {
+          return JSON.stringify({
+            devices: {
+              'com.apple.CoreSimulator.SimRuntime.iOS-27-1': [
+                {
+                  udid: 'duo-udid',
+                  name: 'iPhone Duo',
+                  state: 'Booted',
+                  deviceTypeIdentifier: 'com.apple.CoreSimulator.SimDeviceType.iPhone-Duo'
+                }
+              ]
+            }
+          });
+        }
+        if (cmd === 'xcrun' && args[3] === 'enumerate') {
+          return DUO_ENUMERATE_OUTPUT;
+        }
+        if (cmd === 'idb' && args[0] === 'hinge') {
+          return JSON.stringify({ angle: 0.0 });
+        }
+        if (cmd === 'xcrun' && args[3] === 'screenshot') {
+          const displayArg = args.find(a => a.startsWith('--display=')) ?? '';
+          const outPath = args[args.length - 1];
+          await fs.promises.writeFile(
+            outPath,
+            displayArg.endsWith('primary') ? litOuter : blackInner
+          );
+          return '';
+        }
+        return '';
+      });
+
+      const sessionId = await manager.createSimulatorSession({ deviceName: 'iPhone Duo' });
+
+      // Default screenshot on foldable session captures the lit outer screen Buffer
+      const defaultBuf = await manager.takeScreenshot(sessionId);
+      expect(Buffer.isBuffer(defaultBuf)).toBe(true);
+      expect(defaultBuf).toEqual(litOuter);
+
+      // All displays in-memory returns labelled PNGs
+      const allInMemory = (await manager.takeScreenshot(
+        sessionId,
+        undefined,
+        'all'
+      )) as LabelledScreenshot[];
+      expect(allInMemory).toHaveLength(2);
+      expect(allInMemory[0].label).toBe('outer (primary, 4x6, active)');
+      expect(allInMemory[0].buffer).toEqual(litOuter);
+      expect(allInMemory[1].label).toBe('inner (primary-1, 6x8, inactive)');
+      expect(allInMemory[1].buffer).toEqual(blackInner);
+
+      // All displays with single file outputPath writes suffixed files
+      const outDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'mcp-duo-test-'));
+      try {
+        const baseOut = path.join(outDir, 'capture.png');
+        const saved = (await manager.takeScreenshot(
+          sessionId,
+          baseOut,
+          'all'
+        )) as SavedDisplayScreenshot[];
+        expect(saved).toHaveLength(2);
+        expect(saved[0].path).toBe(path.join(outDir, 'capture-outer.png'));
+        expect(saved[1].path).toBe(path.join(outDir, 'capture-inner.png'));
+        expect(await fs.promises.readFile(saved[0].path)).toEqual(litOuter);
+        expect(await fs.promises.readFile(saved[1].path)).toEqual(blackInner);
+      } finally {
+        await fs.promises.rm(outDir, { recursive: true, force: true });
+      }
+    });
   });
 });

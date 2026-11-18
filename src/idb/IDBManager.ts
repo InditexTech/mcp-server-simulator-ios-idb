@@ -4,18 +4,177 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
+import * as zlib from 'node:zlib';
 import { 
   IIDBManager, 
   SimulatorInfo, 
   AppInfo, 
   SessionConfig,
   ButtonType,
+  DeviceOrientation,
+  DisplayRole,
+  SimulatorDisplayInfo,
+  SimulatorPosture,
+  ExpectedPosture,
+  HingeAngleResult,
+  LabelledScreenshot,
+  SavedDisplayScreenshot,
   AccessibilityInfo,
   CrashLogInfo
 } from './interfaces/IIDBManager.js';
 
 const execFileAsync = promisify(execFile);
+
+const VALID_ORIENTATIONS = new Set<DeviceOrientation>([
+  'PORTRAIT',
+  'PORTRAIT_UPSIDE_DOWN',
+  'LANDSCAPE_LEFT',
+  'LANDSCAPE_RIGHT'
+]);
+
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const HINGE_TOLERANCE_DEGREES = 1.0;
+
+interface ParsedScreenEntry {
+  screenId: string;
+  name: string;
+  uniqueId: string;
+  deviceName: string;
+  screenType: string;
+  width: number;
+  height: number;
+  uiOrientation?: string;
+}
+
+interface PngInspection {
+  width?: number;
+  height?: number;
+  hasVisiblePixels?: boolean;
+}
+
+function paethPredictor(a: number, b: number, c: number): number {
+  const p = a + b - c;
+  const pa = Math.abs(p - a);
+  const pb = Math.abs(p - b);
+  const pc = Math.abs(p - c);
+  if (pa <= pb && pa <= pc) return a;
+  return pb <= pc ? b : c;
+}
+
+function inspectPngBuffer(buffer: Buffer): PngInspection {
+  if (buffer.length < 33 || !buffer.subarray(0, 8).equals(PNG_SIGNATURE)) {
+    return {};
+  }
+
+  const width = buffer.readUInt32BE(16);
+  const height = buffer.readUInt32BE(20);
+  const bitDepth = buffer[24];
+  const colorType = buffer[25];
+  const interlace = buffer[28];
+
+  if (width === 0 || height === 0 || bitDepth !== 8 || interlace !== 0) {
+    return { width, height };
+  }
+
+  const channels = colorType === 6 ? 4 : colorType === 2 ? 3 : colorType === 4 ? 2 : colorType === 0 ? 1 : 0;
+  if (channels === 0) {
+    return { width, height };
+  }
+
+  const idatChunks: Buffer[] = [];
+  let offset = 8;
+  while (offset + 8 <= buffer.length) {
+    const length = buffer.readUInt32BE(offset);
+    const type = buffer.subarray(offset + 4, offset + 8).toString('ascii');
+    const dataStart = offset + 8;
+    const dataEnd = dataStart + length;
+    if (dataEnd + 4 > buffer.length) {
+      break;
+    }
+    if (type === 'IDAT') {
+      idatChunks.push(buffer.subarray(dataStart, dataEnd));
+    } else if (type === 'IEND') {
+      break;
+    }
+    offset = dataEnd + 4;
+  }
+
+  if (idatChunks.length === 0) {
+    return { width, height };
+  }
+
+  try {
+    const raw = zlib.inflateSync(Buffer.concat(idatChunks));
+    const rowBytes = width * channels;
+    const stride = 1 + rowBytes;
+    if (raw.length < height * stride) {
+      return { width, height };
+    }
+
+    let prevRow = new Uint8Array(rowBytes);
+    let currRow = new Uint8Array(rowBytes);
+    const colorChannels = channels >= 3 ? 3 : 1;
+
+    for (let y = 0; y < height; y++) {
+      const rowOffset = y * stride;
+      const filterType = raw[rowOffset];
+
+      for (let i = 0; i < rowBytes; i++) {
+        const xByte = raw[rowOffset + 1 + i];
+        const left = i >= channels ? currRow[i - channels] : 0;
+        const up = prevRow[i];
+        const upLeft = i >= channels ? prevRow[i - channels] : 0;
+
+        switch (filterType) {
+          case 0:
+            currRow[i] = xByte;
+            break;
+          case 1:
+            currRow[i] = (xByte + left) & 0xff;
+            break;
+          case 2:
+            currRow[i] = (xByte + up) & 0xff;
+            break;
+          case 3:
+            currRow[i] = (xByte + ((left + up) >> 1)) & 0xff;
+            break;
+          case 4:
+            currRow[i] = (xByte + paethPredictor(left, up, upLeft)) & 0xff;
+            break;
+          default:
+            return { width, height };
+        }
+      }
+
+      for (let px = 0; px < rowBytes; px += channels) {
+        for (let c = 0; c < colorChannels; c++) {
+          if (currRow[px + c] > 0) {
+            return { width, height, hasVisiblePixels: true };
+          }
+        }
+      }
+
+      const swap = prevRow;
+      prevRow = currRow;
+      currRow = swap;
+    }
+
+    return { width, height, hasVisiblePixels: false };
+  } catch {
+    return { width, height };
+  }
+}
+
+function appendSuffixBeforeExtension(filePath: string, suffix: string): string {
+  const ext = path.extname(filePath);
+  if (!ext) {
+    return `${filePath}${suffix}.png`;
+  }
+  const base = filePath.slice(0, filePath.length - ext.length);
+  return `${base}${suffix}${ext}`;
+}
 
 interface IDBAppInfo {
   bundle_id: string;
@@ -35,7 +194,10 @@ interface IDBCrashLogInfo {
  */
 export class IDBManager implements IIDBManager {
   private readonly sessions: Map<string, string> = new Map(); // sessionId -> udid
+  private readonly multiDisplayUdids: Set<string> = new Set();
   private sessionCounter: number = 0;
+  private settleMaxAttempts: number = 20;
+  private settleIntervalMs: number = 250;
 
   private async executeCommand(command: string, args: string[] = []): Promise<string> {
     try {
@@ -81,7 +243,7 @@ export class IDBManager implements IIDBManager {
 
   async createSimulatorSession(config?: SessionConfig): Promise<string> {
     await this.verifyIDBAvailability();
-    let udid: string;
+    let selectedSimulator: SimulatorInfo;
 
     // Booted first: with several devices sharing a name (one per runtime),
     // reuse the one already running instead of booting another.
@@ -100,16 +262,21 @@ export class IDBManager implements IIDBManager {
       if (!simulator) {
         throw new Error(`No simulator found with name ${config.deviceName}`);
       }
-      udid = simulator.udid;
+      selectedSimulator = simulator;
     } else {
       if (simulators.length === 0) {
         throw new Error('No available simulators found');
       }
-      udid = simulators[0].udid;
+      selectedSimulator = simulators[0];
     }
 
+    const { udid } = selectedSimulator;
     if (config?.autoboot !== false) {
       await this.bootSimulatorByUDID(udid);
+    }
+
+    if (selectedSimulator.deviceType === 'com.apple.CoreSimulator.SimDeviceType.iPhone-Duo') {
+      this.multiDisplayUdids.add(selectedSimulator.udid);
     }
 
     const sessionId = this.generateSessionId();
@@ -263,22 +430,587 @@ export class IDBManager implements IIDBManager {
     ]);
   }
 
-  async takeScreenshot(sessionId: string, outputPath?: string): Promise<Buffer | string> {
+  private requireSessionUDID(sessionId: string): string {
     const udid = this.sessions.get(sessionId);
-    if (!udid) {
-      throw new Error(`Session not found: ${sessionId}`);
+    if (!udid) throw new Error(`Session not found: ${sessionId}`);
+    return udid;
+  }
+
+  private parseIntegratedDisplays(output: string): SimulatorDisplayInfo[] {
+    const lines = output.split(/\r?\n/);
+    const rawEntries: ParsedScreenEntry[] = [];
+    let inConnectedScreens = false;
+    let current: Partial<ParsedScreenEntry> | null = null;
+
+    const flushCurrent = () => {
+      if (
+        current &&
+        current.screenType?.toLowerCase() === 'integrated' &&
+        current.screenId &&
+        current.deviceName
+      ) {
+        rawEntries.push({
+          screenId: current.screenId,
+          name: current.name || current.deviceName,
+          uniqueId: current.uniqueId || current.deviceName,
+          deviceName: current.deviceName,
+          screenType: current.screenType,
+          width: current.width ?? 0,
+          height: current.height ?? 0,
+          uiOrientation: current.uiOrientation
+        });
+      }
+      current = null;
+    };
+
+    for (const line of lines) {
+      if (/^\s*Connected Screens:\s*$/.test(line)) {
+        inConnectedScreens = true;
+        continue;
+      }
+      if (!inConnectedScreens) {
+        continue;
+      }
+      if (/^Port:\s*$/.test(line)) {
+        flushCurrent();
+        inConnectedScreens = false;
+        continue;
+      }
+
+      const headerMatch = /^\s{4}\((\d+)\)\s+(.+?):\s*$/.exec(line);
+      if (headerMatch) {
+        flushCurrent();
+        current = {
+          screenId: headerMatch[1],
+          name: headerMatch[2].trim()
+        };
+        continue;
+      }
+
+      if (!current) {
+        continue;
+      }
+
+      const propMatch = /^\s{8}([^:]+):\s*(.*)$/.exec(line);
+      if (!propMatch) {
+        continue;
+      }
+
+      const key = propMatch[1].trim();
+      const value = propMatch[2].trim();
+      switch (key) {
+        case 'Screen ID':
+          current.screenId = value;
+          break;
+        case 'Name':
+          current.name = value;
+          break;
+        case 'Unique ID':
+          current.uniqueId = value;
+          break;
+        case 'Device Name':
+          current.deviceName = value;
+          break;
+        case 'Screen Type':
+          current.screenType = value;
+          break;
+        case 'Pixel Size': {
+          const sizeMatch = /\{\s*(\d+)\s*,\s*(\d+)\s*\}/.exec(value);
+          if (sizeMatch) {
+            current.width = Number.parseInt(sizeMatch[1], 10);
+            current.height = Number.parseInt(sizeMatch[2], 10);
+          }
+          break;
+        }
+        case 'UI Orientation':
+          current.uiOrientation = value;
+          break;
+      }
     }
-    
-    const tempPath = outputPath || path.join(process.cwd(), `screenshot_${Date.now()}.png`);
-    await this.executeCommand('idb', ['screenshot', '--udid', udid, '--', tempPath]);
-    
+
+    flushCurrent();
+
+    if (rawEntries.length === 0) {
+      return [];
+    }
+
+    if (rawEntries.length === 1) {
+      const [only] = rawEntries;
+      return [{
+        screenId: only.screenId,
+        name: only.name,
+        uniqueId: only.uniqueId,
+        deviceName: only.deviceName,
+        role: 'main',
+        width: only.width,
+        height: only.height,
+        uiOrientation: only.uiOrientation,
+        active: true
+      }];
+    }
+
+    const sorted = [...rawEntries].sort((a, b) => {
+      if (a.deviceName === 'primary' && b.deviceName !== 'primary') return -1;
+      if (b.deviceName === 'primary' && a.deviceName !== 'primary') return 1;
+      return a.width * a.height - b.width * b.height;
+    });
+
+    return sorted.map((entry, idx) => {
+      const role: DisplayRole = idx === 0 ? 'outer' : idx === 1 ? 'inner' : 'integrated';
+      return {
+        screenId: entry.screenId,
+        name: entry.name,
+        uniqueId: entry.uniqueId,
+        deviceName: entry.deviceName,
+        role,
+        width: entry.width,
+        height: entry.height,
+        uiOrientation: entry.uiOrientation,
+        active: false
+      };
+    });
+  }
+
+  private async enumerateIntegratedDisplays(udid: string): Promise<SimulatorDisplayInfo[]> {
+    const output = await this.executeCommand('xcrun', ['simctl', 'io', udid, 'enumerate']);
+    const displays = this.parseIntegratedDisplays(output);
+    if (displays.length > 1) {
+      this.multiDisplayUdids.add(udid);
+    }
+    return displays;
+  }
+
+  private async readHingeAngle(udid: string): Promise<number> {
+    const output = await this.executeCommand('idb', ['hinge', '--udid', udid, '--json']);
+    try {
+      const parsed = JSON.parse(output);
+      if (typeof parsed.angle === 'number' && Number.isFinite(parsed.angle)) {
+        return parsed.angle;
+      }
+    } catch {
+      const numeric = Number.parseFloat(output);
+      if (Number.isFinite(numeric)) {
+        return numeric;
+      }
+    }
+    throw new Error(`Could not parse hinge angle from idb output: ${output}`);
+  }
+
+  private async readOrientation(udid: string): Promise<DeviceOrientation> {
+    const output = await this.executeCommand('idb', ['rotation', '--udid', udid, '--json']);
+    let rawOrientation = output.trim();
+    try {
+      const parsed = JSON.parse(output);
+      if (typeof parsed.orientation === 'string') {
+        rawOrientation = parsed.orientation.trim();
+      }
+    } catch {
+      // Plain text orientation output
+    }
+    const upper = rawOrientation.toUpperCase() as DeviceOrientation;
+    if (VALID_ORIENTATIONS.has(upper)) {
+      return upper;
+    }
+    throw new Error(`Unrecognized device orientation from idb: ${output}`);
+  }
+
+  private async captureDisplaySnapshots(
+    udid: string,
+    displays: SimulatorDisplayInfo[],
+    fallbackAngle: number | null
+  ): Promise<{ displays: SimulatorDisplayInfo[]; buffers: Map<string, Buffer> }> {
+    const buffers = new Map<string, Buffer>();
+    const inspections = new Map<string, PngInspection>();
+    const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'mcp-sim-displays-'));
+
+    try {
+      for (const display of displays) {
+        const safeName = display.deviceName.replace(/[^a-zA-Z0-9_-]/g, '_');
+        const shotPath = path.join(tempDir, `${safeName}.png`);
+        await this.executeCommand('xcrun', [
+          'simctl',
+          'io',
+          udid,
+          'screenshot',
+          '--type=png',
+          `--display=${display.deviceName}`,
+          shotPath
+        ]);
+        const buf = fs.existsSync(shotPath)
+          ? await fs.promises.readFile(shotPath)
+          : Buffer.alloc(0);
+        buffers.set(display.deviceName, buf);
+        inspections.set(display.deviceName, inspectPngBuffer(buf));
+      }
+    } finally {
+      await fs.promises.rm(tempDir, { recursive: true, force: true });
+    }
+
+    const anyVisible = displays.some(
+      d => inspections.get(d.deviceName)?.hasVisiblePixels === true
+    );
+    const fallbackRole: DisplayRole =
+      fallbackAngle !== null && fallbackAngle > 0 ? 'inner' : 'outer';
+
+    const resolvedDisplays = displays.map(display => {
+      const info = inspections.get(display.deviceName);
+      const width = info?.width ?? display.width;
+      const height = info?.height ?? display.height;
+      let active: boolean;
+      if (displays.length === 1) {
+        active = true;
+      } else if (anyVisible) {
+        active = info?.hasVisiblePixels === true;
+      } else {
+        active = display.role === fallbackRole;
+      }
+      return {
+        ...display,
+        width,
+        height,
+        active
+      };
+    });
+
+    return { displays: resolvedDisplays, buffers };
+  }
+
+  private normalizeDisplaySelector(raw: string): string {
+    const cleaned = raw.trim().toLowerCase();
+    if (
+      cleaned === 'all' ||
+      cleaned === 'all displays' ||
+      cleaned === 'all screens' ||
+      cleaned === 'both' ||
+      cleaned === 'both displays' ||
+      cleaned === 'todas' ||
+      cleaned === 'todas las pantallas' ||
+      cleaned === 'ambas' ||
+      cleaned === 'ambas pantallas'
+    ) {
+      return 'all';
+    }
+    if (cleaned === 'outer' || cleaned === 'cover' || cleaned === 'exterior' || cleaned === 'externa') {
+      return 'outer';
+    }
+    if (cleaned === 'inner' || cleaned === 'interior' || cleaned === 'interna') {
+      return 'inner';
+    }
+    if (cleaned === 'active' || cleaned === 'activa' || cleaned === 'current' || cleaned === 'actual') {
+      return 'active';
+    }
+    if (cleaned === 'main' || cleaned === 'principal') {
+      return 'main';
+    }
+    return cleaned;
+  }
+
+  private matchesDisplaySelector(display: SimulatorDisplayInfo, normalizedSelector: string): boolean {
+    if (normalizedSelector === 'active') {
+      return display.active;
+    }
+    return (
+      display.role.toLowerCase() === normalizedSelector ||
+      display.deviceName.toLowerCase() === normalizedSelector ||
+      display.screenId.toLowerCase() === normalizedSelector ||
+      display.name.toLowerCase() === normalizedSelector ||
+      display.uniqueId.toLowerCase() === normalizedSelector
+    );
+  }
+
+  private selectDisplays(
+    displays: SimulatorDisplayInfo[],
+    normalizedSelector: string,
+    rawSelector: string
+  ): SimulatorDisplayInfo[] {
+    if (normalizedSelector === 'all') {
+      return displays;
+    }
+    if (normalizedSelector === 'active') {
+      const active = displays.filter(d => d.active);
+      return active.length > 0 ? [active[0]] : [displays[0]];
+    }
+    const matched = displays.filter(d => this.matchesDisplaySelector(d, normalizedSelector));
+    if (matched.length === 0) {
+      const available = displays.map(d => `${d.role}:${d.deviceName}`).join(', ');
+      throw new Error(`Display "${rawSelector}" not found on simulator (available: ${available})`);
+    }
+    return matched;
+  }
+
+  private describePostureMismatch(posture: SimulatorPosture, expected: ExpectedPosture): string | null {
+    const reasons: string[] = [];
+
+    if (expected.orientation !== undefined && posture.orientation !== expected.orientation) {
+      reasons.push(`expected orientation ${expected.orientation}, got ${posture.orientation}`);
+    }
+
+    if (expected.angle !== undefined) {
+      if (posture.angle === null) {
+        reasons.push(`expected hinge angle ${expected.angle} degrees, but simulator is not foldable`);
+      } else if (Math.abs(posture.angle - expected.angle) > HINGE_TOLERANCE_DEGREES) {
+        reasons.push(`expected hinge angle ${expected.angle} degrees, got ${posture.angle} degrees`);
+      }
+    }
+
+    if (expected.minAngle !== undefined) {
+      if (posture.angle === null) {
+        reasons.push(`expected hinge angle >= ${expected.minAngle} degrees, but simulator is not foldable`);
+      } else if (posture.angle < expected.minAngle - HINGE_TOLERANCE_DEGREES) {
+        reasons.push(`expected hinge angle >= ${expected.minAngle} degrees, got ${posture.angle} degrees`);
+      }
+    }
+
+    if (expected.maxAngle !== undefined) {
+      if (posture.angle === null) {
+        reasons.push(`expected hinge angle <= ${expected.maxAngle} degrees, but simulator is not foldable`);
+      } else if (posture.angle > expected.maxAngle + HINGE_TOLERANCE_DEGREES) {
+        reasons.push(`expected hinge angle <= ${expected.maxAngle} degrees, got ${posture.angle} degrees`);
+      }
+    }
+
+    if (expected.activeDisplay !== undefined) {
+      const normalized = this.normalizeDisplaySelector(expected.activeDisplay);
+      if (!posture.activeDisplay || !this.matchesDisplaySelector(posture.activeDisplay, normalized)) {
+        const actualLabel = posture.activeDisplay
+          ? `${posture.activeDisplay.role} (${posture.activeDisplay.deviceName})`
+          : 'none';
+        reasons.push(`expected active display "${expected.activeDisplay}", got "${actualLabel}"`);
+      }
+    }
+
+    return reasons.length > 0 ? reasons.join('; ') : null;
+  }
+
+  async setHingeAngle(sessionId: string, angle: number): Promise<HingeAngleResult> {
+    const udid = this.requireSessionUDID(sessionId);
+    if (typeof angle !== 'number' || !Number.isFinite(angle) || angle < 0 || angle > 180) {
+      throw new Error('Hinge angle must be a finite number between 0 and 180 degrees');
+    }
+
+    await this.executeCommand('idb', ['hinge', String(angle), '--udid', udid]);
+
+    const maxAttempts = Math.max(1, this.settleMaxAttempts);
+    let lastMeasuredAngle = Number.NaN;
+    let angleMatched = false;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      lastMeasuredAngle = await this.readHingeAngle(udid);
+      if (Math.abs(lastMeasuredAngle - angle) <= HINGE_TOLERANCE_DEGREES) {
+        angleMatched = true;
+        break;
+      }
+      if (attempt < maxAttempts - 1 && this.settleIntervalMs > 0) {
+        await new Promise(resolve => setTimeout(resolve, this.settleIntervalMs));
+      }
+    }
+
+    if (!angleMatched) {
+      throw new Error(
+        `Hinge angle mismatch: requested ${angle} degrees, measured ${lastMeasuredAngle} degrees`
+      );
+    }
+
+    const displays = await this.enumerateIntegratedDisplays(udid);
+    if (displays.length === 0) {
+      return { angle, measuredAngle: lastMeasuredAngle, activeDisplay: null };
+    }
+
+    const expectedRole: DisplayRole = angle === 0 ? 'outer' : 'inner';
+    const displayAttempts = displays.length > 1 ? Math.min(3, maxAttempts) : 1;
+    let activeDisplay: SimulatorDisplayInfo | null = null;
+
+    for (let dAttempt = 0; dAttempt < displayAttempts; dAttempt++) {
+      const snapshots = await this.captureDisplaySnapshots(udid, displays, lastMeasuredAngle);
+      activeDisplay = snapshots.displays.find(d => d.active) ?? null;
+      if (displays.length <= 1 || activeDisplay?.role === expectedRole) {
+        break;
+      }
+      if (dAttempt < displayAttempts - 1 && this.settleIntervalMs > 0) {
+        await new Promise(resolve => setTimeout(resolve, this.settleIntervalMs * 2));
+      }
+    }
+
+    return {
+      angle,
+      measuredAngle: lastMeasuredAngle,
+      activeDisplay
+    };
+  }
+
+  async getPosture(sessionId: string): Promise<SimulatorPosture> {
+    const udid = this.requireSessionUDID(sessionId);
+    const [displays, orientation] = await Promise.all([
+      this.enumerateIntegratedDisplays(udid),
+      this.readOrientation(udid)
+    ]);
+
+    if (displays.length > 1) {
+      const angle = await this.readHingeAngle(udid);
+      const snapshots = await this.captureDisplaySnapshots(udid, displays, angle);
+      const activeDisplay = snapshots.displays.find(d => d.active) ?? null;
+      return {
+        foldable: true,
+        angle,
+        orientation,
+        activeDisplay,
+        displays: snapshots.displays
+      };
+    }
+
+    const singleDisplays = displays.map(d => ({ ...d, active: true }));
+    return {
+      foldable: false,
+      angle: null,
+      orientation,
+      activeDisplay: singleDisplays[0] ?? null,
+      displays: singleDisplays
+    };
+  }
+
+  async setOrientation(
+    sessionId: string,
+    orientation: DeviceOrientation,
+    expectedPosture?: ExpectedPosture
+  ): Promise<SimulatorPosture> {
+    const udid = this.requireSessionUDID(sessionId);
+    if (!VALID_ORIENTATIONS.has(orientation)) {
+      throw new Error(`Invalid device orientation: ${orientation}`);
+    }
+
+    await this.executeCommand('idb', ['rotation', orientation, '--udid', udid]);
+
+    const orientationAttempts = Math.max(1, Math.min(this.settleMaxAttempts, 6));
+    for (let attempt = 0; attempt < orientationAttempts; attempt++) {
+      const currentOrientation = await this.readOrientation(udid);
+      if (currentOrientation === orientation) {
+        break;
+      }
+      if (attempt < orientationAttempts - 1 && this.settleIntervalMs > 0) {
+        await new Promise(resolve => setTimeout(resolve, this.settleIntervalMs));
+      }
+    }
+
+    const postureAttempts = expectedPosture?.activeDisplay ? Math.min(2, orientationAttempts) : 1;
+    let lastMismatch = 'unknown posture state';
+
+    for (let attempt = 0; attempt < postureAttempts; attempt++) {
+      const posture = await this.getPosture(sessionId);
+      const mismatch = this.describePostureMismatch(posture, {
+        ...expectedPosture,
+        orientation
+      });
+      if (!mismatch) {
+        return posture;
+      }
+      lastMismatch = mismatch;
+      if (attempt < postureAttempts - 1 && this.settleIntervalMs > 0) {
+        await new Promise(resolve => setTimeout(resolve, this.settleIntervalMs * 2));
+      }
+    }
+
+    throw new Error(`Posture mismatch: ${lastMismatch}`);
+  }
+
+  async takeScreenshot(
+    sessionId: string,
+    outputPath?: string,
+    display?: string
+  ): Promise<Buffer | string | LabelledScreenshot[] | SavedDisplayScreenshot[]> {
+    const udid = this.requireSessionUDID(sessionId);
+    const normalizedSelector = display !== undefined ? this.normalizeDisplaySelector(display) : undefined;
+
+    if (normalizedSelector === undefined) {
+      if (this.multiDisplayUdids.has(udid)) {
+        const displays = await this.enumerateIntegratedDisplays(udid);
+        if (displays.length > 1) {
+          let fallbackAngle: number | null = null;
+          try {
+            fallbackAngle = await this.readHingeAngle(udid);
+          } catch {
+            fallbackAngle = null;
+          }
+          const snapshots = await this.captureDisplaySnapshots(udid, displays, fallbackAngle);
+          const active = snapshots.displays.find(d => d.active) ?? snapshots.displays[0];
+          const buffer = snapshots.buffers.get(active.deviceName) ?? Buffer.alloc(0);
+          if (outputPath) {
+            await fs.promises.writeFile(outputPath, buffer);
+            return outputPath;
+          }
+          return buffer;
+        }
+      }
+
+      if (outputPath) {
+        await this.executeCommand('idb', ['screenshot', '--udid', udid, '--', outputPath]);
+        return outputPath;
+      }
+
+      const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'mcp-sim-screenshot-'));
+      const tempPath = path.join(tempDir, 'screenshot.png');
+      try {
+        await this.executeCommand('idb', ['screenshot', '--udid', udid, '--', tempPath]);
+        return await fs.promises.readFile(tempPath);
+      } finally {
+        await fs.promises.rm(tempDir, { recursive: true, force: true });
+      }
+    }
+
+    const displays = await this.enumerateIntegratedDisplays(udid);
+    if (displays.length === 0) {
+      throw new Error('No integrated displays reported by simulator');
+    }
+
+    let fallbackAngle: number | null = null;
+    if (displays.length > 1) {
+      try {
+        fallbackAngle = await this.readHingeAngle(udid);
+      } catch {
+        fallbackAngle = null;
+      }
+    }
+
+    const snapshots = await this.captureDisplaySnapshots(udid, displays, fallbackAngle);
+    const selectedDisplays = this.selectDisplays(snapshots.displays, normalizedSelector, display!);
+
+    const formatLabel = (d: SimulatorDisplayInfo): string =>
+      `${d.role} (${d.deviceName}, ${d.width}x${d.height}, ${d.active ? 'active' : 'inactive'})`;
+
     if (outputPath) {
-      return outputPath;
-    } else {
-      const buffer = fs.readFileSync(tempPath);
-      fs.unlinkSync(tempPath);
-      return buffer;
+      let isDirectory = false;
+      try {
+        isDirectory = (await fs.promises.stat(outputPath)).isDirectory();
+      } catch {
+        isDirectory = false;
+      }
+
+      const multipleOutputs = normalizedSelector === 'all' || selectedDisplays.length > 1;
+      const saved: SavedDisplayScreenshot[] = [];
+
+      for (const d of selectedDisplays) {
+        const buffer = snapshots.buffers.get(d.deviceName) ?? Buffer.alloc(0);
+        const targetPath = isDirectory
+          ? path.join(outputPath, `screenshot-${d.role}.png`)
+          : multipleOutputs
+            ? appendSuffixBeforeExtension(outputPath, `-${d.role}`)
+            : outputPath;
+        await fs.promises.writeFile(targetPath, buffer);
+        saved.push({
+          label: formatLabel(d),
+          display: d,
+          path: targetPath
+        });
+      }
+
+      return saved;
     }
+
+    return selectedDisplays.map(d => ({
+      label: formatLabel(d),
+      display: d,
+      buffer: snapshots.buffers.get(d.deviceName) ?? Buffer.alloc(0),
+      mimeType: 'image/png' as const
+    }));
   }
 
   async getSystemLogs(sessionId: string, options?: { 
