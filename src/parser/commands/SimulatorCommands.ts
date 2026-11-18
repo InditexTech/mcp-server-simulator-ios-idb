@@ -71,45 +71,36 @@ function normalizeExpectedDisplayAlias(raw: string): string {
 }
 
 function extractExpectedPosture(clause?: string): ExpectedPosture | undefined {
-  if (!clause) return undefined;
-  const text = clause.trim();
-  if (!text) return undefined;
-
+  if (clause === undefined) return undefined;
   const expected: ExpectedPosture = {};
-
-  const angleMatch =
-    /(?:hinge\s+)?(?:angle|[aá]ngulo)\s*(?:of|de|=|:)?\s*(-?\d+(?:\.\d+)?)\s*(?:degrees|deg|grados|°)?/i.exec(
-      text
-    );
-  if (angleMatch) {
-    expected.angle = Number.parseFloat(angleMatch[1]);
+  for (const part of clause.trim().replace(/[.!?]+$/, '').split(/\s+(?:and|y)\s+/i)) {
+    const angle = /^(?:hinge\s+)?(?:angle|[aá]ngulo)\s*(?:of|de|=|:)?\s*(-?\d+(?:\.\d+)?)\s*(?:degrees|deg|grados|°)?$/i.exec(part);
+    if (angle && expected.angle === undefined) {
+      const degrees = Number(angle[1]);
+      if (Number.isFinite(degrees) && degrees >= 0 && degrees <= 180) {
+        expected.angle = degrees;
+        continue;
+      }
+    }
+    const display = /^(?:active\s+)?(?:display|screen|pantalla(?:\s+activa)?)\s+(?:(?:is|sea|=|:)\s*)?([a-z0-9-]+)$/i.exec(part)
+      ?? /^(outer|inner|cover|active|main|exterior|externa|interior|interna|activa|principal)\s+(?:display|screen|pantalla)$/i.exec(part);
+    if (display && expected.activeDisplay === undefined) {
+      expected.activeDisplay = normalizeExpectedDisplayAlias(display[1]);
+      continue;
+    }
+    throw new Error(`Invalid expected posture: ${part || clause}`);
   }
-
-  const displayAfterKeyword =
-    /(?:active\s+)?(?:display|screen|pantalla(?:\s+activa)?)\s*(?:is|sea|=|:)?\s*(outer|inner|cover|active|main|primary(?:-1)?|exterior|externa|interior|interna|activa|principal|[a-zA-Z0-9-]+)/i.exec(
-      text
-    );
-  const displayBeforeKeyword =
-    /\b(outer|inner|cover|active|main|exterior|externa|interior|interna|activa|principal)\s+(?:display|screen|pantalla)\b/i.exec(
-      text
-    );
-
-  const rawDisplay = displayAfterKeyword?.[1] ?? displayBeforeKeyword?.[1];
-  if (rawDisplay) {
-    expected.activeDisplay = normalizeExpectedDisplayAlias(rawDisplay);
-  }
-
-  return Object.keys(expected).length > 0 ? expected : undefined;
+  return expected;
 }
 
 const ORIENTATION_TOKEN =
   'portrait[\\s_-]+upside[\\s_-]+down|upside[\\s_-]+down|landscape[\\s_-]+left|landscape[\\s_-]+right|portrait|landscape|vertical\\s+invertid[oa]|boca\\s+abajo|horizontal\\s+izquierda|horizontal\\s+derecha|apaisado\\s+izquierda|apaisado\\s+derecha|vertical|horizontal|apaisado';
 
 const EXPECTED_POSTURE_SUFFIX_EN =
-  '(?:,?\\s*(?:and\\s+)?(?:verify(?:ing)?|expect(?:ing)?|with\\s+expected(?:\\s+posture)?)(?:\\s+posture)?\\s+(?<expected>.+))?';
+  '(?:,?\\s+(?:and\\s+)?(?:verify(?:ing)?|expect(?:ing)?|with\\s+expected)(?:\\s+posture)?\\b\\s*(?<expected>.*))?\\s*[.!?]*$';
 
 const EXPECTED_POSTURE_SUFFIX_ES =
-  '(?:,?\\s*(?:y\\s+)?(?:verificando|esperando|con\\s+postura\\s+esperada)(?:\\s+postura)?\\s+(?<expected>.+))?';
+  '(?:,?\\s+(?:y\\s+)?(?:verificando|esperando|con\\s+postura\\s+esperada)(?:\\s+postura)?\\b\\s*(?<expected>.*))?\\s*[.!?]*$';
 
 export class SimulatorCommands extends BaseCommandDefinition {
   protected definitions: CommandDefinition[] = [
@@ -347,19 +338,19 @@ export class SimulatorCommands extends BaseCommandDefinition {
       command: 'set orientation',
       patterns: [
         new RegExp(
-          `(?:cambiar|establecer|ajustar|fijar|poner)\\s+(?:la\\s+)?orientaci[oó]n(?:\\s+del\\s+(?:simulador|dispositivo))?\\s+(?:a|en)\\s+(?<orientation>${ORIENTATION_TOKEN})${EXPECTED_POSTURE_SUFFIX_ES}`,
+          `^(?:cambiar|establecer|ajustar|fijar|poner)\\s+(?:la\\s+)?orientaci[oó]n(?:\\s+del\\s+(?:simulador|dispositivo))?\\s+(?:a|en)\\s+(?<orientation>${ORIENTATION_TOKEN})${EXPECTED_POSTURE_SUFFIX_ES}`,
           'i'
         ),
         new RegExp(
-          `(?:rotar|girar)(?:\\s+(?:el\\s+)?(?:simulador|dispositivo))?\\s+a\\s+(?<orientation>${ORIENTATION_TOKEN})${EXPECTED_POSTURE_SUFFIX_ES}`,
+          `^(?:rotar|girar)(?:\\s+(?:el\\s+)?(?:simulador|dispositivo))?\\s+a\\s+(?<orientation>${ORIENTATION_TOKEN})${EXPECTED_POSTURE_SUFFIX_ES}`,
           'i'
         ),
         new RegExp(
-          `set\\s+(?:the\\s+)?(?:(?:device|simulator)\\s+)?orientation\\s+(?:to\\s+)?(?<orientation>${ORIENTATION_TOKEN})${EXPECTED_POSTURE_SUFFIX_EN}`,
+          `^set\\s+(?:the\\s+)?(?:(?:device|simulator)\\s+)?orientation\\s+(?:to\\s+)?(?<orientation>${ORIENTATION_TOKEN})${EXPECTED_POSTURE_SUFFIX_EN}`,
           'i'
         ),
         new RegExp(
-          `rotate(?:\\s+(?:the\\s+)?(?:device|simulator))?\\s+(?:to\\s+)?(?<orientation>${ORIENTATION_TOKEN})${EXPECTED_POSTURE_SUFFIX_EN}`,
+          `^rotate(?:\\s+(?:the\\s+)?(?:device|simulator))?\\s+(?:to\\s+)?(?<orientation>${ORIENTATION_TOKEN})${EXPECTED_POSTURE_SUFFIX_EN}`,
           'i'
         )
       ],

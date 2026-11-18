@@ -744,6 +744,39 @@ describe('IDBManager', () => {
   });
 
   describe('foldable posture, orientation verification, and display-selectable screenshots', () => {
+    it.each(['both dark', 'both visible', 'missing', 'invalid'])('does not confirm activity with %s capture evidence', async state => {
+      const manager = new IDBManager();
+      manager['sessions'].set('duo', 'duo-udid');
+      manager['multiDisplayUdids'].add('duo-udid');
+      manager['settleMaxAttempts'] = 1;
+      jest.spyOn(manager as any, 'executeCommand').mockImplementation(async (...parameters: unknown[]) => {
+        const args = parameters[1] as string[];
+        if (args[3] === 'enumerate') return DUO_ENUMERATE_OUTPUT;
+        if (args[0] === 'hinge') return '{"angle":120}';
+        if (args[0] === 'rotation') return '{"orientation":"PORTRAIT"}';
+        if (args[3] === 'screenshot' && state !== 'missing') {
+          const color: [number, number, number] = state === 'both dark' ? [0, 0, 0] : [1, 2, 3];
+          await fs.promises.writeFile(args[args.length - 1], state === 'invalid' ? 'not a PNG' : createTestPng(2, 2, color));
+        }
+        return '';
+      });
+
+      if (state === 'missing' || state === 'invalid') {
+        await expect(manager.takeScreenshot('duo', undefined, 'all')).rejects.toThrow(/ENOENT|Invalid or unsupported PNG/);
+        return;
+      }
+
+      const posture = await manager.getPosture('duo');
+      expect(posture.activeDisplay).toBeNull();
+      expect(posture.displays.map(display => display.active)).toEqual([null, null]);
+      await expect(manager.takeScreenshot('duo')).rejects.toThrow('Could not determine the active display');
+      await expect(manager.takeScreenshot('duo', undefined, 'active')).rejects.toThrow('Could not determine the active display');
+      await expect(manager.setOrientation('duo', 'PORTRAIT', { activeDisplay: 'inner' })).rejects.toThrow('got "unknown"');
+      await expect(manager.takeScreenshot('duo', undefined, 'all')).resolves.toEqual([
+        expect.objectContaining({ label: expect.stringContaining('activity unknown') }),
+        expect.objectContaining({ label: expect.stringContaining('activity unknown') })
+      ]);
+    });
     it('sets hinge angle, polls until settled, and rejects invalid or mismatched angles', async () => {
       const manager = new IDBManager();
       manager['sessions'].set('session', 'duo-udid');

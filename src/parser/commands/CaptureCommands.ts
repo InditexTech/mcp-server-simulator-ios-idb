@@ -73,8 +73,8 @@ export class CaptureCommands extends BaseCommandDefinition {
     {
       command: 'capture screen',
       patterns: [
-        /(?:tomar?|hacer|sacar)\s+(?:una\s+)?captura(?:\s+de\s+(?<display>todas\s+las\s+pantallas|ambas\s+pantallas|(?:la\s+)?pantalla(?:\s+(?:exterior|externa|interior|interna|activa|principal|[a-zA-Z0-9-]+))?))?(?:\s+en\s+(?<outputPath>[^\s,]+))?/i,
-        /capturar\s+(?<display>todas\s+las\s+pantallas|ambas\s+pantallas|(?:la\s+)?pantalla(?:\s+(?:exterior|externa|interior|interna|activa|principal|[a-zA-Z0-9-]+))?)(?:\s+en\s+(?<outputPath>[^\s,]+))?/i,
+        /(?:tomar?|hacer|sacar)\s+(?:una\s+)?captura(?:\s+de\s+(?<display>todas\s+las\s+pantallas|ambas\s+pantallas|(?:la\s+)?pantalla(?:\s+(?!en\s)[a-zA-Z0-9-]+)?))?(?:\s+en\s+(?<outputPath>[^\s,]+))?/i,
+        /capturar\s+(?<display>todas\s+las\s+pantallas|ambas\s+pantallas|(?:la\s+)?pantalla(?:\s+(?!en\s)[a-zA-Z0-9-]+)?)(?:\s+en\s+(?<outputPath>[^\s,]+))?/i,
         /screenshot(?:\s+de\s+(?<display>todas\s+las\s+pantallas|ambas\s+pantallas|(?:la\s+)?pantalla\s+(?:exterior|externa|interior|interna|activa|principal|[a-zA-Z0-9-]+)))?(?:\s+en\s+(?<outputPath>[^\s,]+))?/i,
         /take\s+(?:a\s+)?screenshot(?:\s+(?:of|from)\s+(?:the\s+)?(?<display>all(?:\s+(?:displays|screens))?|both(?:\s+(?:displays|screens))?|(?:outer|inner|cover|active|main|primary(?:-1)?)(?:\s+(?:display|screen))?|(?:display|screen)\s+[^\s,]+))?(?:\s+to\s+(?<outputPath>[^\s,]+))?/i,
         /capture\s+(?:the\s+)?(?<display>all\s+(?:displays|screens)|both\s+(?:displays|screens)|(?:outer|inner|cover|active|main|primary(?:-1)?)\s+(?:display|screen)|screen)(?:\s+to\s+(?<outputPath>[^\s,]+))?/i

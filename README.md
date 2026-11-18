@@ -286,6 +286,8 @@ The NLParser supports the following natural language commands:
 
 Omitting `outputPath` returns native MCP `image/png` content (including labelled PNG content blocks when selecting a display or `all displays`); supplying `outputPath` with `all displays` writes suffixed files (e.g. `shot-outer.png`, `shot-inner.png`).
 
+If the active panel cannot be determined, posture reports `activeDisplay: null` and an active-display capture fails rather than guessing. Explicit panel captures still work when the PNGs are valid; their activity labels can be unknown.
+
 ### 🐛 Debug
 | Command | Description | Example |
 |---------|-------------|---------|

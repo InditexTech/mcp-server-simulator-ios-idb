@@ -161,6 +161,20 @@ describe('NLParser', () => {
 
   describe('foldable posture and display-selectable commands', () => {
     it.each([
+      'set orientation to portrait expecting angle banana',
+      'set orientation to portrait expecting angle 120 and nonsense',
+      'set orientation to portrait expecting',
+      'rotar a vertical verificando pantalla exterior y cualquier cosa',
+      'cambiar orientación a vertical esperando ángulo 200',
+      'rotar a vertical verificando ángulo 90 y ángulo 120'
+    ])('rejects the entire malformed expectation: %s', async instruction => {
+      await expect(parser.parseInstruction(instruction)).rejects.toThrow('Invalid expected posture');
+    });
+
+    it.each([
+      ['capturar pantalla en /ruta/Captura.png', 'capture screen', { outputPath: '/ruta/Captura.png' }],
+      ['tomar una captura de la pantalla en /ruta/Captura.png', 'capture screen', { outputPath: '/ruta/Captura.png' }],
+      ['input text set orientation to portrait expecting angle banana', 'input text', { text: 'set orientation to portrait expecting angle banana' }],
       ['fold to 120 degrees', 'set hinge angle', { angle: 120 }],
       ['fold closed', 'set hinge angle', { angle: 0 }],
       ['fold half-open', 'set hinge angle', { angle: 90 }],

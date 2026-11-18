@@ -149,6 +149,7 @@ function inspectPngBuffer(buffer: Buffer): PngInspection {
       }
 
       for (let px = 0; px < rowBytes; px += channels) {
+        if ((colorType === 4 || colorType === 6) && currRow[px + channels - 1] === 0) continue;
         for (let c = 0; c < colorChannels; c++) {
           if (currRow[px + c] > 0) {
             return { width, height, hasVisiblePixels: true };
@@ -199,9 +200,9 @@ export class IDBManager implements IIDBManager {
   private settleMaxAttempts: number = 20;
   private settleIntervalMs: number = 250;
 
-  private async executeCommand(command: string, args: string[] = []): Promise<string> {
+  private async executeCommand(command: string, args: string[] = [], timeout?: number): Promise<string> {
     try {
-      const { stdout } = await execFileAsync(command, args);
+      const { stdout } = await execFileAsync(command, args, { timeout });
       return stdout.trim();
     } catch (error: any) {
       console.error(`Error executing command: ${command}`, args);
@@ -617,16 +618,17 @@ export class IDBManager implements IIDBManager {
   private async captureDisplaySnapshots(
     udid: string,
     displays: SimulatorDisplayInfo[],
-    fallbackAngle: number | null
-  ): Promise<{ displays: SimulatorDisplayInfo[]; buffers: Map<string, Buffer> }> {
-    const buffers = new Map<string, Buffer>();
-    const inspections = new Map<string, PngInspection>();
+    deadline = Date.now() + 30_000
+  ): Promise<{ displays: SimulatorDisplayInfo[]; buffers: Record<string, Buffer> }> {
+    const buffers: Record<string, Buffer> = Object.create(null);
+    const inspections: PngInspection[] = [];
     const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'mcp-sim-displays-'));
 
     try {
-      for (const display of displays) {
-        const safeName = display.deviceName.replace(/[^a-zA-Z0-9_-]/g, '_');
-        const shotPath = path.join(tempDir, `${safeName}.png`);
+      for (const [index, display] of displays.entries()) {
+        const remaining = deadline - Date.now();
+        if (remaining <= 0) throw new Error('Timed out capturing simulator displays');
+        const shotPath = path.join(tempDir, `${index}.png`);
         await this.executeCommand('xcrun', [
           'simctl',
           'io',
@@ -635,44 +637,37 @@ export class IDBManager implements IIDBManager {
           '--type=png',
           `--display=${display.deviceName}`,
           shotPath
-        ]);
-        const buf = fs.existsSync(shotPath)
-          ? await fs.promises.readFile(shotPath)
-          : Buffer.alloc(0);
-        buffers.set(display.deviceName, buf);
-        inspections.set(display.deviceName, inspectPngBuffer(buf));
+        ], remaining);
+        const buf = await fs.promises.readFile(shotPath);
+        const inspection = inspectPngBuffer(buf);
+        if (inspection.hasVisiblePixels === undefined) {
+          throw new Error(`Invalid or unsupported PNG for display ${display.deviceName}`);
+        }
+        buffers[display.deviceName] = buf;
+        inspections.push(inspection);
       }
     } finally {
       await fs.promises.rm(tempDir, { recursive: true, force: true });
     }
 
-    const anyVisible = displays.some(
-      d => inspections.get(d.deviceName)?.hasVisiblePixels === true
-    );
-    const fallbackRole: DisplayRole =
-      fallbackAngle !== null && fallbackAngle > 0 ? 'inner' : 'outer';
-
-    const resolvedDisplays = displays.map(display => {
-      const info = inspections.get(display.deviceName);
-      const width = info?.width ?? display.width;
-      const height = info?.height ?? display.height;
-      let active: boolean;
-      if (displays.length === 1) {
-        active = true;
-      } else if (anyVisible) {
-        active = info?.hasVisiblePixels === true;
-      } else {
-        active = display.role === fallbackRole;
-      }
-      return {
-        ...display,
-        width,
-        height,
-        active
-      };
-    });
+    const uniqueVisible = inspections.filter(info => info.hasVisiblePixels).length === 1;
+    const resolvedDisplays = displays.map((display, index) => ({
+      ...display,
+      width: inspections[index].width ?? display.width,
+      height: inspections[index].height ?? display.height,
+      active: displays.length === 1 ? true : uniqueVisible ? Boolean(inspections[index].hasVisiblePixels) : null
+    }));
 
     return { displays: resolvedDisplays, buffers };
+  }
+
+  private async captureActiveDisplay(udid: string, displays: SimulatorDisplayInfo[]) {
+    const deadline = Date.now() + 30_000;
+    let snapshots = await this.captureDisplaySnapshots(udid, displays, deadline);
+    if (!snapshots.displays.some(display => display.active) && Date.now() < deadline) {
+      snapshots = await this.captureDisplaySnapshots(udid, displays, deadline);
+    }
+    return snapshots;
   }
 
   private normalizeDisplaySelector(raw: string): string {
@@ -707,7 +702,7 @@ export class IDBManager implements IIDBManager {
 
   private matchesDisplaySelector(display: SimulatorDisplayInfo, normalizedSelector: string): boolean {
     if (normalizedSelector === 'active') {
-      return display.active;
+      return display.active === true;
     }
     return (
       display.role.toLowerCase() === normalizedSelector ||
@@ -727,8 +722,9 @@ export class IDBManager implements IIDBManager {
       return displays;
     }
     if (normalizedSelector === 'active') {
-      const active = displays.filter(d => d.active);
-      return active.length > 0 ? [active[0]] : [displays[0]];
+      const active = displays.find(d => d.active);
+      if (!active) throw new Error('Could not determine the active display');
+      return [active];
     }
     const matched = displays.filter(d => this.matchesDisplaySelector(d, normalizedSelector));
     if (matched.length === 0) {
@@ -774,7 +770,7 @@ export class IDBManager implements IIDBManager {
       if (!posture.activeDisplay || !this.matchesDisplaySelector(posture.activeDisplay, normalized)) {
         const actualLabel = posture.activeDisplay
           ? `${posture.activeDisplay.role} (${posture.activeDisplay.deviceName})`
-          : 'none';
+          : 'unknown';
         reasons.push(`expected active display "${expected.activeDisplay}", got "${actualLabel}"`);
       }
     }
@@ -816,14 +812,14 @@ export class IDBManager implements IIDBManager {
       return { angle, measuredAngle: lastMeasuredAngle, activeDisplay: null };
     }
 
-    const expectedRole: DisplayRole = angle === 0 ? 'outer' : 'inner';
     const displayAttempts = displays.length > 1 ? Math.min(3, maxAttempts) : 1;
     let activeDisplay: SimulatorDisplayInfo | null = null;
+    const deadline = Date.now() + 30_000;
 
-    for (let dAttempt = 0; dAttempt < displayAttempts; dAttempt++) {
-      const snapshots = await this.captureDisplaySnapshots(udid, displays, lastMeasuredAngle);
+    for (let dAttempt = 0; dAttempt < displayAttempts && Date.now() < deadline; dAttempt++) {
+      const snapshots = await this.captureDisplaySnapshots(udid, displays, deadline);
       activeDisplay = snapshots.displays.find(d => d.active) ?? null;
-      if (displays.length <= 1 || activeDisplay?.role === expectedRole) {
+      if (activeDisplay) {
         break;
       }
       if (dAttempt < displayAttempts - 1 && this.settleIntervalMs > 0) {
@@ -847,7 +843,7 @@ export class IDBManager implements IIDBManager {
 
     if (displays.length > 1) {
       const angle = await this.readHingeAngle(udid);
-      const snapshots = await this.captureDisplaySnapshots(udid, displays, angle);
+      const snapshots = await this.captureDisplaySnapshots(udid, displays);
       const activeDisplay = snapshots.displays.find(d => d.active) ?? null;
       return {
         foldable: true,
@@ -923,16 +919,11 @@ export class IDBManager implements IIDBManager {
     if (normalizedSelector === undefined) {
       if (this.multiDisplayUdids.has(udid)) {
         const displays = await this.enumerateIntegratedDisplays(udid);
+        if (!displays.length) throw new Error('No integrated displays reported by simulator');
         if (displays.length > 1) {
-          let fallbackAngle: number | null = null;
-          try {
-            fallbackAngle = await this.readHingeAngle(udid);
-          } catch {
-            fallbackAngle = null;
-          }
-          const snapshots = await this.captureDisplaySnapshots(udid, displays, fallbackAngle);
-          const active = snapshots.displays.find(d => d.active) ?? snapshots.displays[0];
-          const buffer = snapshots.buffers.get(active.deviceName) ?? Buffer.alloc(0);
+          const snapshots = await this.captureActiveDisplay(udid, displays);
+          const [active] = this.selectDisplays(snapshots.displays, 'active', 'active');
+          const buffer = snapshots.buffers[active.deviceName];
           if (outputPath) {
             await fs.promises.writeFile(outputPath, buffer);
             return outputPath;
@@ -961,20 +952,13 @@ export class IDBManager implements IIDBManager {
       throw new Error('No integrated displays reported by simulator');
     }
 
-    let fallbackAngle: number | null = null;
-    if (displays.length > 1) {
-      try {
-        fallbackAngle = await this.readHingeAngle(udid);
-      } catch {
-        fallbackAngle = null;
-      }
-    }
-
-    const snapshots = await this.captureDisplaySnapshots(udid, displays, fallbackAngle);
+    const snapshots = normalizedSelector === 'active'
+      ? await this.captureActiveDisplay(udid, displays)
+      : await this.captureDisplaySnapshots(udid, displays);
     const selectedDisplays = this.selectDisplays(snapshots.displays, normalizedSelector, display!);
 
     const formatLabel = (d: SimulatorDisplayInfo): string =>
-      `${d.role} (${d.deviceName}, ${d.width}x${d.height}, ${d.active ? 'active' : 'inactive'})`;
+      `${d.role} (${d.deviceName}, ${d.width}x${d.height}, ${d.active === null ? 'activity unknown' : d.active ? 'active' : 'inactive'})`;
 
     if (outputPath) {
       let isDirectory = false;
@@ -988,7 +972,7 @@ export class IDBManager implements IIDBManager {
       const saved: SavedDisplayScreenshot[] = [];
 
       for (const d of selectedDisplays) {
-        const buffer = snapshots.buffers.get(d.deviceName) ?? Buffer.alloc(0);
+        const buffer = snapshots.buffers[d.deviceName];
         const targetPath = isDirectory
           ? path.join(outputPath, `screenshot-${d.role}.png`)
           : multipleOutputs
@@ -1008,7 +992,7 @@ export class IDBManager implements IIDBManager {
     return selectedDisplays.map(d => ({
       label: formatLabel(d),
       display: d,
-      buffer: snapshots.buffers.get(d.deviceName) ?? Buffer.alloc(0),
+      buffer: snapshots.buffers[d.deviceName],
       mimeType: 'image/png' as const
     }));
   }

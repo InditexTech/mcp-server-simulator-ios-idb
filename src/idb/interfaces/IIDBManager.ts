@@ -48,7 +48,8 @@ export interface SimulatorDisplayInfo {
   width: number;
   height: number;
   uiOrientation?: string;
-  active: boolean;
+  /** null when the active panel could not be established. */
+  active: boolean | null;
 }
 
 export interface SimulatorPosture {
