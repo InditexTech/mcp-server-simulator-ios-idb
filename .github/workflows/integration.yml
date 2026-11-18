@@ -1,0 +1,154 @@
+# SPDX-FileCopyrightText: © 2026 Industria de Diseño Textil S.A. INDITEX
+# SPDX-License-Identifier: Apache-2.0
+
+# Real-simulator integration suite, gated to published releases and manual
+# runs only (no pull_request triggers, no cron schedule).
+#
+# Workflow credit: the job skeleton (concurrency scoping, failure-artifact
+# upload shape) is adapted from the integration workflow proposal in PR #77
+# by Rodrigo Bustamante, reworked for the post-#74 toolchain (macos-26,
+# Node 24.22.1, npm 12.2.0, no project venv) and the release-only trigger
+# contract.
+#
+# This check runs AFTER a release is published: it is a post-release
+# verification, not a publication gate, and nothing runs on merge.
+#
+# Ref integrity: for workflow_dispatch the job evaluates the immutable
+# github.sha of the manual run. For release events the workflow checks out
+# the static event-provided tag ref and then, before any build step, asserts
+# that the checked-out commit equals the commit the tag currently points to
+# on origin. Exact-tag handling and limits:
+# - The tag name is untrusted data: it reaches the job through a step-level
+#   `env:` mapping (never interpolated into shell code) and is expanded only
+#   as shell data ("$RELEASE_TAG"), never eval'd. Log lines use printf
+#   instead of interpolating it into workflow commands.
+# - Light-weight tags resolve directly to a commit; annotated tags list both
+#   the tag object and its peeled commit ("^{}"). The script reads the
+#   exact two refs via positional multi-pattern ls-remote and trusts only
+#   the peeled entry; the string match is exact (case-pattern) — no glob or
+#   regex over the tag value.
+# - Tags are mutable server-side, so this job verifies the tag AS OF THE
+#   RUN and documents the resolved commit in the log; it does not claim the
+#   release commit is cryptographically immutable.
+# - If the tag disappears or is repointed between checkout and verification,
+#   the comparison fails and the job aborts (fail-on-mismatch by design).
+
+name: Integration suite (release + manual)
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: integration-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '24.22.1'
+  NPM_VERSION: '12.2.0'
+
+jobs:
+  simulator:
+    name: Integration suite — real simulator verification
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      # Non-privileged context: static checkout of the event-provided ref.
+      # For release events that is the (recorded) tag ref; for
+      # workflow_dispatch it is github.sha of the trusted manual run.
+      - name: Checkout event ref
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.sha }}
+          persist-credentials: false
+
+      # Ref-integrity boundary for release events: verify the checked-out
+      # commit against the tag's current commit on origin BEFORE any
+      # cache-backed or build step runs. RELEASE_TAG is data only.
+      - name: Verify checked-out commit matches the release tag
+        if: github.event_name == 'release'
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          : "${RELEASE_TAG:?}"
+          RESOLVED_SHA=""
+          # Annotated tags list both the tag object and its peeled commit
+          # ("^{}"); light-weight tags only the commit. Trust the peeled
+          # entry; fall back to the unpeeled ref for light-weight tags.
+          while IFS=$'\t' read -r sha ref; do
+            case "$ref" in
+              "refs/tags/${RELEASE_TAG}^{}") RESOLVED_SHA="$sha" ;;
+              "refs/tags/${RELEASE_TAG}")
+                if [[ -z "$RESOLVED_SHA" ]]; then RESOLVED_SHA="$sha"; fi ;;
+            esac
+          done < <(git ls-remote origin "refs/tags/${RELEASE_TAG}" "refs/tags/${RELEASE_TAG}^{}")
+          if [[ -z "$RESOLVED_SHA" ]]; then
+            printf '::error::Release tag %s not found on origin\n' "$RELEASE_TAG" >&2
+            exit 1
+          fi
+          CHECKED_SHA="$(git rev-parse HEAD)"
+          if [[ "$RESOLVED_SHA" != "$CHECKED_SHA" ]]; then
+            printf '::error::Checked-out commit %s does not match tag %s (%s); refusing to test a stale or repointed tag\n' "$CHECKED_SHA" "$RELEASE_TAG" "$RESOLVED_SHA" >&2
+            exit 1
+          fi
+          printf 'Release tag %s verified against commit %s\n' "$RELEASE_TAG" "$CHECKED_SHA"
+
+      # npm cache intentionally disabled: setup-node's GitHub cache was the
+      # cache-poisoning surface flagged by CodeQL for this workflow, and the
+      # cost is a slower install on a release-only cadence.
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # The repo pins npm (packageManager: npm@12.2.0, engines >= 12.2.0);
+      # setup-node's bundled npm tracks the runner image, so pin it
+      # explicitly and fail fast on drift.
+      - name: Pin npm
+        run: |
+          set -euo pipefail
+          npm install --global "npm@${NPM_VERSION}"
+          INSTALLED_NPM="$(npm --version)"
+          echo "npm: ${INSTALLED_NPM}"
+          if [[ "$INSTALLED_NPM" != "$NPM_VERSION" ]]; then
+            echo "::error::npm ${INSTALLED_NPM} installed but ${NPM_VERSION} required"
+            exit 1
+          fi
+          INSTALLED_NODE="$(node --version)"
+          echo "node: ${INSTALLED_NODE}"
+
+      # npm ci runs scripts/install_dependencies.sh, which installs the
+      # official meta/fb idb metapackage (client + companion) via Homebrew;
+      # no project Python venv is involved since #74.
+      - name: Install dependencies
+        run: npm ci
+
+      # The suite creates its own disposable simulator (mcp-integration-*)
+      # and never touches pre-existing devices; globalTeardown shuts down
+      # and deletes the owned device even when tests fail.
+      - name: Run integration tests
+        env:
+          IOS_SIM_INTEGRATION: '1'
+          IOS_SIM_ARTIFACTS_DIR: ${{ runner.temp }}/integration-artifacts
+        run: npm run test:integration
+
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: integration-artifacts-${{ github.event_name }}-${{ github.run_number }}
+          # Privacy whitelist: only the suite-owned disposable artifacts
+          # directory (screenshots the suite explicitly captured plus the
+          # run summary written by the harness). The repo's generic logs/
+          # directory produced by the MCP server is deliberately NOT
+          # uploaded: its content is not sanitized and may contain host
+          # data. Nothing outside IOS_SIM_ARTIFACTS_DIR is published.
+          path: ${{ runner.temp }}/integration-artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
