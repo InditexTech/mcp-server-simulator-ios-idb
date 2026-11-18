@@ -1,0 +1,14 @@
+README.md
+  h_54a1c5973b9675 266,270-271,275-276,282-283,291-292,313,368-370,375,394-404
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "ac88e99c5e117888f3e480f1cea0f971b38408b7",
+  "prompts": {},
+  "humans": {
+    "h_54a1c5973b9675": {
+      "author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
