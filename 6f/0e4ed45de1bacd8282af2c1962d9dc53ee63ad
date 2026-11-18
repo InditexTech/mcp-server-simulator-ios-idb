@@ -1,0 +1,19 @@
+src/idb/__tests__/IDBManager.test.ts
+  s_88c9cab7aaec83::t_e7c02ef000f8c5 850-965
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "6f0e4ed45de1bacd8282af2c1962d9dc53ee63ad",
+  "prompts": {},
+  "sessions": {
+    "s_88c9cab7aaec83": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e10ff6d15ffe45nq7efw814te6",
+        "model": "inditex/KAIA/glm-5.3-flash"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
