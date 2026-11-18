@@ -1,0 +1,35 @@
+README.md
+  s_d1e98c30084cd2::t_2aa5f38a576e81 289-290
+src/idb/IDBManager.ts
+  s_2bcec98eb3d51e::t_195e2a18e9c736 152,203,205,621-624,628-631,640-647,653-659,664-672,705,725-727,773,817,819-820,822,846,922,924-926,955-957,961,975,995
+src/idb/interfaces/IIDBManager.ts
+  s_d1e98c30084cd2::t_bf980b5b1eca11 51-52
+src/parser/commands/CaptureCommands.ts
+  s_d1e98c30084cd2::t_93a07423bed633 76-77
+src/parser/commands/SimulatorCommands.ts
+  s_d1e98c30084cd2::t_8582e74270c5ff 74,76-91,93,100,103,341,345,349,353
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "2d7dc49396f8b66a9085f85c7a10d41d09aae4db",
+  "prompts": {},
+  "sessions": {
+    "s_2bcec98eb3d51e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1c2766f2ffe7zbB7MyUtgIVv3",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    },
+    "s_d1e98c30084cd2": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e106de90fffeRKUlzZ3YrkV0t4",
+        "model": "inditex/KAIA/glm-5.3-flash"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
