@@ -111,13 +111,13 @@ export class IDBManager implements IIDBManager {
   private async cleanupSessionRecordings(sessionId: string): Promise<void> {
     const sessionRecordings = Array.from(this.activeRecordings.values())
       .filter(recording => recording.sessionId === sessionId);
-    for (const recording of sessionRecordings) {
+    await Promise.all(sessionRecordings.map(async recording => {
       try {
         await this.stopVideoRecording(sessionId, recording.recordingId);
       } catch {
         this.activeRecordings.delete(recording.recordingId);
       }
-    }
+    }));
   }
 
   private parseAppList(output: string): IDBAppInfo[] {
@@ -640,7 +640,7 @@ export class IDBManager implements IIDBManager {
     let entry: ActiveVideoRecording | undefined;
     if (recordingId !== undefined) {
       const candidate = this.activeRecordings.get(recordingId);
-      if (!candidate || candidate.sessionId !== sessionId) {
+      if (candidate?.sessionId !== sessionId) {
         throw new Error(`Video recording not found for session ${sessionId}: ${recordingId}`);
       }
       entry = candidate;
@@ -655,26 +655,24 @@ export class IDBManager implements IIDBManager {
     try {
       if (!entry.exitResult) {
         entry.process.kill('SIGINT');
-        let timedOut = false;
-        await new Promise<void>(resolve => {
-          const timer = setTimeout(() => {
-            timedOut = true;
-            try {
-              entry!.process.kill('SIGKILL');
-            } catch {
-              // Best-effort force kill
-            }
-            resolve();
-          }, VIDEO_STOP_TIMEOUT_MS);
-          timer.unref?.();
-
-          entry!.exitPromise.then(() => {
-            clearTimeout(timer);
-            resolve();
-          });
-        });
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const timedOut = await Promise.race([
+          entry.exitPromise.then(() => false),
+          new Promise<boolean>(resolve => {
+            timer = setTimeout(() => resolve(true), VIDEO_STOP_TIMEOUT_MS);
+            timer.unref?.();
+          })
+        ]);
+        if (timer) {
+          clearTimeout(timer);
+        }
 
         if (timedOut) {
+          try {
+            entry.process.kill('SIGKILL');
+          } catch {
+            // Best-effort force kill
+          }
           await entry.exitPromise;
           throw new Error(`Timeout waiting for video recording to stop: ${entry.recordingId}`);
         }

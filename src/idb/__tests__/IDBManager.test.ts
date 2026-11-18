@@ -847,4 +847,120 @@ describe('IDBManager', () => {
     await expect(manager.startVideoRecording('session-2', '/tmp/fail.mp4'))
       .rejects.toThrow('Video recording exited before becoming ready (code 1): Target not booted');
   });
+
+  it('covers accessibility fallback shapes and video error/timeout branches', async () => {
+    const manager = new IDBManager();
+    manager['sessions'].set('session', 'simulator-udid');
+
+    // Exercise spawnProcess directly against a harmless built-in binary (/usr/bin/true).
+    const realProc = manager['spawnProcess']('/usr/bin/true', []);
+    await new Promise<void>(resolve => realProc.once('close', () => resolve()));
+
+    // Accessibility edge shapes: empty string, single object, null, array hit, primitive JSON.
+    const outputs = [
+      '',
+      JSON.stringify({ AXLabel: 'SingleRoot', AXValue: 42 }),
+      '42',
+      '',
+      'null',
+      JSON.stringify([{ AXLabel: 'ArrayPointHit', frame: { x: 5, y: 6, width: 7, height: 8 } }]),
+      '42'
+    ];
+    jest.spyOn(manager as any, 'executeCommand').mockImplementation(async () => outputs.shift() ?? '');
+
+    await expect(manager.describeAllElements('session')).resolves.toEqual([]);
+    await expect(manager.describeAllElements('session')).resolves.toEqual([
+      { label: 'SingleRoot', value: '42', frame: { x: 0, y: 0, width: 0, height: 0 } }
+    ]);
+    await expect(manager.describeAllElements('session')).resolves.toEqual([]);
+
+    await expect(manager.describePointElement('session', 1, 2)).resolves.toBeNull();
+    await expect(manager.describePointElement('session', 1, 2)).resolves.toBeNull();
+    await expect(manager.describePointElement('session', 1, 2)).resolves.toEqual({
+      label: 'ArrayPointHit',
+      frame: { x: 5, y: 6, width: 7, height: 8 }
+    });
+    await expect(manager.describePointElement('session', 1, 2)).resolves.toBeNull();
+
+    await expect(manager.stopVideoRecording('ghost-session'))
+      .rejects.toThrow('Session not found: ghost-session');
+
+    // Spawn error event during video startup.
+    const errorChild = new EventEmitter() as any;
+    errorChild.stderr = new EventEmitter();
+    errorChild.kill = jest.fn(() => true);
+
+    // Non-zero exit on explicit recordingId stop, plus wrong recordingId rejection.
+    const nonZeroStopChild = new EventEmitter() as any;
+    nonZeroStopChild.stderr = new EventEmitter();
+    nonZeroStopChild.kill = jest.fn(() => {
+      setImmediate(() => nonZeroStopChild.emit('close', 2, null));
+      return true;
+    });
+
+    // Startup timeout and stop timeout under fake timers.
+    const silentStartChild = new EventEmitter() as any;
+    silentStartChild.stderr = new EventEmitter();
+    silentStartChild.kill = jest.fn(() => true);
+
+    const hungStopChild = new EventEmitter() as any;
+    hungStopChild.stderr = new EventEmitter();
+    hungStopChild.kill = jest.fn((signal?: NodeJS.Signals) => {
+      if (signal === 'SIGKILL') {
+        setImmediate(() => hungStopChild.emit('close', null, 'SIGKILL'));
+      }
+      return true;
+    });
+
+    const shutdownCleanupChild = new EventEmitter() as any;
+    shutdownCleanupChild.stderr = new EventEmitter();
+    shutdownCleanupChild.kill = jest.fn(() => {
+      setImmediate(() => shutdownCleanupChild.emit('close', 3, null));
+      return true;
+    });
+
+    const queue = [errorChild, nonZeroStopChild, silentStartChild, hungStopChild, shutdownCleanupChild];
+    jest.spyOn(manager as any, 'spawnProcess').mockImplementation(() => {
+      const next = queue.shift();
+      if (next === errorChild) {
+        setImmediate(() => next.emit('error', new Error('spawn idb ENOENT')));
+      } else if (next !== silentStartChild) {
+        setImmediate(() => next.stderr.emit('data', 'Running video until ^C\n'));
+      }
+      return next;
+    });
+
+    await expect(manager.startVideoRecording('session', '/tmp/err.mp4'))
+      .rejects.toThrow('Error executing command: spawn idb ENOENT');
+
+    const explicitId = await manager.startVideoRecording('session', '/tmp/explicit.mp4');
+    await expect(manager.stopVideoRecording('session', 'wrong-id'))
+      .rejects.toThrow('Video recording not found for session session: wrong-id');
+    await expect(manager.stopVideoRecording('session', explicitId))
+      .rejects.toThrow('Video recording exited with code 2');
+
+    jest.useFakeTimers();
+    const startTimeoutPromise = manager.startVideoRecording('session', '/tmp/timeout-start.mp4');
+    const startTimeoutExpectation = expect(startTimeoutPromise)
+      .rejects.toThrow('Timeout waiting for video recording to start');
+    await jest.advanceTimersByTimeAsync(16_000);
+    await startTimeoutExpectation;
+    expect(silentStartChild.kill).toHaveBeenCalledWith('SIGKILL');
+    jest.useRealTimers();
+
+    const hungId = await manager.startVideoRecording('session', '/tmp/timeout-stop.mp4');
+    jest.useFakeTimers();
+    const stopTimeoutPromise = manager.stopVideoRecording('session', hungId);
+    const stopTimeoutExpectation = expect(stopTimeoutPromise)
+      .rejects.toThrow(`Timeout waiting for video recording to stop: ${hungId}`);
+    await jest.advanceTimersByTimeAsync(16_000);
+    await stopTimeoutExpectation;
+    expect(hungStopChild.kill).toHaveBeenCalledWith('SIGKILL');
+    jest.useRealTimers();
+
+    // shutdownSimulator cleans up active recordings even if stopping exits non-zero.
+    jest.spyOn(manager, 'shutdownSimulatorByUDID').mockResolvedValue(undefined);
+    await manager.startVideoRecording('session', '/tmp/shutdown-cleanup.mp4');
+    await expect(manager.shutdownSimulator('session')).resolves.toBeUndefined();
+  });
 });
