@@ -1,0 +1,19 @@
+.github/workflows/integration.yml
+  s_fa81bd25f9bfa8::t_3f7f38b82824b6 132-138
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "0e6503ce2cd5ae2243a52ee84524241a82142c34",
+  "prompts": {},
+  "sessions": {
+    "s_fa81bd25f9bfa8": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e161144e7ffeQv440Op5Q4S56Z",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
