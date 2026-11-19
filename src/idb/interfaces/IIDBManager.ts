@@ -371,9 +371,9 @@ export interface IIDBManager {
   /**
    * Stops video recording of the simulator
    * @param sessionId Session ID of the simulator
-   * @param recordingId Recording ID to stop
+   * @param recordingId Recording ID to stop (optional; defaults to active recording for session)
    */
-  stopVideoRecording?(sessionId: string, recordingId: string): Promise<void>;
+  stopVideoRecording?(sessionId: string, recordingId?: string): Promise<void>;
 
   /**
    * Gets simulator system logs

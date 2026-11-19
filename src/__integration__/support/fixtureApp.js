@@ -33,6 +33,52 @@ struct FixtureApp: App {
 }
 `,
   'ContentView.swift': `import SwiftUI
+import UIKit
+
+struct PlainTextField: UIViewRepresentable {
+    @Binding var text: String
+
+    final class Coordinator: NSObject {
+        var text: Binding<String>
+
+        init(text: Binding<String>) {
+            self.text = text
+        }
+
+        @objc func editingChanged(_ sender: UITextField) {
+            text.wrappedValue = sender.text ?? ""
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text)
+    }
+
+    func makeUIView(context: Context) -> UITextField {
+        let textField = UITextField(frame: .zero)
+        textField.borderStyle = .roundedRect
+        textField.placeholder = "Enter text here"
+        textField.autocorrectionType = .no
+        textField.autocapitalizationType = .none
+        textField.spellCheckingType = .no
+        textField.smartQuotesType = .no
+        textField.smartDashesType = .no
+        textField.smartInsertDeleteType = .no
+        textField.accessibilityIdentifier = "fixtureTextField"
+        textField.addTarget(
+            context.coordinator,
+            action: #selector(Coordinator.editingChanged(_:)),
+            for: .editingChanged
+        )
+        return textField
+    }
+
+    func updateUIView(_ uiView: UITextField, context: Context) {
+        if uiView.text != text {
+            uiView.text = text
+        }
+    }
+}
 
 struct ContentView: View {
     @State private var enteredText: String = ""
@@ -42,10 +88,9 @@ struct ContentView: View {
         VStack(spacing: 16) {
             Text("MCP Fixture")
                 .font(.title)
-            TextField("Enter text here", text: $enteredText)
-                .textFieldStyle(.roundedBorder)
+            PlainTextField(text: $enteredText)
+                .frame(height: 44)
                 .padding()
-                .accessibilityIdentifier("fixtureTextField")
             Text(String(format: "Value: %@", enteredText))
                 .accessibilityIdentifier("fixtureEchoLabel")
             Text(lastOpenedUrl)
@@ -59,6 +104,15 @@ struct ContentView: View {
         }
     }
 }
+`,
+  'Entitlements.plist': `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.get-task-allow</key>
+    <true/>
+</dict>
+</plist>
 `,
   'Info.plist': `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -128,5 +182,11 @@ export async function buildFixtureApp(outDir) {
   ], { timeout: 300_000 });
 
   fs.copyFileSync(path.join(srcDir, 'Info.plist'), path.join(appPath, 'Info.plist'));
+  await execFileAsync('/usr/bin/codesign', [
+    '--force',
+    '--sign', '-',
+    '--entitlements', path.join(srcDir, 'Entitlements.plist'),
+    appPath
+  ], { timeout: 60_000 });
   return appPath;
 }

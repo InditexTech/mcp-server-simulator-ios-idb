@@ -232,7 +232,9 @@ export class OrchestratorToIDB {
 
         case CommandType.STOP_VIDEO_RECORDING:
           await this.requireMethod('stopVideoRecording')(sid, params.recordingId);
-          result = { recordingId: params.recordingId };
+          result = params.recordingId !== undefined
+            ? { sessionId: sid, recordingId: params.recordingId }
+            : { sessionId: sid };
           break;
 
         // Debug commands
