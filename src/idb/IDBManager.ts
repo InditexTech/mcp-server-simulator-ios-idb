@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: © 2025 Industria de Diseño Textil S.A. INDITEX
 // SPDX-License-Identifier: Apache-2.0
 
-import { execFile } from 'node:child_process';
+import { ChildProcess, execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
@@ -31,12 +31,34 @@ interface IDBCrashLogInfo {
   timestamp: number | null;
 }
 
+interface VideoProcessExit {
+  code: number | null;
+  signal: NodeJS.Signals | null;
+  error?: Error;
+}
+
+interface ActiveVideoRecording {
+  recordingId: string;
+  sessionId: string;
+  outputPath: string;
+  process: ChildProcess;
+  stderrTail: string;
+  exitResult?: VideoProcessExit;
+  exitPromise: Promise<VideoProcessExit>;
+}
+
+const VIDEO_START_TIMEOUT_MS = 15_000;
+const VIDEO_STOP_TIMEOUT_MS = 15_000;
+const MAX_STDERR_TAIL_CHARS = 4_096;
+
 /**
  * IDB manager implementation for interacting with iOS simulators
  */
 export class IDBManager implements IIDBManager {
   private readonly sessions: Map<string, string> = new Map(); // sessionId -> udid
+  private readonly activeRecordings: Map<string, ActiveVideoRecording> = new Map();
   private sessionCounter: number = 0;
+  private recordingCounter: number = 0;
   private idbAvailabilityPromise: Promise<void> | null = null;
 
   private async executeCommand(command: string, args: string[] = []): Promise<string> {
@@ -71,6 +93,56 @@ export class IDBManager implements IIDBManager {
       throw new Error(`Session not found: ${sessionId}`);
     }
     return udid;
+  }
+
+  private spawnProcess(command: string, args: string[] = []): ChildProcess {
+    return spawn(command, args, { stdio: ['ignore', 'ignore', 'pipe'] });
+  }
+
+  private normalizeAccessibilityElement(raw: Record<string, any>): AccessibilityInfo {
+    const frame = raw?.frame ?? {};
+    const element: AccessibilityInfo = {
+      frame: {
+        x: Number(frame.x ?? 0),
+        y: Number(frame.y ?? 0),
+        width: Number(frame.width ?? 0),
+        height: Number(frame.height ?? 0)
+      }
+    };
+    const identifier = raw?.AXUniqueId ?? raw?.identifier;
+    if (typeof identifier === 'string' && identifier.length > 0) {
+      element.identifier = identifier;
+    }
+    const label = raw?.AXLabel ?? raw?.label;
+    if (typeof label === 'string') {
+      element.label = label;
+    }
+    const type = raw?.type ?? raw?.role;
+    if (typeof type === 'string' && type.length > 0) {
+      element.type = type;
+    }
+    const value = raw?.AXValue ?? raw?.value;
+    if (value !== undefined && value !== null) {
+      element.value = String(value);
+    }
+    if (Array.isArray(raw?.children)) {
+      element.children = raw.children.map((child: Record<string, any>) =>
+        this.normalizeAccessibilityElement(child)
+      );
+    }
+    return element;
+  }
+
+  private async cleanupSessionRecordings(sessionId: string): Promise<void> {
+    const sessionRecordings = Array.from(this.activeRecordings.values())
+      .filter(recording => recording.sessionId === sessionId);
+    await Promise.all(sessionRecordings.map(async recording => {
+      try {
+        await this.stopVideoRecording(sessionId, recording.recordingId);
+      } catch {
+        this.activeRecordings.delete(recording.recordingId);
+      }
+    }));
   }
 
   private parseAppList(output: string): IDBAppInfo[] {
@@ -152,6 +224,7 @@ export class IDBManager implements IIDBManager {
 
   async terminateSimulatorSession(sessionId: string): Promise<void> {
     this.requireSessionUDID(sessionId);
+    await this.cleanupSessionRecordings(sessionId);
     this.sessions.delete(sessionId);
   }
 
@@ -214,6 +287,7 @@ export class IDBManager implements IIDBManager {
 
   async shutdownSimulator(sessionId: string): Promise<void> {
     const udid = this.requireSessionUDID(sessionId);
+    await this.cleanupSessionRecordings(sessionId);
     await this.shutdownSimulatorByUDID(udid);
   }
 
@@ -394,6 +468,218 @@ export class IDBManager implements IIDBManager {
       '--udid',
       udid
     ]);
+  }
+
+  async describeAllElements(sessionId: string): Promise<AccessibilityInfo[]> {
+    const udid = this.requireSessionUDID(sessionId);
+    const output = await this.executeIDBCommand(['ui', 'describe-all', '--udid', udid, '--json']);
+    if (!output) {
+      return [];
+    }
+    const parsed = JSON.parse(output);
+    if (Array.isArray(parsed)) {
+      return parsed.map((item: Record<string, any>) => this.normalizeAccessibilityElement(item));
+    }
+    if (parsed && typeof parsed === 'object') {
+      return [this.normalizeAccessibilityElement(parsed)];
+    }
+    return [];
+  }
+
+  async describePointElement(sessionId: string, x: number, y: number): Promise<AccessibilityInfo | null> {
+    const udid = this.requireSessionUDID(sessionId);
+    const output = await this.executeIDBCommand([
+      'ui',
+      'describe-point',
+      '--udid',
+      udid,
+      '--json',
+      '--',
+      String(x),
+      String(y)
+    ]);
+    if (!output) {
+      return null;
+    }
+    const parsed = JSON.parse(output);
+    if (parsed === null) {
+      return null;
+    }
+    if (Array.isArray(parsed)) {
+      return parsed.length > 0 ? this.normalizeAccessibilityElement(parsed[0]) : null;
+    }
+    if (typeof parsed === 'object') {
+      return this.normalizeAccessibilityElement(parsed);
+    }
+    return null;
+  }
+
+  async startVideoRecording(sessionId: string, outputPath: string): Promise<string> {
+    const udid = this.requireSessionUDID(sessionId);
+
+    for (const existing of this.activeRecordings.values()) {
+      if (existing.sessionId === sessionId && !existing.exitResult) {
+        throw new Error(`Video recording is already active for session ${sessionId}: ${existing.recordingId}`);
+      }
+    }
+
+    const recordingId = `recording_${Date.now()}_${this.recordingCounter++}`;
+    const child = this.spawnProcess('idb', ['video', '--udid', udid, '--', outputPath]);
+
+    let resolveExit!: (exit: VideoProcessExit) => void;
+    const exitPromise = new Promise<VideoProcessExit>(resolve => {
+      resolveExit = resolve;
+    });
+
+    const entry: ActiveVideoRecording = {
+      recordingId,
+      sessionId,
+      outputPath,
+      process: child,
+      stderrTail: '',
+      exitPromise
+    };
+
+    const recordExit = (exit: VideoProcessExit) => {
+      if (!entry.exitResult) {
+        entry.exitResult = exit;
+        resolveExit(exit);
+      }
+    };
+
+    await new Promise<void>((resolveReady, rejectReady) => {
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        try {
+          child.kill('SIGKILL');
+        } catch {
+          // Best-effort cleanup on startup timeout
+        }
+        rejectReady(new Error(`Timeout waiting for video recording to start: ${entry.stderrTail.trim() || outputPath}`));
+      }, VIDEO_START_TIMEOUT_MS);
+      timer.unref?.();
+
+      const finishReady = () => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        clearTimeout(timer);
+        resolveReady();
+      };
+
+      const finishError = (error: Error) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        clearTimeout(timer);
+        rejectReady(error);
+      };
+
+      child.stderr?.on('data', (chunk: Buffer | string) => {
+        const text = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
+        entry.stderrTail = (entry.stderrTail + text).slice(-MAX_STDERR_TAIL_CHARS);
+        // idb.common.signal prints "Running video until ^C" to stderr right after
+        // installing its SIGINT/SIGTERM handlers on the asyncio loop.
+        if (entry.stderrTail.includes('Running video')) {
+          finishReady();
+        }
+      });
+
+      child.once('error', (err: NodeJS.ErrnoException) => {
+        if (err?.code === 'ENOENT' || /\bspawn\s+idb\s+ENOENT\b/.test(String(err?.message ?? ''))) {
+          this.idbAvailabilityPromise = null;
+        }
+        recordExit({ code: null, signal: null, error: err });
+        finishError(new Error(`Error executing command: ${err.message}`));
+      });
+
+      child.once('close', (code: number | null, signal: NodeJS.Signals | null) => {
+        recordExit({ code, signal });
+        finishError(new Error(
+          `Video recording exited before becoming ready (code ${code ?? 'null'}): ${entry.stderrTail.trim() || 'no output'}`
+        ));
+      });
+    });
+
+    this.activeRecordings.set(recordingId, entry);
+    return recordingId;
+  }
+
+  async stopVideoRecording(sessionId: string, recordingId?: string): Promise<void> {
+    this.requireSessionUDID(sessionId);
+
+    let entry: ActiveVideoRecording | undefined;
+    if (recordingId !== undefined) {
+      const candidate = this.activeRecordings.get(recordingId);
+      if (candidate?.sessionId !== sessionId) {
+        throw new Error(`Video recording not found for session ${sessionId}: ${recordingId}`);
+      }
+      entry = candidate;
+    } else {
+      entry = Array.from(this.activeRecordings.values())
+        .find(candidate => candidate.sessionId === sessionId);
+      if (!entry) {
+        throw new Error(`No active video recording for session: ${sessionId}`);
+      }
+    }
+
+    try {
+      if (!entry.exitResult) {
+        entry.process.kill('SIGINT');
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const timedOut = await Promise.race([
+          entry.exitPromise.then(() => false),
+          new Promise<boolean>(resolve => {
+            timer = setTimeout(() => resolve(true), VIDEO_STOP_TIMEOUT_MS);
+            timer.unref?.();
+          })
+        ]);
+        if (timer) {
+          clearTimeout(timer);
+        }
+
+        if (timedOut) {
+          try {
+            entry.process.kill('SIGKILL');
+          } catch {
+            // Best-effort force kill
+          }
+          await entry.exitPromise;
+          throw new Error(`Timeout waiting for video recording to stop: ${entry.recordingId}`);
+        }
+      }
+
+      const exit = await entry.exitPromise;
+      if (exit.error) {
+        throw new Error(`Error stopping video recording: ${exit.error.message}`);
+      }
+      if (exit.code !== 0 && exit.code !== null) {
+        throw new Error(`Video recording exited with code ${exit.code}: ${entry.stderrTail.trim()}`);
+      }
+    } finally {
+      this.activeRecordings.delete(entry.recordingId);
+    }
+  }
+
+  async startDebugServer(sessionId: string, bundleId: string): Promise<number> {
+    const udid = this.requireSessionUDID(sessionId);
+    const output = await this.executeIDBCommand(['debugserver', 'start', '--udid', udid, '--', bundleId]);
+    const portMatch = /connect:\/\/[^:\s]+:(\d+)/.exec(output);
+    if (!portMatch) {
+      throw new Error(`Could not read the debug server port from idb output: ${output}`);
+    }
+    return Number.parseInt(portMatch[1], 10);
+  }
+
+  async stopDebugServer(sessionId: string): Promise<void> {
+    const udid = this.requireSessionUDID(sessionId);
+    await this.executeIDBCommand(['debugserver', 'stop', '--udid', udid]);
   }
 
   async getDebugServerStatus(sessionId: string): Promise<{ running: boolean; port?: number; bundleId?: string; }> {

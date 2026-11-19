@@ -263,22 +263,24 @@ The NLParser supports the following natural language commands:
 | Tap | Taps at specific coordinates | "tap at 100, 200" |
 | Swipe | Performs a swipe gesture | "swipe from 100, 200 to 300, 400" |
 | Press button | Presses a device button | "press button HOME", "press button SIRI" |
-| Input text | Types text | "input text Hello World" |
+| Input text | Types text via HID keyboard events | "input text Hello World" |
 | Press key | Presses a key by code | "press key 4" |
 | Press key sequence | Presses a sequence of keys | "press key sequence 4 5 6" |
+
+> **Note on `Input text` delivery semantics:** `input text` dispatches US-ANSI HID keyboard events through `idb ui text` and returns `success: true` when the events are sent to the simulator, even if no editable text control currently holds keyboard focus — focus the target field first (for example with `tap`). The parser trims leading and trailing instruction whitespace while preserving leading zeros (`0123`), mixed case (`AbC`), and interior spaces. Final text observed in UI controls also reflects target-control and simulator keyboard settings: app-level autocorrection/smart-punctuation traits, simulator hardware keyboard layout for non-alphanumeric symbols, and iOS's system-wide double-space `"."` shortcut (`KeyboardPeriodShortcut`), which converts the first pair of rapid spaces immediately after a word character into `". "` (e.g., `left   space` → `left.  space`) even when a `UITextField` disables `autocorrectionType` and smart punctuation.
 
 ### ♿ Accessibility
 | Command | Description | Example |
 |---------|-------------|---------|
-| Describe elements | Lists all accessibility elements (not implemented yet) | "describe all elements", "show accessibility elements" |
-| Describe point | Describes element at coordinates (not implemented yet) | "describe point 100, 200", "what's at 150, 300" |
+| Describe elements | Lists all accessibility elements on screen | "describe all elements", "show accessibility elements" |
+| Describe point | Describes accessibility element at coordinates | "describe point 100, 200", "what's at 150, 300" |
 
 ### 📸 Capture and Logs
 | Command | Description | Example |
 |---------|-------------|---------|
 | Take screenshot | Captures a screenshot | "take screenshot", "capture screen" |
-| Record video | Records screen activity (not implemented yet) | "record video /path/output.mp4" |
-| Stop recording | Stops video recording (not implemented yet) | "stop recording", "stop video recording" |
+| Record video | Records screen activity to an MP4 file | "record video /path/output.mp4" |
+| Stop recording | Stops active video recording for the session | "stop recording", "stop video recording" |
 | Get logs | Retrieves system or app logs | "get logs", "get logs for com.example.app" |
 
 Omitting `outputPath` (plain "take screenshot") returns native MCP `image/png` content instead of a JSON Buffer.
@@ -286,8 +288,8 @@ Omitting `outputPath` (plain "take screenshot") returns native MCP `image/png` c
 ### 🐛 Debug
 | Command | Description | Example |
 |---------|-------------|---------|
-| Start debug | Starts a debug session (not implemented yet) | "debug app com.example.app", "start debug com.example.app" |
-| Stop debug | Stops a debug session (not implemented yet) | "stop debug", "terminate debug session" |
+| Start debug | Starts a debug session for an app and returns its port | "debug app com.example.app", "start debug com.example.app" |
+| Stop debug | Stops the active debug session | "stop debug", "terminate debug session" |
 | Debug status | Gets debug session status | "debug status", "show debug info" |
 
 ### 💥 Crash Logs
@@ -308,7 +310,7 @@ Omitting `outputPath` (plain "take screenshot") returns native MCP `image/png` c
 | Approve permissions | Approves app permissions | "approve permissions com.example.app photos camera" |
 | Update contacts | Updates contacts database | "update contacts /path/to/contacts.sqlite" |
 
-The interface supports all commands available in the idb CLI tool, providing a comprehensive set of operations for iOS simulator automation.
+The server supports the natural-language commands listed above; custom `IIDBManager` implementations that omit optional methods fail explicitly with `Command not supported by the IDB manager: <method>`.
 
 ## 🔍 Architecture
 
@@ -363,13 +365,14 @@ never create, boot, or modify any simulator:
 
 - `CommandWiring.test.ts` asserts a hand-written canonical table: every parser
   example reaches exactly one `IDBManager` method with exact arguments, and no
-  other method is called. Unsupported commands fail with
-  `Command not supported by the IDB manager: <method>` and zero manager calls.
+  other method is called. Partial `IIDBManager` implementations omitting
+  optional methods fail with `Command not supported by the IDB manager: <method>`
+  and zero manager calls.
 - `CommandRegressionMatrix.test.ts` covers each regression class fixed by
   PR #71 (exact command mapping, case/leading-zero preservation, earliest and
   longest parser match, explicit crash-log deletion scope, session threading).
 - `IDBManager.test.ts` pins the `idb` / `xcrun simctl` argv, response, and
-  error contracts of the newly wired commands. These are **wiring contracts
+  error contracts of the wired commands. These are **wiring contracts
   only**: passing here does not prove the real CLI accepts those arguments.
 
 ### Opt-in integration tests (real simulator)
@@ -388,12 +391,17 @@ Runs only with the dedicated Jest config (`jest.integration.config.js`) and
    `dist/index.js` and speaks JSON-RPC over stdio with the MCP SDK Client
    (transport → parser → adapters → `IDBManager` → `idb`/`simctl`).
 3. Asserts observable effects: owned device in the inventory, accurate booted
-   listing, PNG signature of screenshots, Safari launch/list/terminate,
-   URL opening through the fixture's own `mcpfixture://` scheme (the app
-   renders the URL it receives via `onOpenURL`; no external network), and
-   uninstall/`bundleId` truthfulness with a compiled fixture app
-   (`com.inditex.mcp.fixture.demo`).
-4. Verifies unsupported commands fail honestly over the wire.
+   listing, natural-language verification (`is simulator booted`,
+   `is app … installed`), PNG signature of screenshots, MP4 container
+   recording (`record video` / `stop recording`), debug server lifecycle,
+   accessibility inspection (`describe all elements`, `describe point`),
+   deterministic `input text` semantics (unfocused no-op vs focused
+   preservation of leading zeros, mixed case, and consecutive spaces), Safari
+   launch/list/terminate, URL opening through the fixture's own
+   `mcpfixture://` scheme (the app renders the URL it receives via
+   `onOpenURL`; no external network), and uninstall/`bundleId` truthfulness
+   with a compiled fixture app (`com.inditex.mcp.fixture.demo`).
+4. Verifies unrecognized instructions fail honestly over the wire.
 5. Guarantees cleanup: teardown shuts down and deletes the owned device by
    its exact UDID even when tests fail, and terminates the `idb_companion`
    process spawned for the owned UDID (exact argv match, current user only,
