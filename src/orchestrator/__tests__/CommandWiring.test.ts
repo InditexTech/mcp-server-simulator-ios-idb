@@ -52,9 +52,15 @@ const MANAGER_METHODS = [
   'inputText',
   'pressKey',
   'pressKeySequence',
+  'describeAllElements',
+  'describePointElement',
   'takeScreenshot',
+  'startVideoRecording',
+  'stopVideoRecording',
   'getSystemLogs',
   'getAppLogs',
+  'startDebugServer',
+  'stopDebugServer',
   'getDebugServerStatus',
   'listCrashLogs',
   'getCrashLog',
@@ -83,21 +89,11 @@ interface ExpectedManagerCall {
   args: unknown[];
 }
 
-interface ExpectedUnsupported {
-  unsupported: string;
-}
-
-type ExpectedOutcome = ExpectedManagerCall | ExpectedUnsupported;
-
 function call(method: ManagerMethod, ...args: unknown[]): ExpectedManagerCall {
   return { method, args };
 }
 
-function unsupported(managerMethod: string): ExpectedUnsupported {
-  return { unsupported: managerMethod };
-}
-
-const EXPECTED_BY_EXAMPLE: Record<string, ExpectedOutcome> = {
+const EXPECTED_BY_EXAMPLE: Record<string, ExpectedManagerCall> = {
   // Simulator management commands
   'crear sesión': call('createSimulatorSession', {}),
   'crear una sesión de simulador': call('createSimulatorSession', {}),
@@ -204,13 +200,13 @@ const EXPECTED_BY_EXAMPLE: Record<string, ExpectedOutcome> = {
   'type key sequence 65 66 67': call('pressKeySequence', '', [65, 66, 67]),
   'enter key sequence 13 14 15': call('pressKeySequence', '', [13, 14, 15]),
 
-  // Accessibility commands (IDBManager does not implement them yet)
-  'describir todos los elementos': unsupported('describeAllElements'),
-  'describe all elements': unsupported('describeAllElements'),
-  'mostrar elementos de accesibilidad': unsupported('describeAllElements'),
-  'describir punto 100, 200': unsupported('describePointElement'),
-  'describe point 150, 300': unsupported('describePointElement'),
-  'qué hay en 200, 400': unsupported('describePointElement'),
+  // Accessibility commands
+  'describir todos los elementos': call('describeAllElements', ''),
+  'describe all elements': call('describeAllElements', ''),
+  'mostrar elementos de accesibilidad': call('describeAllElements', ''),
+  'describir punto 100, 200': call('describePointElement', '', 100, 200),
+  'describe point 150, 300': call('describePointElement', '', 150, 300),
+  'qué hay en 200, 400': call('describePointElement', '', 200, 400),
 
   // Capture and logging commands
   'capturar pantalla': call('takeScreenshot', '', undefined),
@@ -218,16 +214,16 @@ const EXPECTED_BY_EXAMPLE: Record<string, ExpectedOutcome> = {
   'tomar una captura': call('takeScreenshot', '', undefined),
   'capture screen': call('takeScreenshot', '', undefined),
   'take screenshot to /path/capture.png': call('takeScreenshot', '', '/path/capture.png'),
-  'grabar video /ruta/video.mp4': unsupported('startVideoRecording'),
-  'record video /tmp/captura.mp4': unsupported('startVideoRecording'),
-  'iniciar grabación de video /ruta/salida.mp4': unsupported('startVideoRecording'),
-  'record video /path/video.mp4': unsupported('startVideoRecording'),
-  'start recording video /path/output.mp4': unsupported('startVideoRecording'),
-  'detener grabación': unsupported('stopVideoRecording'),
-  'parar grabación de video': unsupported('stopVideoRecording'),
-  'stop recording': unsupported('stopVideoRecording'),
-  'end recording': unsupported('stopVideoRecording'),
-  'stop video recording': unsupported('stopVideoRecording'),
+  'grabar video /ruta/video.mp4': call('startVideoRecording', '', '/ruta/video.mp4'),
+  'record video /tmp/captura.mp4': call('startVideoRecording', '', '/tmp/captura.mp4'),
+  'iniciar grabación de video /ruta/salida.mp4': call('startVideoRecording', '', '/ruta/salida.mp4'),
+  'record video /path/video.mp4': call('startVideoRecording', '', '/path/video.mp4'),
+  'start recording video /path/output.mp4': call('startVideoRecording', '', '/path/output.mp4'),
+  'detener grabación': call('stopVideoRecording', '', undefined),
+  'parar grabación de video': call('stopVideoRecording', '', undefined),
+  'stop recording': call('stopVideoRecording', '', undefined),
+  'end recording': call('stopVideoRecording', '', undefined),
+  'stop video recording': call('stopVideoRecording', '', undefined),
   'obtener logs': call('getSystemLogs', '', undefined),
   'mostrar logs de com.example.app': call('getSystemLogs', '', { bundle: 'com.example.app' }),
   'get logs for com.apple.mobilesafari': call('getSystemLogs', '', { bundle: 'com.apple.mobilesafari' }),
@@ -235,16 +231,16 @@ const EXPECTED_BY_EXAMPLE: Record<string, ExpectedOutcome> = {
   'display logs for com.example.app': call('getSystemLogs', '', { bundle: 'com.example.app' }),
 
   // Debug commands
-  'iniciar debug com.example.app': unsupported('startDebugServer'),
-  'start debug com.apple.mobilesafari': unsupported('startDebugServer'),
-  'debug app com.example.app': unsupported('startDebugServer'),
-  'begin debug com.example.app': unsupported('startDebugServer'),
-  'launch debug com.apple.mobilesafari': unsupported('startDebugServer'),
-  'detener debug': unsupported('stopDebugServer'),
-  'parar debug': unsupported('stopDebugServer'),
-  'stop debug': unsupported('stopDebugServer'),
-  'end debug': unsupported('stopDebugServer'),
-  'terminate debug': unsupported('stopDebugServer'),
+  'iniciar debug com.example.app': call('startDebugServer', '', 'com.example.app'),
+  'start debug com.apple.mobilesafari': call('startDebugServer', '', 'com.apple.mobilesafari'),
+  'debug app com.example.app': call('startDebugServer', '', 'com.example.app'),
+  'begin debug com.example.app': call('startDebugServer', '', 'com.example.app'),
+  'launch debug com.apple.mobilesafari': call('startDebugServer', '', 'com.apple.mobilesafari'),
+  'detener debug': call('stopDebugServer', ''),
+  'parar debug': call('stopDebugServer', ''),
+  'stop debug': call('stopDebugServer', ''),
+  'end debug': call('stopDebugServer', ''),
+  'terminate debug': call('stopDebugServer', ''),
   'estado debug': call('getDebugServerStatus', ''),
   'status debug': call('getDebugServerStatus', ''),
   'información debug': call('getDebugServerStatus', ''),
@@ -314,9 +310,13 @@ const createIDBManagerMock = () => {
     installApp: { bundleId: 'com.example.app', name: 'app' },
     listApps: [],
     isAppInstalled: true,
+    describeAllElements: [],
+    describePointElement: null,
     takeScreenshot: '/tmp/screenshot.png',
+    startVideoRecording: 'recording_1',
     getSystemLogs: '',
     getAppLogs: '',
+    startDebugServer: 12345,
     getDebugServerStatus: { running: false },
     listCrashLogs: [],
     getCrashLog: ''
@@ -352,20 +352,9 @@ describe('Command wiring (parser -> orchestrator -> IDB manager)', () => {
   });
 
   it.each(Object.entries(EXPECTED_BY_EXAMPLE))(
-    '%s routes to exactly one manager call or reports it unsupported',
+    '%s routes to exactly one manager call',
     async (example, expected) => {
       const result = await orchestrator.processInstruction(example);
-
-      if ('unsupported' in expected) {
-        // The adapter must report the missing manager method instead of
-        // silently running some other operation.
-        expect(result.success).toBe(false);
-        expect(result.error).toBe(`Command not supported by the IDB manager: ${expected.unsupported}`);
-        for (const name of MANAGER_METHODS) {
-          expect(idbManager[name]).not.toHaveBeenCalled();
-        }
-        return;
-      }
 
       expect(result.success).toBe(true);
       expect(idbManager[expected.method]).toHaveBeenCalledTimes(1);
@@ -379,6 +368,23 @@ describe('Command wiring (parser -> orchestrator -> IDB manager)', () => {
       }
     }
   );
+
+  it.each([
+    ['describe all elements', 'describeAllElements'],
+    ['describe point 150, 300', 'describePointElement'],
+    ['record video /tmp/out.mp4', 'startVideoRecording'],
+    ['stop recording', 'stopVideoRecording'],
+    ['start debug com.example.app', 'startDebugServer'],
+    ['stop debug', 'stopDebugServer']
+  ] as const)('reports missing optional IIDBManager method for "%s"', async (instruction, method) => {
+    const partialManager: Partial<Record<ManagerMethod, jest.Mock>> = { ...idbManager };
+    delete partialManager[method];
+    const partialOrchestrator = new MCPOrchestrator(new NLParser(), partialManager as unknown as IIDBManager);
+
+    const result = await partialOrchestrator.processInstruction(instruction);
+    expect(result.success).toBe(false);
+    expect(result.error).toBe(`Command not supported by the IDB manager: ${method}`);
+  });
 
   it('passes the active session to follow-up commands', async () => {
     await orchestrator.processInstruction('create session');

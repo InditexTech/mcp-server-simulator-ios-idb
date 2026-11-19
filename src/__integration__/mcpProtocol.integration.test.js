@@ -251,27 +251,157 @@ describe('built-in app behavior', () => {
   });
 });
 
-describe('unsupported commands must fail honestly through MCP', () => {
-  it.each([
-    ['record video /tmp/mcp-it-video.mp4', 'startVideoRecording'],
-    ['stop recording', 'stopVideoRecording'],
-    ['describe all elements', 'describeAllElements'],
-    ['start debug com.example.app', 'startDebugServer']
-  ])('"%s" reports the unsupported manager method', async (instruction, method) => {
+describe('unrecognized instructions fail honestly through MCP', () => {
+  it('rejects an unparseable instruction without executing simulator actions', async () => {
     ({ client, transport } = await startMcpServer());
-    const { structured } = await processInstruction(client, instruction);
+    const { structured } = await processInstruction(client, 'fly me to the moon');
     expect(structured.success).toBe(false);
-    expect(structured.error).toBe(`Command not supported by the IDB manager: ${method}`);
+    expect(structured.error).toMatch(/Could not understand the instruction/i);
   });
 });
 
-describe('fixture app install/uninstall with the real bundle ID', () => {
-  it('installs the fixture and reports ITS REAL bundle id, not a synthesized one', async () => {
+describe('accessibility describe, deterministic input text, video, and debug server', () => {
+  it('verifies unfocused no-op and focused exact preservation of leading zeros, case, and consecutive spaces', async () => {
     ({ client, transport } = await startMcpServer());
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-it-fixture-'));
     const appPath = await buildFixtureApp(tmp);
 
     await processInstruction(client, `create session with ${state.name}`);
+    const installed = await processInstruction(client, `install app ${appPath}`);
+    expect(installed.structured.success).toBe(true);
+    const launched = await processInstruction(client, `launch app ${FIXTURE_BUNDLE_ID}`);
+    expect(launched.structured.success).toBe(true);
+
+    // Poll MCP `describe all elements` until both fixtureEchoLabel and fixtureTextField are visible.
+    const readinessDeadline = Date.now() + 180_000;
+    let textField = null;
+    let echoLabel = null;
+    while (Date.now() < readinessDeadline && (!textField || !echoLabel)) {
+      const described = await processInstruction(client, 'describe all elements');
+      if (described.structured?.success && Array.isArray(described.structured.data)) {
+        const flat = flattenElements(described.structured.data);
+        textField = flat.find(el => el.identifier === 'fixtureTextField') || null;
+        echoLabel = flat.find(el => el.identifier === 'fixtureEchoLabel') || null;
+      }
+      if (!textField || !echoLabel) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+    expect(defined(textField)).toBe(true);
+    expect(defined(echoLabel)).toBe(true);
+    expect(echoLabel.label).toBe('Value: ');
+
+    const centerX = Math.round(textField.frame.x + textField.frame.width / 2);
+    const centerY = Math.round(textField.frame.y + textField.frame.height / 2);
+
+    // Verify `describe point` through MCP at the text field's coordinates.
+    const pointDescribed = await processInstruction(client, `describe point ${centerX}, ${centerY}`);
+    expect(pointDescribed.structured.success).toBe(true);
+    expect(defined(pointDescribed.structured.data)).toBe(true);
+    expect(typeof pointDescribed.structured.data.frame?.width).toBe('number');
+
+    // 1. Typing BEFORE focusing the text field returns success: true (HID events sent)
+    // while leaving the unfocused field unchanged.
+    const unfocusedTyped = await processInstruction(client, 'input text unfocused999');
+    expect(unfocusedTyped.structured.success).toBe(true);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    const afterUnfocused = await processInstruction(client, 'describe all elements');
+    expect(afterUnfocused.structured.success).toBe(true);
+    const unfocusedEcho = flattenElements(afterUnfocused.structured.data)
+      .find(el => el.identifier === 'fixtureEchoLabel');
+    expect(unfocusedEcho?.label).toBe('Value: ');
+
+    // 2. Focus the text field via MCP `tap`, wait for the software keyboard / responder,
+    // and verify exact preservation of leading zeros ("0123"), mixed case ("AbC"), and
+    // consecutive spaces ("[   ]"), plus iOS's documented system double-space "."
+    // shortcut after word characters ("left   space" -> "left.  space") even when
+    // UITextField disables autocorrection and smart punctuation.
+    const tapped = await processInstruction(client, `tap at ${centerX}, ${centerY}`);
+    expect(tapped.structured.success).toBe(true);
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const targetSample = '0123 AbC left   space';
+    const expectedUiValue = 'Value: 0123 AbC left.  space';
+    const focusedTyped = await processInstruction(client, `input text ${targetSample}`);
+    expect(focusedTyped.structured.success).toBe(true);
+
+    const echoDeadline = Date.now() + 60_000;
+    let observedLabel = null;
+    while (Date.now() < echoDeadline && observedLabel !== expectedUiValue) {
+      const described = await processInstruction(client, 'describe all elements');
+      if (described.structured?.success && Array.isArray(described.structured.data)) {
+        const currentEcho = flattenElements(described.structured.data)
+          .find(el => el.identifier === 'fixtureEchoLabel');
+        observedLabel = currentEcho?.label ?? null;
+      }
+      if (observedLabel !== expectedUiValue) {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      }
+    }
+    expect(observedLabel).toBe(expectedUiValue);
+
+    await processInstruction(client, `terminate app ${FIXTURE_BUNDLE_ID}`);
+  });
+
+  it('records an MP4 video file and manages debug server start/status/stop', async () => {
+    ({ client, transport } = await startMcpServer());
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-it-fixture-'));
+    const appPath = await buildFixtureApp(tmp);
+    const videoPath = path.join(state.stateDir, `recording-${Date.now()}.mp4`);
+
+    await processInstruction(client, `create session with ${state.name}`);
+    const installed = await processInstruction(client, `install app ${appPath}`);
+    expect(installed.structured.success).toBe(true);
+
+    // Video recording start -> brief frame window -> stop -> valid MP4 container ('ftyp').
+    const startedVideo = await processInstruction(client, `record video ${videoPath}`);
+    expect(startedVideo.structured.success).toBe(true);
+    expect(typeof startedVideo.structured.data).toBe('string');
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    const stoppedVideo = await processInstruction(client, 'stop recording');
+    expect(stoppedVideo.structured.success).toBe(true);
+    expect(fs.existsSync(videoPath)).toBe(true);
+    const videoBytes = fs.readFileSync(videoPath);
+    expect(videoBytes.byteLength).toBeGreaterThan(32);
+    expect(videoBytes.subarray(4, 8).toString('ascii')).toBe('ftyp');
+
+    // Debug server start -> status running -> stop -> status not running.
+    const startedDebug = await processInstruction(client, `start debug ${FIXTURE_BUNDLE_ID}`);
+    expect(startedDebug.structured.success).toBe(true);
+    expect(typeof startedDebug.structured.data?.port).toBe('number');
+    expect(startedDebug.structured.data.port).toBeGreaterThan(0);
+
+    const activeStatus = await processInstruction(client, 'debug status');
+    expect(activeStatus.structured.success).toBe(true);
+    expect(activeStatus.structured.data?.running).toBe(true);
+
+    const stoppedDebug = await processInstruction(client, 'stop debug');
+    expect(stoppedDebug.structured.success).toBe(true);
+
+    const stoppedStatus = await processInstruction(client, 'debug status');
+    expect(stoppedStatus.structured.success).toBe(true);
+    expect(stoppedStatus.structured.data?.running).toBe(false);
+  });
+});
+
+describe('fixture app install/uninstall and verification commands', () => {
+  it('installs the fixture, reports its real bundle id, and answers natural-language verification checks', async () => {
+    ({ client, transport } = await startMcpServer());
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-it-fixture-'));
+    const appPath = await buildFixtureApp(tmp);
+
+    await processInstruction(client, `create session with ${state.name}`);
+
+    const simBooted = await processInstruction(client, 'is simulator booted');
+    expect(simBooted.structured.success).toBe(true);
+    expect(simBooted.structured.data).toBe(true);
+
+    // Ensure clean pre-install baseline if an earlier spec left the fixture installed.
+    await processInstruction(client, `uninstall app ${FIXTURE_BUNDLE_ID}`);
+    const beforeInstallCheck = await processInstruction(client, `is app ${FIXTURE_BUNDLE_ID} installed`);
+    expect(beforeInstallCheck.structured.success).toBe(true);
+    expect(beforeInstallCheck.structured.data).toBe(false);
+
     const installed = await processInstruction(client, `install app ${appPath}`);
     expect(installed.structured.success).toBe(true);
 
@@ -288,21 +418,34 @@ describe('fixture app install/uninstall with the real bundle ID', () => {
     const synthesized = listed.structured.data.find(app => app.bundleId === 'com.example.FixtureApp');
     expect(defined(synthesized)).toBe(false);
 
-    // 'verify app' has no parser pattern (README documents "is app … installed",
-    // a known PR #71 follow-up gap): assert real presence through list apps
-    // instead of an unparseable instruction.
-    const afterInstallList = await processInstruction(client, 'list apps');
-    expect(afterInstallList.structured.success).toBe(true);
-    expect(afterInstallList.structured.data.some(app => app.bundleId === FIXTURE_BUNDLE_ID)).toBe(true);
+    // Natural-language verification commands (English and Spanish, #92 / PR #93).
+    const afterInstallEn = await processInstruction(client, `is app ${FIXTURE_BUNDLE_ID} installed`);
+    expect(afterInstallEn.structured.success).toBe(true);
+    expect(afterInstallEn.structured.data).toBe(true);
+
+    const afterInstallEs = await processInstruction(client, `verificar app ${FIXTURE_BUNDLE_ID}`);
+    expect(afterInstallEs.structured.success).toBe(true);
+    expect(afterInstallEs.structured.data).toBe(true);
 
     const uninstalled = await processInstruction(client, `uninstall app ${FIXTURE_BUNDLE_ID}`);
     expect(uninstalled.structured.success).toBe(true);
 
-    const afterUninstallList = await processInstruction(client, 'list apps');
-    expect(afterUninstallList.structured.success).toBe(true);
-    expect(afterUninstallList.structured.data.some(app => app.bundleId === FIXTURE_BUNDLE_ID)).toBe(false);
+    const afterUninstallCheck = await processInstruction(client, `is app ${FIXTURE_BUNDLE_ID} installed`);
+    expect(afterUninstallCheck.structured.success).toBe(true);
+    expect(afterUninstallCheck.structured.data).toBe(false);
   });
 });
+
+function flattenElements(elements) {
+  const out = [];
+  for (const el of Array.isArray(elements) ? elements : []) {
+    out.push(el);
+    if (Array.isArray(el.children) && el.children.length > 0) {
+      out.push(...flattenElements(el.children));
+    }
+  }
+  return out;
+}
 
 function defined(x) {
   return x !== undefined && x !== null;
