@@ -95,4 +95,92 @@ describe('buildToolResult', () => {
       text: JSON.stringify(savedPathResult)
     });
   });
+
+  it('returns labelled PNG content blocks for multi-display screenshots without raw Buffer bytes', () => {
+    const outerBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x10]);
+    const innerBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x20, 0x21]);
+    const outerDisplay = {
+      screenId: '1',
+      name: 'LCD',
+      uniqueId: 'outer-uuid',
+      deviceName: 'primary',
+      role: 'outer' as const,
+      width: 2034,
+      height: 1398,
+      active: false
+    };
+    const innerDisplay = {
+      screenId: '3',
+      name: 'LCD-1',
+      uniqueId: 'inner-uuid',
+      deviceName: 'primary-1',
+      role: 'inner' as const,
+      width: 2853,
+      height: 2007,
+      active: true
+    };
+
+    const result = {
+      success: true,
+      timestamp: 1700000000123,
+      data: [
+        {
+          label: 'outer (primary, 2034x1398, inactive)',
+          display: outerDisplay,
+          buffer: outerBytes,
+          mimeType: 'image/png' as const
+        },
+        {
+          label: 'inner (primary-1, 2853x2007, active)',
+          display: innerDisplay,
+          buffer: innerBytes,
+          mimeType: 'image/png' as const
+        }
+      ]
+    };
+
+    const response = buildToolResult(result);
+    const blocks = response.content as ContentBlock[];
+
+    expect(blocks).toHaveLength(5);
+    expect(blocks[0]).toEqual({
+      type: 'text',
+      text: 'outer (primary, 2034x1398, inactive)'
+    });
+    expect(blocks[1]).toEqual({
+      type: 'image',
+      data: outerBytes.toString('base64'),
+      mimeType: 'image/png'
+    });
+    expect(blocks[2]).toEqual({
+      type: 'text',
+      text: 'inner (primary-1, 2853x2007, active)'
+    });
+    expect(blocks[3]).toEqual({
+      type: 'image',
+      data: innerBytes.toString('base64'),
+      mimeType: 'image/png'
+    });
+    expect(JSON.parse(blocks[4].text as string)).toEqual({
+      success: true,
+      timestamp: 1700000000123,
+      data: [
+        {
+          label: 'outer (primary, 2034x1398, inactive)',
+          display: outerDisplay,
+          mimeType: 'image/png',
+          byteLength: outerBytes.byteLength
+        },
+        {
+          label: 'inner (primary-1, 2853x2007, active)',
+          display: innerDisplay,
+          mimeType: 'image/png',
+          byteLength: innerBytes.byteLength
+        }
+      ]
+    });
+
+    const serialized = JSON.stringify(response);
+    expect(serialized).not.toContain('"type":"Buffer"');
+  });
 });

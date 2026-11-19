@@ -17,6 +17,9 @@ export enum CommandType {
   BOOT_SIMULATOR = 'bootSimulator',
   SHUTDOWN_SIMULATOR = 'shutdownSimulator',
   FOCUS_SIMULATOR = 'focusSimulator',
+  SET_HINGE_ANGLE = 'setHingeAngle',
+  GET_POSTURE = 'getPosture',
+  SET_ORIENTATION = 'setOrientation',
 
   // Application management commands
   INSTALL_APP = 'installApp',

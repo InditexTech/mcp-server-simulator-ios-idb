@@ -34,6 +34,9 @@ export class ParserToOrchestrator {
       'boot simulator': CommandType.BOOT_SIMULATOR,
       'shutdown simulator': CommandType.SHUTDOWN_SIMULATOR,
       'focus simulator': CommandType.FOCUS_SIMULATOR,
+      'set hinge angle': CommandType.SET_HINGE_ANGLE,
+      'get posture': CommandType.GET_POSTURE,
+      'set orientation': CommandType.SET_ORIENTATION,
 
       // Application management commands
       'install app': CommandType.INSTALL_APP,
@@ -214,6 +217,12 @@ export class ParserToOrchestrator {
         // Convert autoboot to boolean if it's a string
         if (typeof parameters.autoboot === 'string') {
           parameters.autoboot = parameters.autoboot.toLowerCase() === 'true';
+        }
+        break;
+
+      case CommandType.SET_HINGE_ANGLE:
+        if (parameters.angle !== undefined) {
+          parameters.angle = Number(parameters.angle);
         }
         break;
     }
