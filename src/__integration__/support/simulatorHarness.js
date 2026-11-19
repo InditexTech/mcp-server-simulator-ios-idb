@@ -28,7 +28,7 @@ const execFileAsync = promisify(execFile);
 const OWNED_NAME_PREFIX = 'mcp-integration-';
 
 /**
- * Cold-start barrier, not a connect retry loop. CoreSimulator's Booted state
+ * Cold-start barrier. CoreSimulator's Booted state
  * precedes completed data migration/service startup; simctl bootstatus waits
  * for that completion. Then own the companion launch explicitly and require
  * both its startup report AND a gRPC response from the exact owned target.
@@ -39,10 +39,54 @@ const OWNED_NAME_PREFIX = 'mcp-integration-';
  * lazy autospawn. list-targets presence alone proves neither of these.
  * The caller owns cleanup on failure (including a partially started child).
  */
-export async function connectOwnedSimulator(udid, stateDir, { timeoutMs = 120_000 } = {}) {
+export async function connectOwnedSimulator(udid, stateDir, { timeoutMs = 120_000, diagnostics = [] } = {}) {
   if (typeof udid !== 'string' || !/^[0-9A-Fa-f-]{36}$/.test(udid)) {
     throw new Error('cold-start refused: no valid owned UDID');
   }
+  const bootStarted = Date.now();
+  try {
+    await execFileAsync('xcrun', ['simctl', 'bootstatus', udid], { timeout: timeoutMs, killSignal: 'SIGKILL' });
+    diagnostics.push({ stage: 'boot-services', elapsedMs: Date.now() - bootStarted, ready: true });
+  } catch (error) {
+    diagnostics.push({ stage: 'boot-services', elapsedMs: Date.now() - bootStarted, ready: false });
+    throw new Error(`Owned simulator cold-start boot-services failed within ${timeoutMs} ms: ${error.message}`, { cause: error });
+  }
+
+  const recoveryDeadline = Date.now() + 2 * timeoutMs;
+  const socketPath = `/tmp/idb/${udid}_companion.sock`;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const budget = Math.min(timeoutMs, recoveryDeadline - Date.now());
+    if (budget <= 0) throw new Error('Owned companion recovery budget exhausted after cleanup');
+    try {
+      await connectCompanion(udid, socketPath, stateDir, budget, attempt, diagnostics);
+      process.stderr.write(`[integration] cold-start ready after ${Date.now() - bootStarted} ms (companion attempt ${attempt})\n`);
+      return;
+    } catch (error) {
+      if (attempt !== 1 || error.code !== 'COMPANION_REPORT_TIMEOUT') throw error;
+      const cleanupStarted = Date.now();
+      let clean = false;
+      try {
+        const results = await cleanupOwnedCompanions(udid);
+        // The socket check is independent: the cleanup helper may not be
+        // able to distinguish an inaccessible path from an absent path.
+        clean = results.every(result => result.gone) && error.companionExited() && socketStatus(socketPath) === 'absent';
+      } finally {
+        diagnostics.push({ stage: 'recovery-cleanup', elapsedMs: Date.now() - cleanupStarted, ready: clean });
+      }
+      if (!clean) throw new Error(`${error.message}; owned companion cleanup not confirmed; refusing to retry startup`, { cause: error });
+    }
+  }
+}
+
+function socketStatus(socketPath) {
+  try {
+    return fs.lstatSync(socketPath).isSocket() ? 'socket' : 'other';
+  } catch (error) {
+    return error.code === 'ENOENT' ? 'absent' : 'unknown';
+  }
+}
+
+async function connectCompanion(udid, socketPath, stateDir, timeoutMs, attempt, diagnostics) {
   const deadline = Date.now() + timeoutMs;
   const remaining = () => {
     const ms = deadline - Date.now();
@@ -53,14 +97,25 @@ export async function connectOwnedSimulator(udid, stateDir, { timeoutMs = 120_00
     const { stdout } = await execFileAsync(executable, args, { timeout: remaining(), killSignal: 'SIGKILL' });
     return stdout;
   };
-  const socketPath = `/tmp/idb/${udid}_companion.sock`;
-  const logPath = path.join(stateDir, 'companion-startup.log');
-  let stage = 'boot-services';
+  const logPath = path.join(stateDir, `companion-startup-${attempt}.log`);
+  let stage = 'companion-start';
+  let stageStarted = Date.now();
+  let reportBytes = 0;
+  let exit;
   let child;
   let childFailure;
+  const record = ready => {
+    let stderrBytes = null;
+    try { stderrBytes = fs.statSync(logPath, { throwIfNoEntry: false })?.size ?? 0; } catch { /* diagnostic unavailable */ }
+    diagnostics.push({ attempt, stage, ready, elapsedMs: Date.now() - stageStarted,
+      reportBytes, exit, childStarted: Boolean(child?.pid), socket: socketStatus(socketPath), stderrBytes });
+  };
+  const advance = next => {
+    record(true);
+    stage = next;
+    stageStarted = Date.now();
+  };
   try {
-    await command('xcrun', ['simctl', 'bootstatus', udid]);
-    stage = 'companion-start';
     // Same short, UDID-scoped Unix socket used by idb; existing teardown's
     // process identity and socket guards apply unchanged. No TCP listener.
     fs.mkdirSync('/tmp/idb', { recursive: true, mode: 0o700 });
@@ -76,16 +131,20 @@ export async function connectOwnedSimulator(udid, stateDir, { timeoutMs = 120_00
     // child exits during either handshake rather than accepting stale state.
     child.on('error', error => { childFailure = error; });
     child.on('exit', (code, signal) => {
+      exit = { code, signal };
       childFailure = new Error(`owned companion exited (code=${code}, signal=${signal})`);
     });
     let clearReportListeners;
     await new Promise((resolve, reject) => {
       let output = '';
-      const timer = setTimeout(() => reject(new Error('companion did not report its endpoint before deadline')), remaining());
+      const timer = setTimeout(() => reject(Object.assign(
+        new Error('companion did not report its endpoint before deadline'), { code: 'COMPANION_REPORT_TIMEOUT' }
+      )), remaining());
       const onError = error => reject(error);
       const onExit = () => reject(childFailure);
       const onClose = () => reject(new Error('companion stdout closed without startup report'));
       const onData = chunk => {
+        reportBytes += chunk.length;
         output += chunk.toString();
         if (output.length > 65_536) return reject(new Error('oversized companion startup report'));
         const newline = output.indexOf('\n');
@@ -112,29 +171,23 @@ export async function connectOwnedSimulator(udid, stateDir, { timeoutMs = 120_00
       // Promise cleanup is installed before any asynchronous native event.
       clearReportListeners = clear;
     }).finally(() => clearReportListeners?.());
-    stage = 'grpc-handshake';
+    advance('grpc-handshake');
     const description = JSON.parse(await command('idb', ['--companion', socketPath, 'describe', '--json']));
     if (description.udid !== udid) throw new Error('gRPC target identity mismatch; refusing foreign companion');
     if (childFailure) throw childFailure;
-    stage = 'registration';
+    advance('registration');
     const registered = JSON.parse(await command('idb', ['connect', udid, '--json']));
     if (registered.udid !== udid) throw new Error('registered target identity mismatch');
     if (childFailure) throw childFailure;
-    process.stderr.write(`[integration] cold-start ready: boot services, companion report, gRPC and registration verified (${timeoutMs - remaining()} ms)\n`);
+    record(true);
   } catch (error) {
-    // The setup failure path removes the private directory. Preserve only a
-    // bounded tail of THIS companion's diagnostics in the actionable error.
-    let diagnostics = '';
-    if (fs.existsSync(logPath)) {
-      const fd = fs.openSync(logPath, 'r');
-      try {
-        const size = fs.fstatSync(fd).size;
-        const tail = Buffer.alloc(Math.min(size, 2048));
-        fs.readSync(fd, tail, 0, tail.length, Math.max(0, size - tail.length));
-        diagnostics = tail.length ? `; companion stderr tail: ${tail.toString()}` : '';
-      } finally { fs.closeSync(fd); }
+    record(false);
+    const failure = new Error(`Owned simulator cold-start ${stage} failed within ${timeoutMs} ms: ${error.message}`, { cause: error });
+    if (error.code === 'COMPANION_REPORT_TIMEOUT') {
+      failure.code = error.code;
+      failure.companionExited = () => Boolean(exit || child?.exitCode != null || child?.signalCode != null);
     }
-    throw new Error(`Owned simulator cold-start ${stage} failed within ${timeoutMs} ms: ${error.message}${diagnostics}`, { cause: error });
+    throw failure;
   } finally {
     child?.stdout?.destroy();
     child?.unref();
