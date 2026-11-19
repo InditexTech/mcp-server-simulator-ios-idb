@@ -638,3 +638,142 @@ process.stdout.write(JSON.stringify({ threw, before, after, envUnset: !process.e
     expect(outcome.envUnset).toBe(true);
   });
 });
+
+describe('mcpClient stderr surfacing on unexpected server death', () => {
+  // All three probes load the REAL harness ESM module in a disposable child
+  // Node (same "spawn one node, import ESM" pattern as the harness probes
+  // above). No real MCP server, no simulator: the spawned child talks to a
+  // stub entry point written per-probe, which is exactly the shape of the
+  // failure diagnosed on the first real Integration-suite run (a dying
+  // child whose stderr went to a piped-but-unconsumed stream).
+
+  it('createStderrCollector keeps the END of a chatty stderr stream (tail semantics like fatal boot errors)', async () => {
+    // GIVEN
+    const script = `
+      const mod = await import(${JSON.stringify(new URL('../__integration__/support/mcpClient.js', import.meta.url).href)});
+      const collector = mod.createStderrCollector(32);
+      'abcdefghij'.split('').forEach((ch, i) => collector.push('line' + i + ch.repeat(4) + ';'));
+      process.stdout.write(JSON.stringify({ tail: collector.tail, limit: mod.STDERR_TAIL_LIMIT }));
+    `;
+    const probe = spawnSync(process.execPath, ['--experimental-vm-modules', '--input-type=module', '-e', script], {
+      encoding: 'utf8'
+    });
+    expect(probe.status).toBe(0);
+    const { tail, limit } = JSON.parse(probe.stdout);
+
+    // THEN
+    expect(limit).toBe(4000);
+    // The LAST chunk (the fatal error position) is always retained; the
+    // earliest content is the part that gets truncated.
+    expect(tail.endsWith('line9jjjj;')).toBe(true);
+    expect(tail.startsWith('line0')).toBe(false);
+    expect(tail.length).toBeLessThanOrEqual(32);
+  });
+
+  it('startMcpServer surfaces the dying child stderr on the connect-failure path', async () => {
+    // GIVEN: a stub entry that writes MODULE_NOT_FOUND-style fatal output to
+    // stderr and exits 1 — the exact failure shape of run 44276455743
+    // (12/12 "MCP error -32000: Connection closed", cause invisible).
+    const dir = mkdtempSync(path.join(tmpdir(), 'mcpclient-stderr-'));
+    const stub = path.join(dir, 'stub-fails.js');
+    writeFileSync(stub, [
+      "// stub: boots like a server but dies on stderr before initializing",
+      "process.stderr.write('Cannot find module /dist/index.js\\nRequire stack: stub\\n');",
+      "process.exit(1);"
+    ].join('\n'), 'utf8');
+
+    const script = `
+      const mod = await import(${JSON.stringify(new URL('../__integration__/support/mcpClient.js', import.meta.url).href)});
+      const { StdioClientTransport } = await import(${JSON.stringify(new URL('../../node_modules/@modelcontextprotocol/sdk/dist/esm/client/stdio.js', import.meta.url).href)});
+      const { Client } = await import(${JSON.stringify(new URL('../../node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js', import.meta.url).href)});
+      const transport = new StdioClientTransport({
+        command: ${JSON.stringify(process.execPath)},
+        args: [${JSON.stringify(stub)}],
+        stderr: 'pipe'
+      });
+      const collector = mod.createStderrCollector();
+      transport.stderr?.on('data', (chunk) => collector.push(chunk));
+      mod.installStderrGuard(transport, () => collector.tail);
+      const client = new Client({ name: 'probe', version: '1.0.0' });
+      let connectErr = null;
+      try { await client.connect(transport); } catch (e) { connectErr = String(e && e.message || e); }
+      process.stdout.write(JSON.stringify({ connectErr, tailHasFatal: /Cannot find module/.test(collector.tail) }));
+    `;
+
+    // WHEN: run guard+connect against the dying stub.
+    const probe = spawnSync(process.execPath, ['--experimental-vm-modules', '--input-type=module', '-e', script], {
+      encoding: 'utf8'
+    });
+    if (probe.status !== 0) {
+      throw new Error(`mcpClient connect-failure probe failed: ${(probe.stderr ?? '').slice(0, 1500)}`);
+    }
+    const outcome = JSON.parse(probe.stdout);
+
+    // THEN: the connect path failed AND the captured tail contains the
+    // child's fatal stderr — the bytes CI previously lost.
+    expect(outcome.connectErr).toBeTruthy();
+    expect(outcome.tailHasFatal).toBe(true);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('guard stays silent on intentional close and only fires on unexpected close/error', async () => {
+    // GIVEN: a stub server that initializes successfully then exits 0 when
+    // stdin closes (normal teardown), plus a live transport pair.
+    const dir = mkdtempSync(path.join(tmpdir(), 'mcpclient-guard-'));
+    const stub = path.join(dir, 'stub-ok.js');
+    writeFileSync(stub, [
+      "// stub: minimal MCP server speaking the initialize handshake",
+      "process.stderr.write('stub boot diagnostics line\\n');",
+      "const readline = await import('node:readline');",
+      "const rl = readline.createInterface({ input: process.stdin });",
+      "rl.on('line', (line) => {",
+      "  let m;",
+      "  try { m = JSON.parse(line); } catch { return; }",
+      "  if (m.id !== undefined) {",
+      "    process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: m.id, result: { protocolVersion: '2025-06-18', capabilities: {}, serverInfo: { name: 'stub', version: '1.0.0' } } }) + '\\n');",
+      "  }",
+      "});",
+      "rl.on('close', () => process.exit(0));"
+    ].join('\n'), 'utf8');
+
+    const script = `
+      const mod = await import(${JSON.stringify(new URL('../__integration__/support/mcpClient.js', import.meta.url).href)});
+      const { StdioClientTransport } = await import(${JSON.stringify(new URL('../../node_modules/@modelcontextprotocol/sdk/dist/esm/client/stdio.js', import.meta.url).href)});
+      const { Client } = await import(${JSON.stringify(new URL('../../node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js', import.meta.url).href)});
+      const transport = new StdioClientTransport({
+        command: ${JSON.stringify(process.execPath)},
+        args: [${JSON.stringify(stub)}],
+        stderr: 'pipe'
+      });
+      const collector = mod.createStderrCollector();
+      transport.stderr?.on('data', (chunk) => collector.push(chunk));
+      mod.installStderrGuard(transport, () => collector.tail);
+      const client = new Client({ name: 'probe', version: '1.0.0' });
+      await client.connect(transport);
+      // Unexpected error while the transport is live: guard MUST print.
+      transport.onerror && transport.onerror(new Error('boom-unexpected'));
+      // Intentional teardown afterwards: guard must NOT print again.
+      await client.close();
+      process.stdout.write(JSON.stringify({ closedFlag: transport.__closed === true }));
+    `;
+
+    // WHEN
+    const probe = spawnSync(process.execPath, ['--experimental-vm-modules', '--input-type=module', '-e', script], {
+      encoding: 'utf8'
+    });
+    if (probe.status !== 0) {
+      throw new Error(`mcpClient guard probe failed: ${(probe.stderr ?? '').slice(0, 1500)}`);
+    }
+    const outcome = JSON.parse(probe.stdout);
+    expect(outcome.closedFlag).toBe(true);
+
+    // THEN: exactly one guard emission — the unexpected error while live;
+    // the intentional close stays silent (no afterEach-teardown spam).
+    const stderrText = String(probe.stderr ?? '');
+    const guardBlocks = stderrText.split('[mcp-client] MCP server child stderr').length - 1;
+    expect(guardBlocks).toBe(1);
+    expect(stderrText).toContain('after transport error: boom-unexpected');
+    expect(stderrText).toContain('[mcp-child-stderr]');
+    rmSync(dir, { recursive: true, force: true });
+  });
+});

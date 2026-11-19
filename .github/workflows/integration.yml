@@ -129,6 +129,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Fresh runners need a real production build before the suite starts:
+      # it spawns dist/index.js as the MCP server child process, and a missing
+      # bundle makes the child die with MODULE_NOT_FOUND, which the SDK
+      # surfaces as an opaque MCP -32000 "Connection closed" on every test.
+      - name: Build server bundle
+        run: npm run build
+
       # The suite creates its own disposable simulator (mcp-integration-*)
       # and never touches pre-existing devices; globalTeardown shuts down
       # and deletes the owned device even when tests fail.
