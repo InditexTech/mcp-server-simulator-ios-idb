@@ -1,0 +1,31 @@
+src/parser/__tests__/NLParser.test.ts
+  s_2bcec98eb3d51e::t_8ff9c988252d67 163-178,195,219
+src/parser/commands/CaptureCommands.ts
+  s_68fe91d383d334::t_87b8243f8302a6 76-80
+src/parser/commands/SimulatorCommands.ts
+  s_2bcec98eb3d51e::t_fc491eaf035d40 284-292
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "33788365f3e8eb6e1b04e9dfa50e6799afec91b9",
+  "prompts": {},
+  "sessions": {
+    "s_2bcec98eb3d51e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1c2766f2ffe7zbB7MyUtgIVv3",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    },
+    "s_68fe91d383d334": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1c3e29d9ffehuflR5aTRn7eaA",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
