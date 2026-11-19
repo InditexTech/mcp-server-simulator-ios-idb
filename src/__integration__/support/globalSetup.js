@@ -23,6 +23,20 @@ import { listSimulators } from './simctl.js';
 import { createOwnedSimulator, cleanupOwnedSimulator, cleanupOwnedCompanions, connectOwnedSimulator } from './simulatorHarness.js';
 import { writeState, STATE_FILE_ENV } from './state.js';
 
+function saveStartupReport(stages, ready) {
+  const directory = process.env.IOS_SIM_ARTIFACTS_DIR;
+  if (!directory) return;
+  try {
+    fs.mkdirSync(directory, { recursive: true });
+    // Stages contain only fixed labels, timings and process/socket status.
+    // Never publish the private command output or the companion log.
+    fs.writeFileSync(path.join(directory, 'mcp-integration-startup.json'),
+      JSON.stringify({ ready, stages }, null, 2), { mode: 0o600 });
+  } catch {
+    process.stderr.write('[integration] could not save startup diagnostics\n');
+  }
+}
+
 export default async function globalSetup() {
   const runId = randomUUID().slice(0, 8);
   // node:fs.mkdtempSync enforces 0700 on the fresh directory by default
@@ -35,6 +49,7 @@ export default async function globalSetup() {
   const stateFile = path.join(stateDir, 'state.json');
   process.env[STATE_FILE_ENV] = stateFile;
   const bootFailures = [];
+  const startupStages = [];
   let created;
 
   try {
@@ -55,7 +70,7 @@ export default async function globalSetup() {
     if (cleanup.some(result => !result.gone)) {
       throw new Error('Owned companion cleanup failed before cold-start; refusing competing companions');
     }
-    await connectOwnedSimulator(ownedUdid, stateDir);
+    await connectOwnedSimulator(ownedUdid, stateDir, { diagnostics: startupStages });
 
     try {
       writeState({
@@ -70,7 +85,9 @@ export default async function globalSetup() {
       bootFailures.push(`state persistence failed: ${String(stateError)}`);
       throw stateError;
     }
+    saveStartupReport(startupStages, true);
   } catch (error) {
+    saveStartupReport(startupStages, false);
     // Do not leak the device when readiness polling, state persistence, or
     // any other step fails. Best effort for every cleanup facet; failures
     // are reported without masking the original error.

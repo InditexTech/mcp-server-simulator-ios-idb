@@ -559,7 +559,7 @@ describe('globalSetup state handoff is real (file inside owned dir, teardown rem
     return dir;
   };
 
-  it('happy: hand-off env file lives INSIDE stateDir; after teardown both file and dir are gone', async () => {
+  it.each([false, true])('records startup diagnostics before cleanup (invalid endpoint: %s)', invalidEndpoint => {
     const dir = setupDir('ok');
     const script = `
 // Explicit companion startup is mocked too: this state-handoff test must
@@ -572,7 +572,8 @@ cp.spawn = () => {
   const child = new EventEmitter();
   child.stdout = new PassThrough();
   child.unref = () => {};
-  setImmediate(() => child.stdout.write(JSON.stringify({ grpc_path: '/tmp/idb/CCCC3333-4444-4555-8666-777788889999_companion.sock' }) + '\\n'));
+  const socket = ${invalidEndpoint} ? '/private/fixture-sensitive.sock' : '/tmp/idb/CCCC3333-4444-4555-8666-777788889999_companion.sock';
+  setImmediate(() => child.stdout.write(JSON.stringify({ grpc_path: socket }) + '\\n'));
   return child;
 };
 syncBuiltinESMExports();
@@ -581,7 +582,12 @@ const teardown = (await import(${JSON.stringify(new URL('../__integration__/supp
 const state = (await import(${JSON.stringify(new URL('../__integration__/support/state.js', import.meta.url).href)}));
 const { existsSync, readFileSync } = await import('node:fs');
 const path = await import('node:path');
-await setup();
+let setupError = null;
+try { await setup(); } catch (error) { setupError = error.message; }
+const startupReport = readFileSync(path.join(process.env.IOS_SIM_ARTIFACTS_DIR, 'mcp-integration-startup.json'), 'utf8');
+if (setupError) {
+  process.stdout.write(JSON.stringify({ setupError, startupReport, envCleared: !process.env[state.STATE_FILE_ENV] }));
+} else {
 const envPath = process.env[state.STATE_FILE_ENV];
 const stateRaw = JSON.parse(readFileSync(envPath, 'utf8'));
 const insideStateDir = path.dirname(envPath) === stateRaw.stateDir;
@@ -589,10 +595,12 @@ await teardown();
 process.stdout.write(JSON.stringify({
   envPathSet: Boolean(envPath),
   insideStateDir,
+  startupReport,
   fileAfterTeardown: existsSync(envPath),
   dirAfterTeardown: existsSync(stateRaw.stateDir),
   envClearedAfterTeardown: !Boolean(process.env[state.STATE_FILE_ENV])
 }));
+}
 `;
     const probe = spawnSync(process.execPath, ['--experimental-vm-modules', '--input-type=module', '-e', script], {
       encoding: 'utf8',
@@ -600,15 +608,28 @@ process.stdout.write(JSON.stringify({
         ...process.env,
         PATH: `${path.join(dir, 'bin')}:${process.env.PATH}`,
         PROBE_SCENARIO: path.join(dir, 'scenario'),
-        PROBE_LOG: path.join(dir, 'calls.log')
+        PROBE_LOG: path.join(dir, 'calls.log'),
+        IOS_SIM_ARTIFACTS_DIR: path.join(dir, 'artifacts')
       }
     });
     if (probe.status !== 0) {
       throw new Error(`setup probe failed: ${(probe.stderr ?? '').slice(3,600)}`);
     }
     const outcome = JSON.parse(probe.stdout);
+    const report = JSON.parse(outcome.startupReport);
+    expect(report.ready).toBe(!invalidEndpoint);
+    if (invalidEndpoint) {
+      expect(outcome.setupError).toContain('unexpected socket');
+      expect(outcome.envCleared).toBe(true);
+      expect(outcome.startupReport).not.toContain('fixture-sensitive');
+      expect(report.stages.at(-1)).toMatchObject({ stage: 'companion-start', ready: false });
+      rmSync(dir, { recursive: true, force: true });
+      return;
+    }
     expect(outcome.envPathSet).toBe(true);
     expect(outcome.insideStateDir).toBe(true);
+    expect(report.stages.map((entry: { stage: string }) => entry.stage))
+      .toEqual(['boot-services', 'companion-start', 'grpc-handshake', 'registration']);
     expect(outcome.fileAfterTeardown).toBe(false);
     expect(outcome.dirAfterTeardown).toBe(false);
     expect(outcome.envClearedAfterTeardown).toBe(true);
@@ -636,6 +657,100 @@ process.stdout.write(JSON.stringify({ threw, before, after, envUnset: !process.e
     expect(outcome.threw).toBe(true);
     expect(outcome.after).toBe(outcome.before);
     expect(outcome.envUnset).toBe(true);
+  });
+});
+
+describe('owned companion startup recovery', () => {
+  function probe(mode: 'recover' | 'uncertain-cleanup' | 'wrong-endpoint' | 'both-timeout') {
+    const script = `
+import cp from 'node:child_process';
+import { EventEmitter } from 'node:events';
+import { syncBuiltinESMExports } from 'node:module';
+import { PassThrough } from 'node:stream';
+import { promisify } from 'node:util';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+const udid = ${JSON.stringify(OWNED)};
+const mode = ${JSON.stringify(mode)};
+const socket = '/tmp/idb/' + udid + '_companion.sock';
+const calls = [];
+const diagnostics = [];
+let child;
+let alive = false;
+let attempts = 0;
+cp.execFile = (command, args, options, callback) => {
+  if (typeof options === 'function') callback = options;
+  calls.push(command + ' ' + args[0]);
+  let stdout = '';
+  let error;
+  if (command === 'id') stdout = 'fakeuser';
+  else if (command === 'ps' && alive) {
+    const prefix = args.includes('ucomm=') ? 'idb_companion ' : '';
+    stdout = '999999 fakeuser Thu Nov 19 11:00:00 2026 ' + prefix + 'idb_companion --udid ' + udid;
+  } else if (command === 'stat') error = new Error('absent');
+  else if (command === 'kill') {
+    alive = false;
+    if (mode !== 'uncertain-cleanup') child.emit('exit', null, 'SIGTERM');
+  } else if (command === 'idb') stdout = JSON.stringify({ udid });
+  queueMicrotask(() => callback(error, stdout, ''));
+  return new EventEmitter();
+};
+cp.execFile[promisify.custom] = (...args) => new Promise((resolve, reject) => {
+  cp.execFile(...args, (error, stdout) => error ? reject(error) : resolve({ stdout }));
+});
+cp.spawn = () => {
+  calls.push('spawn ' + ++attempts);
+  alive = true;
+  child = new EventEmitter();
+  child.pid = 999999;
+  child.stdout = new PassThrough();
+  child.unref = () => {};
+  if (mode === 'wrong-endpoint' || (mode === 'recover' && attempts === 2)) {
+    const started = child;
+    setImmediate(() => started.stdout.write(JSON.stringify({ grpc_path: mode === 'wrong-endpoint' ? '/foreign.sock' : socket }) + '\\n'));
+  }
+  return child;
+};
+syncBuiltinESMExports();
+const { connectOwnedSimulator } = await import(${JSON.stringify(new URL('../__integration__/support/simulatorHarness.js', import.meta.url).href)});
+const dir = mkdtempSync(join(tmpdir(), 'companion-recovery-'));
+let error = null;
+try { await connectOwnedSimulator(udid, dir, { timeoutMs: 550, diagnostics }); }
+catch (failure) { error = failure.message; }
+finally { rmSync(dir, { recursive: true, force: true }); }
+process.stdout.write(JSON.stringify({ calls, diagnostics, error, attempts }));
+`;
+    const result = spawnSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8', timeout: 5000 });
+    if (result.status !== 0) throw new Error(`Companion recovery probe failed: ${result.stderr}`);
+    return JSON.parse(result.stdout);
+  }
+
+  it('starts a second companion only after the timed-out child has exited', () => {
+    const result = probe('recover');
+    expect(result.error).toBeNull();
+    expect(result.calls.filter((call: string) => /^(xcrun|spawn|kill|idb) /.test(call)))
+      .toEqual(['xcrun simctl', 'spawn 1', 'kill -TERM', 'spawn 2', 'idb --companion', 'idb connect']);
+    expect(result.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ stage: 'boot-services', ready: true }),
+      expect.objectContaining({ attempt: 1, stage: 'companion-start', ready: false, reportBytes: 0 }),
+      expect.objectContaining({ stage: 'recovery-cleanup', ready: true }),
+      expect.objectContaining({ attempt: 2, stage: 'registration', ready: true }),
+    ]));
+  });
+
+  it.each(['uncertain-cleanup', 'wrong-endpoint'] as const)('does not retry after %s', mode => {
+    const result = probe(mode);
+    expect(result.attempts).toBe(1);
+    expect(result.calls).not.toContain('idb connect');
+    expect(result.error).toContain(mode === 'wrong-endpoint' ? 'unexpected socket' : 'cleanup not confirmed');
+  });
+
+  it('fails without a third attempt when both startup reports time out', () => {
+    const result = probe('both-timeout');
+    expect(result.attempts).toBe(2);
+    expect(result.error).toContain('did not report its endpoint');
+    expect(result.calls).not.toContain('idb connect');
   });
 });
 
