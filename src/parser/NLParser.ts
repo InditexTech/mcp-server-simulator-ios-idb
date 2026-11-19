@@ -24,7 +24,9 @@ const VERBATIM_PARAMETERS = new Set([
   'dbPath',
   'deviceName',
   'udid',
-  'recordingId'
+  'recordingId',
+  'display',
+  'orientation'
 ]);
 
 /**

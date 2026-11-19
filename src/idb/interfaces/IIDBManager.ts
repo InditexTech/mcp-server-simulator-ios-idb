@@ -31,6 +31,62 @@ export interface SessionConfig {
 
 export type ButtonType = 'APPLE_PAY' | 'HOME' | 'LOCK' | 'SIDE_BUTTON' | 'SIRI';
 
+export type DeviceOrientation =
+  | 'PORTRAIT'
+  | 'PORTRAIT_UPSIDE_DOWN'
+  | 'LANDSCAPE_LEFT'
+  | 'LANDSCAPE_RIGHT';
+
+export type DisplayRole = 'outer' | 'inner' | 'main' | 'integrated';
+
+export interface SimulatorDisplayInfo {
+  screenId: string;
+  name: string;
+  uniqueId: string;
+  deviceName: string;
+  role: DisplayRole;
+  width: number;
+  height: number;
+  uiOrientation?: string;
+  /** null when the active panel could not be established. */
+  active: boolean | null;
+}
+
+export interface SimulatorPosture {
+  foldable: boolean;
+  angle: number | null;
+  orientation: DeviceOrientation;
+  activeDisplay: SimulatorDisplayInfo | null;
+  displays: SimulatorDisplayInfo[];
+}
+
+export interface ExpectedPosture {
+  orientation?: DeviceOrientation;
+  angle?: number;
+  minAngle?: number;
+  maxAngle?: number;
+  activeDisplay?: string;
+}
+
+export interface HingeAngleResult {
+  angle: number;
+  measuredAngle: number;
+  activeDisplay: SimulatorDisplayInfo | null;
+}
+
+export interface LabelledScreenshot {
+  label: string;
+  display: SimulatorDisplayInfo;
+  buffer: Buffer;
+  mimeType: 'image/png';
+}
+
+export interface SavedDisplayScreenshot {
+  label: string;
+  display: SimulatorDisplayInfo;
+  path: string;
+}
+
 export interface CrashLogInfo {
   name: string;
   bundleId?: string;
@@ -116,6 +172,31 @@ export interface IIDBManager {
    * @param sessionId Session ID of the simulator
    */
   focusSimulator?(sessionId: string): Promise<void>;
+
+  /**
+   * Sets the foldable simulator hinge angle and confirms the measured angle
+   * @param sessionId Session ID of the simulator
+   * @param angle Target hinge angle in degrees (0 closed .. 180 flat)
+   */
+  setHingeAngle?(sessionId: string, angle: number): Promise<HingeAngleResult>;
+
+  /**
+   * Reads the current simulator posture (hinge angle, orientation, and displays)
+   * @param sessionId Session ID of the simulator
+   */
+  getPosture?(sessionId: string): Promise<SimulatorPosture>;
+
+  /**
+   * Sets physical device orientation and verifies the resulting posture
+   * @param sessionId Session ID of the simulator
+   * @param orientation Target physical orientation
+   * @param expectedPosture Optional additional posture expectations to verify
+   */
+  setOrientation?(
+    sessionId: string,
+    orientation: DeviceOrientation,
+    expectedPosture?: ExpectedPosture
+  ): Promise<SimulatorPosture>;
 
   // === Application Management ===
 
@@ -270,9 +351,14 @@ export interface IIDBManager {
    * Takes a screenshot of the simulator
    * @param sessionId Session ID of the simulator
    * @param outputPath Path where to save the screenshot (optional)
-   * @returns Buffer with the image or path to the saved file
+   * @param display Display selector ("outer", "inner", "active", "all", screen ID, or device name; optional)
+   * @returns Buffer/labelled PNGs or saved file path(s)
    */
-  takeScreenshot(sessionId: string, outputPath?: string): Promise<any | string>;
+  takeScreenshot(
+    sessionId: string,
+    outputPath?: string,
+    display?: string
+  ): Promise<Buffer | string | LabelledScreenshot[] | SavedDisplayScreenshot[]>;
 
   /**
    * Starts video recording of the simulator

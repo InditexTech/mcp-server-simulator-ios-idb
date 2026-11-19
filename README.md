@@ -246,6 +246,9 @@ The NLParser supports the following natural language commands:
 | Focus simulator | Brings simulator window to front | "focus simulator", "bring simulator to front" |
 | Check simulator | Checks if the current simulator session is booted | "check simulator", "is simulator booted" |
 | List simulator sessions | Lists active simulator sessions | "list simulator sessions", "show active sessions" |
+| Set hinge angle | Sets foldable hinge angle (0°..180°) and confirms measured angle | "fold to 120 degrees", "plegar a 120 grados", "unfold simulator" |
+| Read posture | Reads hinge angle, orientation, and active/integrated displays | "read posture", "leer postura", "get simulator posture" |
+| Set orientation | Sets physical orientation and verifies expected posture | "set orientation to landscape left", "rotate simulator to portrait expecting angle 0 and active display outer" |
 
 ### 📱 App Management
 | Command | Description | Example |
@@ -278,12 +281,14 @@ The NLParser supports the following natural language commands:
 ### 📸 Capture and Logs
 | Command | Description | Example |
 |---------|-------------|---------|
-| Take screenshot | Captures a screenshot | "take screenshot", "capture screen" |
+| Take screenshot | Captures the active display by default, a selected display (`outer`, `inner`, `active`), or all displays | "take screenshot", "take screenshot of all displays", "toma captura de todas las pantallas", "take screenshot of outer display to /path/outer.png" |
 | Record video | Records screen activity to an MP4 file | "record video /path/output.mp4" |
 | Stop recording | Stops active video recording for the session | "stop recording", "stop video recording" |
 | Get logs | Retrieves system or app logs | "get logs", "get logs for com.example.app" |
 
-Omitting `outputPath` (plain "take screenshot") returns native MCP `image/png` content instead of a JSON Buffer.
+Omitting `outputPath` returns native MCP `image/png` content (including labelled PNG content blocks when selecting a display or `all displays`); supplying `outputPath` with `all displays` writes suffixed files (e.g. `shot-outer.png`, `shot-inner.png`).
+
+If the active panel cannot be determined, posture reports `activeDisplay: null` and an active-display capture fails rather than guessing. Explicit panel captures still work when the PNGs are valid; their activity labels can be unknown.
 
 ### 🐛 Debug
 | Command | Description | Example |
