@@ -1,0 +1,41 @@
+.github/workflows/integration.yml
+  s_2f27476b9c31ca::t_0855f082ab767d 132-138
+README.md
+  s_2f27476b9c31ca::t_3a35b5ad4cdca7 266,270-271,275-276,282-283,291-292,313,368-370,375,394-404
+src/__integration__/mcpProtocol.integration.test.js
+  s_2f27476b9c31ca::t_0f3a191d373de7 254-255,257,259,263-264,269-351,356-407,421-428,433-435,439-449
+src/__integration__/support/fixtureApp.js
+  s_2f27476b9c31ca::t_3c62a0a918d511 36-81,91-92,107-115,185-190
+src/__integration__/support/mcpClient.js
+  s_2f27476b9c31ca::t_019c280d65114c 18-40,59-72,80-88,93-167
+src/__tests__/simulatorHarnessCleanup.test.ts
+  s_2f27476b9c31ca::t_f907361ca73777 641-779
+src/adapters/OrchestratorToIDB.ts
+  s_2f27476b9c31ca::t_ebddc3851d92ba 213-215
+src/idb/IDBManager.ts
+  s_2f27476b9c31ca::t_fc364d8508dc7c 4,34-53,59,61,98-147,227,290,473-684
+src/idb/__tests__/IDBManager.test.ts
+  s_2f27476b9c31ca::t_28254aefbe5398 4,780-1145
+src/idb/interfaces/IIDBManager.ts
+  s_2f27476b9c31ca::t_a60b4b82942e68 288,290
+src/orchestrator/__tests__/CommandRegressionMatrix.test.ts
+  s_2f27476b9c31ca::t_f61ce38230cdc9 41-42,44-45,48-49,249-251,259-265,270-272
+src/orchestrator/__tests__/CommandWiring.test.ts
+  s_2f27476b9c31ca::t_30a00f8a62d820 55-56,58-59,62-63,96,203-209,217-226,234-243,313-314,316,319,355,372-388
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "20262cc3d8b246992a6289c215565d081d792f6a",
+  "prompts": {},
+  "sessions": {
+    "s_2f27476b9c31ca": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e10dad901ffevL4enZl0y8GQyB",
+        "model": "gemini-4-carbon"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
