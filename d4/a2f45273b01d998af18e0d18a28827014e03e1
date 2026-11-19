@@ -1,0 +1,43 @@
+.github/workflows/integration.yml
+  s_6a35af9c4a300b::t_38d6ab5b220878 132-138
+ARCHITECTURE.md
+  s_6a35af9c4a300b::t_85cb1f0a5d2ed9 71-72,76-77,186-188
+README.md
+  s_6a35af9c4a300b::t_9d728be1664ac7 269,273-274,278-279,285-286,296-297,318,373-375,380,399-409
+src/__integration__/mcpProtocol.integration.test.js
+  s_6a35af9c4a300b::t_a0fe252c7b111b 254-255,257,259,263-264,269-351,356-407,421-428,433-435,439-449
+src/__integration__/support/fixtureApp.js
+  s_6a35af9c4a300b::t_17d1c75680d31d 36-81,91-92,107-115,185-190
+src/__integration__/support/mcpClient.js
+  s_6a35af9c4a300b::t_4c3b03f97d64ec 18-40,59-72,80-88,93-167
+src/__tests__/simulatorHarnessCleanup.test.ts
+  s_6a35af9c4a300b::t_94a1f2d83b6fca 641-779
+src/adapters/OrchestratorToIDB.ts
+  s_6a35af9c4a300b::t_a83c7dc50d89d6 235-237
+src/idb/IDBManager.ts
+  s_6a35af9c4a300b::t_2ca61ebc9ba29a 4,193-212,218,220-222,233-288,290-307,317-321,334-343,345,358,363,368,378-379,387,392-393,430-434,437-438,445,450,455-456,466,473,483-484,488-489,493-494,505-506,665,681,867,957,1016,1023,1026-1030,1089,1093-1094,1101,1116,1122,1125,1130-1131,1135-1136,1140-1141,1150,1154,1158-1159,1163,1167,1171-1172,1181-1383,1385-1394,1396,1405,1415,1420,1433-1434,1444,1446,1451,1459,1463-1464,1468-1469,1473-1474,1478-1479,1489-1490,1494-1495,1499-1500
+src/idb/__tests__/IDBManager.test.ts
+  s_6a35af9c4a300b::t_00d710514038d0 4,119-242,493,499-502,528,1182-1608
+src/idb/interfaces/IIDBManager.ts
+  s_6a35af9c4a300b::t_c70bb0a7f0a2b3 374,376
+src/orchestrator/__tests__/CommandRegressionMatrix.test.ts
+  s_6a35af9c4a300b::t_229af09ce0671a 41-42,44-45,48-49,249-251,259-265,270-272
+src/orchestrator/__tests__/CommandWiring.test.ts
+  s_6a35af9c4a300b::t_5d1631591df49f 58-59,61-62,65-66,99,220-226,238-247,255-264,349-350,352,355,391,408-424
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "d4a2f45273b01d998af18e0d18a28827014e03e1",
+  "prompts": {},
+  "sessions": {
+    "s_6a35af9c4a300b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e11041965ffetIOCbGfS000cD1",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
