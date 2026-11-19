@@ -1,0 +1,19 @@
+src/__tests__/coldBootConnect.test.ts
+  s_2bcec98eb3d51e::t_c407c465cdf955 12-13,25,32-35,38,57,59-69,85,108,116,137-161,181-189
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "e4c638f63038bffc4758a1aedf8ed424648d9e81",
+  "prompts": {},
+  "sessions": {
+    "s_2bcec98eb3d51e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1c2766f2ffe7zbB7MyUtgIVv3",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
