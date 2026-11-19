@@ -161,6 +161,22 @@ describe('NLParser', () => {
 
   describe('foldable posture and display-selectable commands', () => {
     it.each([
+      'fold to 1e2 degrees',
+      'plegar a 120,5 grados',
+      'set hinge angle to 120degrees extra',
+      'fold to 120 degrees-ish',
+      'fold opening',
+      'take screenshot of the exterior',
+      'take screenshot of outerwear',
+      'take screenshot of all displays extra',
+      'take screenshot of',
+      'toma captura de todas las pantallas extra',
+      'capturar pantalla exterior y algo más'
+    ])('rejects partial hinge or capture instructions: %s', async instruction => {
+      await expect(parser.parseInstruction(instruction)).rejects.toThrow('Could not understand the instruction');
+    });
+
+    it.each([
       'set orientation to portrait expecting angle banana',
       'set orientation to portrait expecting angle 120 and nonsense',
       'set orientation to portrait expecting',
@@ -176,6 +192,7 @@ describe('NLParser', () => {
       ['tomar una captura de la pantalla en /ruta/Captura.png', 'capture screen', { outputPath: '/ruta/Captura.png' }],
       ['input text set orientation to portrait expecting angle banana', 'input text', { text: 'set orientation to portrait expecting angle banana' }],
       ['fold to 120 degrees', 'set hinge angle', { angle: 120 }],
+      ['fold to 120.5 degrees.', 'set hinge angle', { angle: 120.5 }],
       ['fold closed', 'set hinge angle', { angle: 0 }],
       ['fold half-open', 'set hinge angle', { angle: 90 }],
       ['plegar a 135.5°', 'set hinge angle', { angle: 135.5 }],
@@ -199,6 +216,7 @@ describe('NLParser', () => {
         }
       ],
       ['take screenshot of all displays', 'capture screen', { display: 'all' }],
+      ['take screenshot of outer display.', 'capture screen', { display: 'outer' }],
       ['toma captura de todas las pantallas', 'capture screen', { display: 'all' }],
       [
         'toma una captura de todas las pantallas en /tmp/duo.png',

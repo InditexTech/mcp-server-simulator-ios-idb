@@ -281,15 +281,15 @@ export class SimulatorCommands extends BaseCommandDefinition {
     {
       command: 'set hinge angle',
       patterns: [
-        /(?:plegar|doblar)(?:\s+(?:el\s+)?simulador)?\s+a\s+(?<angle>-?\d+(?:\.\d+)?)\s*(?:grados|°)?/i,
-        /(?:ajustar|establecer|fijar|poner)\s+(?:el\s+)?[aá]ngulo\s+de\s+(?:la\s+)?bisagra\s+(?:a|en)\s+(?<angle>-?\d+(?:\.\d+)?)\s*(?:grados|°)?/i,
-        /(?<unfoldEs>desplegar)(?:\s+(?:el\s+)?simulador)?/i,
-        /plegar\s+(?<preset>cerrado|abierto)/i,
-        /fold(?:\s+(?:the\s+)?simulator)?\s+to\s+(?<angle>-?\d+(?:\.\d+)?)\s*(?:degrees|deg|°)?/i,
-        /set\s+(?:the\s+)?hinge(?:\s+angle)?\s+(?:to\s+)?(?<angle>-?\d+(?:\.\d+)?)\s*(?:degrees|deg|°)?/i,
-        /hinge(?:\s+angle)?\s+(?<angle>-?\d+(?:\.\d+)?)\s*(?:degrees|deg|°)?/i,
-        /(?<unfoldEn>unfold)(?:\s+(?:the\s+)?simulator)?/i,
-        /fold\s+(?<preset>closed|flat|open|half(?:-|\s+)open|half)/i
+        /^(?:plegar|doblar)(?:\s+(?:el\s+)?simulador)?\s+a\s+(?<angle>-?\d+(?:\.\d+)?)\s*(?:grados|°)?[.!?]*$/i,
+        /^(?:ajustar|establecer|fijar|poner)\s+(?:el\s+)?[aá]ngulo\s+de\s+(?:la\s+)?bisagra\s+(?:a|en)\s+(?<angle>-?\d+(?:\.\d+)?)\s*(?:grados|°)?[.!?]*$/i,
+        /^(?<unfoldEs>desplegar)(?:\s+(?:el\s+)?simulador)?[.!?]*$/i,
+        /^plegar\s+(?<preset>cerrado|abierto)[.!?]*$/i,
+        /^fold(?:\s+(?:the\s+)?simulator)?\s+to\s+(?<angle>-?\d+(?:\.\d+)?)\s*(?:degrees|deg|°)?[.!?]*$/i,
+        /^set\s+(?:the\s+)?hinge(?:\s+angle)?\s+(?:to\s+)?(?<angle>-?\d+(?:\.\d+)?)\s*(?:degrees|deg|°)?[.!?]*$/i,
+        /^hinge(?:\s+angle)?\s+(?<angle>-?\d+(?:\.\d+)?)\s*(?:degrees|deg|°)?[.!?]*$/i,
+        /^(?<unfoldEn>unfold)(?:\s+(?:the\s+)?simulator)?[.!?]*$/i,
+        /^fold\s+(?<preset>closed|flat|open|half(?:-|\s+)open|half)[.!?]*$/i
       ],
       description: 'Sets the foldable simulator hinge angle (0 closed to 180 flat) and confirms the measured angle',
       requiredParameters: ['angle'],
