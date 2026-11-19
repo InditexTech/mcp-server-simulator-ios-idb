@@ -1,0 +1,21 @@
+src/__integration__/support/globalSetup.js
+  s_6a35af9c4a300b::t_14d18affeb52e6 26-39,52,73,88,90
+src/__integration__/support/simulatorHarness.js
+  s_6a35af9c4a300b::t_bb5c0939f9da7a 31,42,46-89,100-104,107-117,134,140-142,147,174,178,182,184-188,190
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "37a336dd04494199107cba72383fbfd4eb0aef2a",
+  "prompts": {},
+  "sessions": {
+    "s_6a35af9c4a300b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e11041965ffetIOCbGfS000cD1",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
