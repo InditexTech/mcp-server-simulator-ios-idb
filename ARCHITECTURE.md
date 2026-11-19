@@ -68,12 +68,13 @@ There are two distinct pieces of session state; do not conflate them:
 
 - **`IDBManager.sessions: Map<sessionId, udid>`** — the source of truth for
   simulators. `createSimulatorSession(config?)` verifies idb availability via
-  `idb list-targets`, picks a UDID (matching `config.deviceName`
+  `idb list-targets --only simulator` (memoized per `IDBManager` instance and
+  invalidated on failure or `ENOENT`), picks a UDID (matching `config.deviceName`
   case-insensitively against simulator names — a UDID is accepted too for
   ambiguous names — with optionally required `platformVersion`, from
   `xcrun simctl list devices --json`; if no name is given, Boots simulators
-  are preferred and the first available one otherwise), optionally boots it
-  (`autoboot !== false`), and stores a generated `session_<timestamp>_<counter>` **as the map key**, with the UDID as its
+  are preferred and the first available one otherwise), boots it only when not
+  already `Booted` (`autoboot !== false`), and stores a generated `session_<timestamp>_<counter>` **as the map key**, with the UDID as its
   value. Every later manager method (`installApp`, `launchApp`, `tap`,
   `takeScreenshot`, …) looks the UDID up by `sessionId` key and throws
   `Session not found: ${sessionId}` if absent.
@@ -182,8 +183,9 @@ pointer.
     on Homebrew versions with trust controls, it trusts only the three idb
     formulae. No project Python venv is used. Homebrew follows the current stable tap,
     independently of `package-lock.json`.
-  - `IDBManager` validates idb availability before simulator operations via
-    `idb list-targets`.
+  - `IDBManager` validates idb availability once per instance before simulator
+    operations via `idb list-targets --only simulator` (re-checking if
+    verification fails or `idb` fails with `ENOENT`).
 
 ## Adding a new command
 
