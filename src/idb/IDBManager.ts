@@ -23,6 +23,7 @@ import {
   HingeAngleResult,
   LabelledScreenshot,
   SavedDisplayScreenshot,
+  AccessibilityMatchKey,
   AccessibilityInfo,
   CrashLogInfo
 } from './interfaces/IIDBManager.js';
@@ -55,6 +56,11 @@ const VALID_REMOTE_ACTIONS = new Set<RemoteAction>([
   'right',
   'select',
   'menu'
+]);
+
+const VALID_ACCESSIBILITY_MATCH_KEYS = new Set<AccessibilityMatchKey>([
+  'AXLabel',
+  'AXUniqueId'
 ]);
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -344,6 +350,12 @@ export class IDBManager implements IIDBManager {
     const value = raw?.AXValue ?? raw?.value;
     if (value !== undefined && value !== null) {
       element.value = String(value);
+    }
+    if (typeof raw?.focused === 'boolean') {
+      element.focused = raw.focused;
+    }
+    if (typeof raw?.enabled === 'boolean') {
+      element.enabled = raw.enabled;
     }
     if (Array.isArray(raw?.children)) {
       element.children = raw.children.map((child: Record<string, any>) =>
@@ -1312,6 +1324,30 @@ export class IDBManager implements IIDBManager {
       return this.normalizeAccessibilityElement(parsed);
     }
     return null;
+  }
+
+  async tapElement(
+    sessionId: string,
+    marker: string,
+    matchKey: AccessibilityMatchKey = 'AXLabel'
+  ): Promise<void> {
+    const udid = this.requireSessionUDID(sessionId);
+    if (typeof marker !== 'string' || marker.trim().length === 0) {
+      throw new Error('Accessibility marker must be a non-empty string');
+    }
+    if (!VALID_ACCESSIBILITY_MATCH_KEYS.has(matchKey)) {
+      throw new Error(`Invalid accessibility match key: ${matchKey}`);
+    }
+    await this.executeIDBCommand([
+      'ui',
+      'tap',
+      '--match-key',
+      matchKey,
+      '--udid',
+      udid,
+      '--',
+      marker
+    ]);
   }
 
   async startVideoRecording(sessionId: string, outputPath: string): Promise<string> {

@@ -28,7 +28,9 @@ const VERBATIM_PARAMETERS = new Set([
   'display',
   'orientation',
   'button',
-  'action'
+  'action',
+  'marker',
+  'matchKey'
 ]);
 
 /**

@@ -41,6 +41,7 @@ describe('PR #71 regression matrix', () => {
     'pressKeySequence',
     'describeAllElements',
     'describePointElement',
+    'tapElement',
     'takeScreenshot',
     'startVideoRecording',
     'stopVideoRecording',
@@ -252,6 +253,7 @@ describe('PR #71 regression matrix', () => {
   // custom IIDBManager implementation.
   it.each([
     ['press remote select', 'pressRemote'],
+    ['tap element "Play"', 'tapElement'],
     ['describe all elements', 'describeAllElements'],
     ['describe point 150, 300', 'describePointElement'],
     ['record video /tmp/out.mp4', 'startVideoRecording'],

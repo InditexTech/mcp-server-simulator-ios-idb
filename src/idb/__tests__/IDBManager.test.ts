@@ -1786,4 +1786,91 @@ describe('IDBManager', () => {
       'tv-udid'
     ]);
   });
+
+  it('preserves focused/enabled accessibility attributes and taps elements by label or identifier on tvOS and iOS', async () => {
+    const manager = new IDBManager();
+    manager['sessions'].set('tv-session', 'tv-udid');
+    manager['sessionPlatforms'].set('tv-session', 'tvos');
+
+    const executeCommand = jest
+      .spyOn(manager as any, 'executeCommand')
+      .mockImplementation(async (...parameters: unknown[]) => {
+        const args = parameters[1] as string[];
+        if (args[1] === 'describe-all') {
+          return JSON.stringify([
+            {
+              AXUniqueId: 'fixturePrimaryButton',
+              AXLabel: 'Primary Action',
+              type: 'Button',
+              focused: true,
+              enabled: true,
+              frame: { x: 200, y: 300, width: 400, height: 80 },
+              children: [
+                {
+                  AXLabel: 'Subtitle',
+                  type: 'StaticText',
+                  focused: false,
+                  enabled: false,
+                  frame: { x: 210, y: 340, width: 200, height: 30 }
+                }
+              ]
+            }
+          ]);
+        }
+        return '';
+      });
+
+    const elements = await manager.describeAllElements('tv-session');
+    expect(elements).toEqual([
+      {
+        identifier: 'fixturePrimaryButton',
+        label: 'Primary Action',
+        type: 'Button',
+        focused: true,
+        enabled: true,
+        frame: { x: 200, y: 300, width: 400, height: 80 },
+        children: [
+          {
+            label: 'Subtitle',
+            type: 'StaticText',
+            focused: false,
+            enabled: false,
+            frame: { x: 210, y: 340, width: 200, height: 30 }
+          }
+        ]
+      }
+    ]);
+
+    await expect(manager.tapElement('ghost-session', 'Play'))
+      .rejects.toThrow('Session not found: ghost-session');
+    await expect(manager.tapElement('tv-session', '   '))
+      .rejects.toThrow('Accessibility marker must be a non-empty string');
+    await expect(manager.tapElement('tv-session', 'Play', 'AXRole' as any))
+      .rejects.toThrow('Invalid accessibility match key: AXRole');
+
+    // Works on tvOS sessions even though coordinate tap is blocked
+    await manager.tapElement('tv-session', 'Primary Action');
+    expect(executeCommand).toHaveBeenCalledWith('idb', [
+      'ui',
+      'tap',
+      '--match-key',
+      'AXLabel',
+      '--udid',
+      'tv-udid',
+      '--',
+      'Primary Action'
+    ]);
+
+    await manager.tapElement('tv-session', '--leading-dash-id', 'AXUniqueId');
+    expect(executeCommand).toHaveBeenCalledWith('idb', [
+      'ui',
+      'tap',
+      '--match-key',
+      'AXUniqueId',
+      '--udid',
+      'tv-udid',
+      '--',
+      '--leading-dash-id'
+    ]);
+  });
 });

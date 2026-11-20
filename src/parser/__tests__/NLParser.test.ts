@@ -272,6 +272,31 @@ describe('NLParser', () => {
     });
   });
 
+  describe('accessibility element activation', () => {
+    it.each([
+      ['tap element "Play"', { marker: 'Play', matchKey: 'AXLabel' }],
+      ['tap element Settings', { marker: 'Settings', matchKey: 'AXLabel' }],
+      ['tap element "0123"', { marker: '0123', matchKey: 'AXLabel' }],
+      ['tap element "TRUE"', { marker: 'TRUE', matchKey: 'AXLabel' }],
+      ['tap element with id "fixtureSecondaryButton"', { marker: 'fixtureSecondaryButton', matchKey: 'AXUniqueId' }],
+      ['activate element by id loginButton', { marker: 'loginButton', matchKey: 'AXUniqueId' }],
+      ['tocar elemento "Reproducir"', { marker: 'Reproducir', matchKey: 'AXLabel' }],
+      ['pulsar elemento con id "fixtureSecondaryButton"', { marker: 'fixtureSecondaryButton', matchKey: 'AXUniqueId' }]
+    ])('parses and preserves verbatim marker for "%s"', async (instruction, expectedParams) => {
+      const parsed = await parser.parseInstruction(instruction);
+      const normalized = await parser.normalizeParameters(parsed);
+      expect(normalized.command).toBe('tap element');
+      expect(normalized.parameters).toEqual(expectedParams);
+      expect(typeof normalized.parameters.marker).toBe('string');
+    });
+
+    it('rejects empty quoted markers on validation', async () => {
+      const parsed = await parser.parseInstruction('tap element ""');
+      const validation = await parser.validateInstruction(parsed);
+      expect(validation.isValid).toBe(false);
+    });
+  });
+
   describe('suggestCompletions', () => {
     it('should suggest completions for partial text', async () => {
       const suggestions = await parser.suggestCompletions('launch');

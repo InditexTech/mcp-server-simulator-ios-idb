@@ -40,6 +40,7 @@ export enum CommandType {
   // Accessibility commands
   DESCRIBE_ALL_ELEMENTS = 'describeAllElements',
   DESCRIBE_POINT_ELEMENT = 'describePointElement',
+  TAP_ELEMENT = 'tapElement',
 
   // Capture and logging commands
   TAKE_SCREENSHOT = 'takeScreenshot',

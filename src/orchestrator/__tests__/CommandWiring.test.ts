@@ -58,6 +58,7 @@ const MANAGER_METHODS = [
   'pressKeySequence',
   'describeAllElements',
   'describePointElement',
+  'tapElement',
   'takeScreenshot',
   'startVideoRecording',
   'stopVideoRecording',
@@ -233,6 +234,12 @@ const EXPECTED_BY_EXAMPLE: Record<string, ExpectedManagerCall> = {
   'describir punto 100, 200': call('describePointElement', '', 100, 200),
   'describe point 150, 300': call('describePointElement', '', 150, 300),
   'qué hay en 200, 400': call('describePointElement', '', 200, 400),
+  'tap element "Play"': call('tapElement', '', 'Play', 'AXLabel'),
+  'tap element Settings': call('tapElement', '', 'Settings', 'AXLabel'),
+  'tap element with id "fixtureSecondaryButton"': call('tapElement', '', 'fixtureSecondaryButton', 'AXUniqueId'),
+  'activate element by id loginButton': call('tapElement', '', 'loginButton', 'AXUniqueId'),
+  'tocar elemento "Reproducir"': call('tapElement', '', 'Reproducir', 'AXLabel'),
+  'pulsar elemento con id "fixtureSecondaryButton"': call('tapElement', '', 'fixtureSecondaryButton', 'AXUniqueId'),
 
   // Capture and logging commands
   'capturar pantalla': call('takeScreenshot', '', undefined),
@@ -416,6 +423,7 @@ describe('Command wiring (parser -> orchestrator -> IDB manager)', () => {
 
   it.each([
     ['press remote select', 'pressRemote'],
+    ['tap element "Play"', 'tapElement'],
     ['describe all elements', 'describeAllElements'],
     ['describe point 150, 300', 'describePointElement'],
     ['record video /tmp/out.mp4', 'startVideoRecording'],

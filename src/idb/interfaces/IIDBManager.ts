@@ -107,6 +107,8 @@ export interface CrashLogInfo {
   path: string;
 }
 
+export type AccessibilityMatchKey = 'AXLabel' | 'AXUniqueId';
+
 export interface AccessibilityInfo {
   identifier?: string;
   label?: string;
@@ -118,6 +120,8 @@ export interface AccessibilityInfo {
   };
   type?: string;
   value?: string;
+  focused?: boolean;
+  enabled?: boolean;
   children?: AccessibilityInfo[];
 }
 
@@ -369,6 +373,18 @@ export interface IIDBManager {
     x: number,
     y: number
   ): Promise<AccessibilityInfo | null>;
+
+  /**
+   * Activates an accessibility element matched by label or unique identifier
+   * @param sessionId Session ID of the simulator
+   * @param marker Accessibility label or unique identifier to match
+   * @param matchKey Attribute to match against ('AXLabel' default, or 'AXUniqueId')
+   */
+  tapElement?(
+    sessionId: string,
+    marker: string,
+    matchKey?: AccessibilityMatchKey
+  ): Promise<void>;
 
   // === Screenshots and Logs ===
 

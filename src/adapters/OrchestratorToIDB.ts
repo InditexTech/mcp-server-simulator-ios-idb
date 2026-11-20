@@ -231,6 +231,11 @@ export class OrchestratorToIDB {
           result = await this.requireMethod('describePointElement')(sid, params.x, params.y);
           break;
 
+        case CommandType.TAP_ELEMENT:
+          await this.requireMethod('tapElement')(sid, params.marker, params.matchKey);
+          result = { marker: params.marker, matchKey: params.matchKey ?? 'AXLabel' };
+          break;
+
         case CommandType.START_VIDEO_RECORDING:
           result = await this.requireMethod('startVideoRecording')(sid, params.outputPath);
           break;

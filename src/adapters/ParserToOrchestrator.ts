@@ -57,6 +57,7 @@ export class ParserToOrchestrator {
       // Accessibility commands
       'describe elements': CommandType.DESCRIBE_ALL_ELEMENTS,
       'describe point': CommandType.DESCRIBE_POINT_ELEMENT,
+      'tap element': CommandType.TAP_ELEMENT,
 
       // Capture and logging commands
       'capture screen': CommandType.TAKE_SCREENSHOT,
@@ -112,6 +113,8 @@ export class ParserToOrchestrator {
       'deslizar': CommandType.SWIPE,
       'pulsar mando': CommandType.PRESS_REMOTE,
       'presionar mando': CommandType.PRESS_REMOTE,
+      'tocar elemento': CommandType.TAP_ELEMENT,
+      'pulsar elemento': CommandType.TAP_ELEMENT,
       
       // Screenshot and logs commands
       'capturar pantalla': CommandType.TAKE_SCREENSHOT,
