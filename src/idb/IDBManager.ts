@@ -14,6 +14,7 @@ import {
   AppInfo, 
   SessionConfig,
   ButtonType,
+  RemoteAction,
   DeviceOrientation,
   DisplayRole,
   SimulatorDisplayInfo,
@@ -33,6 +34,27 @@ const VALID_ORIENTATIONS = new Set<DeviceOrientation>([
   'PORTRAIT_UPSIDE_DOWN',
   'LANDSCAPE_LEFT',
   'LANDSCAPE_RIGHT'
+]);
+
+const VALID_BUTTONS = new Set<ButtonType>([
+  'APPLE_PAY',
+  'HOME',
+  'LOCK',
+  'SIDE_BUTTON',
+  'SIRI',
+  'PLAY_PAUSE',
+  'VOLUME_UP',
+  'VOLUME_DOWN',
+  'EJECT'
+]);
+
+const VALID_REMOTE_ACTIONS = new Set<RemoteAction>([
+  'up',
+  'down',
+  'left',
+  'right',
+  'select',
+  'menu'
 ]);
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -1204,7 +1226,21 @@ export class IDBManager implements IIDBManager {
 
   async pressButton(sessionId: string, button: ButtonType, duration?: number): Promise<void> {
     const udid = this.requireSessionUDID(sessionId);
+    if (!VALID_BUTTONS.has(button)) {
+      throw new Error(`Invalid device button: ${button}`);
+    }
     const args = ['ui', 'button', button];
+    if (duration) args.push('--duration', String(duration / 1000));
+    args.push('--udid', udid);
+    await this.executeIDBCommand(args);
+  }
+
+  async pressRemote(sessionId: string, action: RemoteAction, duration?: number): Promise<void> {
+    const udid = this.requireSessionUDID(sessionId);
+    if (!VALID_REMOTE_ACTIONS.has(action)) {
+      throw new Error(`Invalid Siri Remote action: ${action}`);
+    }
+    const args = ['ui', 'remote', action];
     if (duration) args.push('--duration', String(duration / 1000));
     args.push('--udid', udid);
     await this.executeIDBCommand(args);

@@ -202,6 +202,11 @@ export class OrchestratorToIDB {
           result = { button: params.button };
           break;
 
+        case CommandType.PRESS_REMOTE:
+          await this.requireMethod('pressRemote')(sid, params.action, params.duration);
+          result = { action: params.action };
+          break;
+
         case CommandType.INPUT_TEXT:
           await this.requireMethod('inputText')(sid, params.text);
           result = { text: params.text };

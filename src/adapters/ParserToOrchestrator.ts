@@ -49,6 +49,7 @@ export class ParserToOrchestrator {
       'tap': CommandType.TAP,
       'swipe': CommandType.SWIPE,
       'press device button': CommandType.PRESS_BUTTON,
+      'press remote': CommandType.PRESS_REMOTE,
       'input text': CommandType.INPUT_TEXT,
       'press key': CommandType.PRESS_KEY,
       'press key sequence': CommandType.PRESS_KEY_SEQUENCE,
@@ -109,6 +110,8 @@ export class ParserToOrchestrator {
       'tocar': CommandType.TAP,
       'pulsar': CommandType.TAP,
       'deslizar': CommandType.SWIPE,
+      'pulsar mando': CommandType.PRESS_REMOTE,
+      'presionar mando': CommandType.PRESS_REMOTE,
       
       // Screenshot and logs commands
       'capturar pantalla': CommandType.TAKE_SCREENSHOT,
@@ -223,6 +226,13 @@ export class ParserToOrchestrator {
       case CommandType.SET_HINGE_ANGLE:
         if (parameters.angle !== undefined) {
           parameters.angle = Number(parameters.angle);
+        }
+        break;
+
+      case CommandType.PRESS_BUTTON:
+      case CommandType.PRESS_REMOTE:
+        if (parameters.duration !== undefined) {
+          parameters.duration = Number(parameters.duration);
         }
         break;
     }

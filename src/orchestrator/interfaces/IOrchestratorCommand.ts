@@ -32,6 +32,7 @@ export enum CommandType {
   TAP = 'tap',
   SWIPE = 'swipe',
   PRESS_BUTTON = 'pressButton',
+  PRESS_REMOTE = 'pressRemote',
   INPUT_TEXT = 'inputText',
   PRESS_KEY = 'pressKey',
   PRESS_KEY_SEQUENCE = 'pressKeySequence',

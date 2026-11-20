@@ -31,7 +31,18 @@ export interface SessionConfig {
   autoboot?: boolean;
 }
 
-export type ButtonType = 'APPLE_PAY' | 'HOME' | 'LOCK' | 'SIDE_BUTTON' | 'SIRI';
+export type ButtonType =
+  | 'APPLE_PAY'
+  | 'HOME'
+  | 'LOCK'
+  | 'SIDE_BUTTON'
+  | 'SIRI'
+  | 'PLAY_PAUSE'
+  | 'VOLUME_UP'
+  | 'VOLUME_DOWN'
+  | 'EJECT';
+
+export type RemoteAction = 'up' | 'down' | 'left' | 'right' | 'select' | 'menu';
 
 export type DeviceOrientation =
   | 'PORTRAIT'
@@ -293,6 +304,18 @@ export interface IIDBManager {
   pressButton?(
     sessionId: string,
     button: ButtonType,
+    duration?: number
+  ): Promise<void>;
+
+  /**
+   * Sends a Siri Remote focus-navigation action (tvOS)
+   * @param sessionId Session ID of the simulator
+   * @param action Siri Remote action ('up' | 'down' | 'left' | 'right' | 'select' | 'menu')
+   * @param duration Press duration in milliseconds (optional)
+   */
+  pressRemote?(
+    sessionId: string,
+    action: RemoteAction,
     duration?: number
   ): Promise<void>;
 

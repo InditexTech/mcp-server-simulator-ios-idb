@@ -52,6 +52,7 @@ const MANAGER_METHODS = [
   'tap',
   'swipe',
   'pressButton',
+  'pressRemote',
   'inputText',
   'pressKey',
   'pressKeySequence',
@@ -199,8 +200,16 @@ const EXPECTED_BY_EXAMPLE: Record<string, ExpectedManagerCall> = {
   'pulsar botón del dispositivo SIRI': call('pressButton', '', 'SIRI', undefined),
   'presionar botón físico HOME': call('pressButton', '', 'HOME', undefined),
   'press device button HOME': call('pressButton', '', 'HOME', undefined),
+  'press device button PLAY_PAUSE': call('pressButton', '', 'PLAY_PAUSE', undefined),
   'push device button SIRI': call('pressButton', '', 'SIRI', undefined),
   'tap device button LOCK': call('pressButton', '', 'LOCK', undefined),
+  'press remote up': call('pressRemote', '', 'up', undefined),
+  'press remote select': call('pressRemote', '', 'select', undefined),
+  'remote menu': call('pressRemote', '', 'menu', undefined),
+  'press siri remote down with duration 250': call('pressRemote', '', 'down', 250),
+  'pulsar mando arriba': call('pressRemote', '', 'up', undefined),
+  'presionar seleccionar en el mando': call('pressRemote', '', 'select', undefined),
+  'pulsar menú del mando': call('pressRemote', '', 'menu', undefined),
   'introducir texto Hola mundo': call('inputText', '', 'Hola mundo'),
   'escribir texto Prueba de texto': call('inputText', '', 'Prueba de texto'),
   'input text Hello world': call('inputText', '', 'Hello world'),
@@ -406,6 +415,7 @@ describe('Command wiring (parser -> orchestrator -> IDB manager)', () => {
   );
 
   it.each([
+    ['press remote select', 'pressRemote'],
     ['describe all elements', 'describeAllElements'],
     ['describe point 150, 300', 'describePointElement'],
     ['record video /tmp/out.mp4', 'startVideoRecording'],

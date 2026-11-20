@@ -1739,4 +1739,51 @@ describe('IDBManager', () => {
     await manager.tap(customSession, 5, 6);
     expect(executeCommand).toHaveBeenCalledWith('idb', ['ui', 'tap', '5', '6', '--udid', 'custom-sim']);
   });
+
+  it('sends Siri Remote focus actions and extended hardware buttons via idb', async () => {
+    const manager = new IDBManager();
+    manager['sessions'].set('tv-session', 'tv-udid');
+    const executeCommand = jest
+      .spyOn(manager as any, 'executeCommand')
+      .mockResolvedValue('');
+
+    await expect(manager.pressRemote('ghost-session', 'select'))
+      .rejects.toThrow('Session not found: ghost-session');
+    await expect(manager.pressRemote('tv-session', 'diagonal' as any))
+      .rejects.toThrow('Invalid Siri Remote action: diagonal');
+    await expect(manager.pressButton('tv-session', 'POWER_OFF' as any))
+      .rejects.toThrow('Invalid device button: POWER_OFF');
+
+    for (const action of ['up', 'down', 'left', 'right', 'select', 'menu'] as const) {
+      await manager.pressRemote('tv-session', action);
+      expect(executeCommand).toHaveBeenCalledWith('idb', ['ui', 'remote', action, '--udid', 'tv-udid']);
+    }
+
+    await manager.pressRemote('tv-session', 'select', 350);
+    expect(executeCommand).toHaveBeenCalledWith('idb', [
+      'ui',
+      'remote',
+      'select',
+      '--duration',
+      '0.35',
+      '--udid',
+      'tv-udid'
+    ]);
+
+    for (const button of ['PLAY_PAUSE', 'VOLUME_UP', 'VOLUME_DOWN', 'EJECT'] as const) {
+      await manager.pressButton('tv-session', button);
+      expect(executeCommand).toHaveBeenCalledWith('idb', ['ui', 'button', button, '--udid', 'tv-udid']);
+    }
+
+    await manager.pressButton('tv-session', 'PLAY_PAUSE', 500);
+    expect(executeCommand).toHaveBeenCalledWith('idb', [
+      'ui',
+      'button',
+      'PLAY_PAUSE',
+      '--duration',
+      '0.5',
+      '--udid',
+      'tv-udid'
+    ]);
+  });
 });
