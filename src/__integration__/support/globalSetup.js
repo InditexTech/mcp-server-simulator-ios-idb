@@ -78,6 +78,7 @@ export default async function globalSetup() {
         name: created.name,
         runtime: created.runtime,
         deviceType: created.deviceType,
+        platform: created.platform,
         beforeInventory: beforeInventory.map(d => ({ udid: d.udid, state: d.state })),
         stateDir
       });

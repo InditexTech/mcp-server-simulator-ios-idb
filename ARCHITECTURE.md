@@ -58,7 +58,7 @@ serialized as JSON text content; on thrown errors the tool responds with
 | IDB gateway | `src/idb/IDBManager.ts` | Implements `IIDBManager`. Resolves session→UDID internally; shells out via `execFileAsync` only. |
 
 Key interfaces live in:
-- `src/idb/interfaces/IIDBManager.ts` — `IIDBManager`, `SimulatorInfo`, `AppInfo`, `SessionConfig`, `ButtonType`, `AccessibilityInfo`, `CrashLogInfo`.
+- `src/idb/interfaces/IIDBManager.ts` — `IIDBManager`, `SimulatorPlatform`, `SimulatorInfo`, `AppInfo`, `SessionConfig`, `ButtonType`, `RemoteAction`, `AccessibilityMatchKey`, `AccessibilityInfo`, `CrashLogInfo`.
 - `src/parser/interfaces/IParser.ts` — `IParser`, `ParseResult`, `ValidationResult`.
 - `src/orchestrator/interfaces/IOrchestratorCommand.ts` — `IOrchestratorCommand`, `CommandType`, `CommandResult`, `CommandContext`, `SequenceCommand`, `ConditionalCommand`, `CommandFactory`.
 
@@ -72,10 +72,9 @@ There are two distinct pieces of session state; do not conflate them:
   invalidated on failure or `ENOENT`), picks a UDID (matching `config.deviceName`
   case-insensitively against simulator names — a UDID is accepted too for
   ambiguous names — with optionally required `platformVersion`, from
-  `xcrun simctl list devices --json`; if no name is given, Boots simulators
-  are preferred and the first available one otherwise), boots it only when not
-  already `Booted` (`autoboot !== false`), and stores a generated `session_<timestamp>_<counter>` **as the map key**, with the UDID as its
-  value. Every later manager method (`installApp`, `launchApp`, `tap`,
+  `xcrun simctl list devices --json`, skipping `isAvailable: false` entries; if no name or platform is given, booted `iOS` simulators
+  are preferred first and Shutdown `iOS` simulators next so coexisting `tvOS`/`watchOS` runtimes do not hijack default sessions), boots it only when not
+  already `Booted` (`autoboot !== false`), and stores a generated `session_<timestamp>_<counter>` **as the map key**, with the UDID and resolved platform family (`ios` / `tvos` / …) tracked internally. Coordinate touch (`tap`, `swipe`) and mobile posture (`setHingeAngle`, `setOrientation`) operations fail fast on `tvos` sessions with guidance toward Siri Remote (`pressRemote`) and accessibility element activation (`tapElement`). Native macOS / Mac Catalyst UI automation is outside this architecture because CoreSimulator provides no macOS simulator and `idb_companion`'s `MacDevice` omits HID, accessibility, screenshots, video, and log streaming. Every later manager method (`installApp`, `launchApp`, `tap`,
   `takeScreenshot`, …) looks the UDID up by `sessionId` key and throws
   `Session not found: ${sessionId}` if absent.
   By-UDID variants (`bootSimulatorByUDID`, `shutdownSimulatorByUDID`) bypass

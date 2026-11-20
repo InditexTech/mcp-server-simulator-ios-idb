@@ -2,11 +2,11 @@
 
 [![MCP Server](https://glama.ai/mcp/servers/@InditexTech/mcp-server-simulator-ios-idb/badge)](https://glama.ai/mcp/servers/@InditexTech/mcp-server-simulator-ios-idb)
 
-A Model Context Protocol (MCP) server that enables LLMs to interact with iOS simulators through natural language commands.
+A Model Context Protocol (MCP) server that enables LLMs to interact with **iOS and tvOS simulators** through natural language commands.
 
 ## ℹ️ Overview
 
-This MCP server provides a bridge between Large Language Models (LLMs) and iOS simulators, offering comprehensive control through natural language commands. Here's what it can do:
+This MCP server provides a bridge between Large Language Models (LLMs) and Apple's CoreSimulator targets (**iOS** and **tvOS** simulators), offering comprehensive control through natural language commands. Here's what it can do:
 
 For detailed usage, see the Installation guide and Supported Commands sections. You can use this server either through direct MCP integration or as a standalone library.
 
@@ -27,10 +27,10 @@ Check out the Architecture section to understand how the components work togethe
 - Handle app permissions and configurations
 
 ### 🖱️ UI Interaction & Testing
-- Interact with the simulator UI
-- Execute tap, swipe, and button press actions
+- Interact with the simulator UI across touch (iOS) and focus-based (tvOS) interfaces
+- Execute coordinate tap/swipe (iOS), Siri Remote navigation (`up`, `down`, `left`, `right`, `select`, `menu`), and hardware button presses (including `PLAY_PAUSE`, `VOLUME_UP`, `VOLUME_DOWN`, `EJECT`)
 - Input text and key sequences
-- Access accessibility elements for UI testing
+- Inspect focus-aware accessibility hierarchies (`focused`, `enabled`) and activate elements directly by label or identifier
 - Record videos of UI interactions
 
 ### 🛠️ Development & Debugging
@@ -57,7 +57,9 @@ Check out the Architecture section to understand how the components work togethe
 - **Node.js**: v24.22.1 LTS or later (CI uses 24.22.1)
 - **npm**: v12.2.0 (install with `npm install --global npm@12.2.0` after selecting Node)
 - **Homebrew**: Required for installing dependencies
-- **Xcode**: 26 or later, selected as the active developer directory, with iOS simulators installed
+- **Xcode**: 26 or later, selected as the active developer directory, with iOS simulators installed (install the optional **tvOS** Simulator runtime via `xcodebuild -downloadPlatform tvOS` when targeting Apple TV simulators)
+
+> **Platform scope (iOS & tvOS Simulators vs. macOS):** This server automates sandboxed **CoreSimulator** targets (`iOS` and `tvOS`) through `xcrun simctl` and Meta's `idb` (`FBSimulatorControl` + `SimulatorFrameworkBridge-iOS` / `SimulatorFrameworkBridge-tvOS`). Native **macOS** and **Mac Catalyst** desktop applications are intentionally out of scope: CoreSimulator provides no macOS simulator, and `idb_companion`'s `MacDevice` target implements `xctest` bundle execution only (HID events, accessibility reads/actions, screenshots, video capture, and log streaming are unsupported on `MacDevice`).
 
 ## 🚀 Installation
 
@@ -92,9 +94,13 @@ npm start
 # Run tests
 npm test
 
-# Run opt-in integration tests against a real, disposable simulator
+# Run opt-in integration tests against a real, disposable iOS simulator
 # (never touch your existing simulators; requires idb + Xcode locally)
 npm run test:integration
+
+# Run opt-in integration tests against a real, disposable tvOS (Apple TV) simulator
+# (requires an installed tvOS Simulator runtime in Xcode)
+npm run test:integration:tvos
 ```
 
 The installation process will automatically:
@@ -263,20 +269,24 @@ The NLParser supports the following natural language commands:
 ### 🖱️ UI Interaction
 | Command | Description | Example |
 |---------|-------------|---------|
-| Tap | Taps at specific coordinates | "tap at 100, 200" |
-| Swipe | Performs a swipe gesture | "swipe from 100, 200 to 300, 400" |
-| Press button | Presses a device button | "press button HOME", "press button SIRI" |
+| Tap | Taps at specific coordinates (iOS touch targets) | "tap at 100, 200" |
+| Swipe | Performs a swipe gesture (iOS touch targets) | "swipe from 100, 200 to 300, 400" |
+| Press button | Presses a hardware button (`APPLE_PAY`, `HOME`, `LOCK`, `SIDE_BUTTON`, `SIRI`, `PLAY_PAUSE`, `VOLUME_UP`, `VOLUME_DOWN`, `EJECT`) | "press device button HOME", "press device button PLAY_PAUSE" |
+| Press remote | Sends a Siri Remote focus-navigation action for tvOS (`up`, `down`, `left`, `right`, `select`, `menu`) | "press remote down", "press remote select", "pulsar mando arriba" |
 | Input text | Types text via HID keyboard events | "input text Hello World" |
 | Press key | Presses a key by code | "press key 4" |
 | Press key sequence | Presses a sequence of keys | "press key sequence 4 5 6" |
+
+> **Note on tvOS focus navigation:** Apple TV simulators have no touchscreen digitizer, so coordinate `tap` and `swipe` commands are rejected with actionable guidance on tvOS sessions. Move focus with `press remote up|down|left|right|menu` and activate controls with `press remote select`. Reading the accessibility tree of an Apple TV (`describe all elements`, including `focused`) and `tap element` need an `idb` build that routes accessibility to the Apple TV's TV output; the published `idb` 1.7.8 fails those calls on tvOS with `Simulator currently reports no active integrated display` (fixed upstream in facebook/idb `81d0f6416`, after 1.7.8). `tap element` works on iOS today and will work on tvOS once the companion is updated.
 
 > **Note on `Input text` delivery semantics:** `input text` dispatches US-ANSI HID keyboard events through `idb ui text` and returns `success: true` when the events are sent to the simulator, even if no editable text control currently holds keyboard focus — focus the target field first (for example with `tap`). The parser trims leading and trailing instruction whitespace while preserving leading zeros (`0123`), mixed case (`AbC`), and interior spaces. Final text observed in UI controls also reflects target-control and simulator keyboard settings: app-level autocorrection/smart-punctuation traits, simulator hardware keyboard layout for non-alphanumeric symbols, and iOS's system-wide double-space `"."` shortcut (`KeyboardPeriodShortcut`), which converts the first pair of rapid spaces immediately after a word character into `". "` (e.g., `left   space` → `left.  space`) even when a `UITextField` disables `autocorrectionType` and smart punctuation.
 
 ### ♿ Accessibility
 | Command | Description | Example |
 |---------|-------------|---------|
-| Describe elements | Lists all accessibility elements on screen | "describe all elements", "show accessibility elements" |
+| Describe elements | Lists all accessibility elements on screen (including `focused` and `enabled` states) | "describe all elements", "show accessibility elements" |
 | Describe point | Describes accessibility element at coordinates | "describe point 100, 200", "what's at 150, 300" |
+| Tap element | Activates an accessibility element by label (`AXLabel`) or unique identifier (`AXUniqueId`) | "tap element \"Play\"", "tap element with id \"loginButton\"", "tocar elemento \"Reproducir\"" |
 
 ### 📸 Capture and Logs
 | Command | Description | Example |
@@ -383,7 +393,10 @@ never create, boot, or modify any simulator:
 ### Opt-in integration tests (real simulator)
 
 ```bash
-npm run test:integration
+npm run test:integration        # Disposable iOS (iPhone) simulator
+npm run test:integration:tvos   # Disposable tvOS (Apple TV) simulator
+# SIM_TVOS_ACCESSIBILITY=1 npm run test:integration:tvos also runs the tvOS
+# accessibility/`tap element` scenario; it needs an idb newer than 1.7.8.
 ```
 
 Runs only with the dedicated Jest config (`jest.integration.config.js`) and

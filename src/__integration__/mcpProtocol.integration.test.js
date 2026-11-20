@@ -12,13 +12,42 @@
 import { jest } from '@jest/globals';
 import { readState } from './support/state.js';
 import { listSimulators } from './support/simctl.js';
+import { resolveSimPlatform } from './support/simulatorHarness.js';
 import { startMcpServer, stopMcpServer, processInstruction } from './support/mcpClient.js';
 import { FIXTURE_BUNDLE_ID, buildFixtureApp } from './support/fixtureApp.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import os from 'node:os';
+import { createHash } from 'node:crypto';
 
 jest.setTimeout(420_000);
+
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+async function screenshotDigest(mcpClient, label) {
+  const outPath = path.join(state.stateDir, `tvos-${label}-${Date.now()}.png`);
+  const shot = await processInstruction(mcpClient, `take screenshot to ${outPath}`);
+  expect(shot.structured.success).toBe(true);
+  return createHash('sha256').update(fs.readFileSync(outPath)).digest('hex');
+}
+
+// Waits (bounded) for the screen to differ from `previous`, then lets the
+// focus animation settle and returns the settled digest as the next baseline.
+async function settledScreenChange(mcpClient, previous, label, timeoutMs = 30_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if ((await screenshotDigest(mcpClient, label)) !== previous) {
+      await sleep(1500);
+      return screenshotDigest(mcpClient, `${label}-settled`);
+    }
+    await sleep(1000);
+  }
+  return previous;
+}
+
+const ACTIVE_PLATFORM = resolveSimPlatform();
+const describeIosOnly = ACTIVE_PLATFORM === 'ios' ? describe : describe.skip;
+const describeTvosOnly = ACTIVE_PLATFORM === 'tvos' ? describe : describe.skip;
 
 let state;
 let client;
@@ -128,7 +157,7 @@ describe('screenshot has a real PNG signature', () => {
   });
 });
 
-describe('built-in app behavior', () => {
+describeIosOnly('built-in app behavior', () => {
   it('launches, lists, and terminates Safari', async () => {
     ({ client, transport } = await startMcpServer());
     await processInstruction(client, `create session with ${state.name}`);
@@ -260,93 +289,95 @@ describe('unrecognized instructions fail honestly through MCP', () => {
   });
 });
 
-describe('accessibility describe, deterministic input text, video, and debug server', () => {
-  it('verifies unfocused no-op and focused exact preservation of leading zeros, case, and consecutive spaces', async () => {
-    ({ client, transport } = await startMcpServer());
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-it-fixture-'));
-    const appPath = await buildFixtureApp(tmp);
+describe('accessibility describe, platform UI controls, video, and debug server', () => {
+  if (ACTIVE_PLATFORM === 'ios') {
+    it('verifies unfocused no-op and focused exact preservation of leading zeros, case, and consecutive spaces', async () => {
+      ({ client, transport } = await startMcpServer());
+      const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-it-fixture-'));
+      const appPath = await buildFixtureApp(tmp, { platform: 'ios' });
 
-    await processInstruction(client, `create session with ${state.name}`);
-    const installed = await processInstruction(client, `install app ${appPath}`);
-    expect(installed.structured.success).toBe(true);
-    const launched = await processInstruction(client, `launch app ${FIXTURE_BUNDLE_ID}`);
-    expect(launched.structured.success).toBe(true);
+      await processInstruction(client, `create session with ${state.name}`);
+      const installed = await processInstruction(client, `install app ${appPath}`);
+      expect(installed.structured.success).toBe(true);
+      const launched = await processInstruction(client, `launch app ${FIXTURE_BUNDLE_ID}`);
+      expect(launched.structured.success).toBe(true);
 
-    // Poll MCP `describe all elements` until both fixtureEchoLabel and fixtureTextField are visible.
-    const readinessDeadline = Date.now() + 180_000;
-    let textField = null;
-    let echoLabel = null;
-    while (Date.now() < readinessDeadline && (!textField || !echoLabel)) {
-      const described = await processInstruction(client, 'describe all elements');
-      if (described.structured?.success && Array.isArray(described.structured.data)) {
-        const flat = flattenElements(described.structured.data);
-        textField = flat.find(el => el.identifier === 'fixtureTextField') || null;
-        echoLabel = flat.find(el => el.identifier === 'fixtureEchoLabel') || null;
+      // Poll MCP `describe all elements` until both fixtureEchoLabel and fixtureTextField are visible.
+      const readinessDeadline = Date.now() + 180_000;
+      let textField = null;
+      let echoLabel = null;
+      while (Date.now() < readinessDeadline && (!textField || !echoLabel)) {
+        const described = await processInstruction(client, 'describe all elements');
+        if (described.structured?.success && Array.isArray(described.structured.data)) {
+          const flat = flattenElements(described.structured.data);
+          textField = flat.find(el => el.identifier === 'fixtureTextField') || null;
+          echoLabel = flat.find(el => el.identifier === 'fixtureEchoLabel') || null;
+        }
+        if (!textField || !echoLabel) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
       }
-      if (!textField || !echoLabel) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+      expect(defined(textField)).toBe(true);
+      expect(defined(echoLabel)).toBe(true);
+      expect(echoLabel.label).toBe('Value: ');
+
+      const centerX = Math.round(textField.frame.x + textField.frame.width / 2);
+      const centerY = Math.round(textField.frame.y + textField.frame.height / 2);
+
+      // Verify `describe point` through MCP at the text field's coordinates.
+      const pointDescribed = await processInstruction(client, `describe point ${centerX}, ${centerY}`);
+      expect(pointDescribed.structured.success).toBe(true);
+      expect(defined(pointDescribed.structured.data)).toBe(true);
+      expect(typeof pointDescribed.structured.data.frame?.width).toBe('number');
+
+      // 1. Typing BEFORE focusing the text field returns success: true (HID events sent)
+      // while leaving the unfocused field unchanged.
+      const unfocusedTyped = await processInstruction(client, 'input text unfocused999');
+      expect(unfocusedTyped.structured.success).toBe(true);
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      const afterUnfocused = await processInstruction(client, 'describe all elements');
+      expect(afterUnfocused.structured.success).toBe(true);
+      const unfocusedEcho = flattenElements(afterUnfocused.structured.data)
+        .find(el => el.identifier === 'fixtureEchoLabel');
+      expect(unfocusedEcho?.label).toBe('Value: ');
+
+      // 2. Focus the text field via MCP `tap`, wait for the software keyboard / responder,
+      // and verify exact preservation of leading zeros ("0123"), mixed case ("AbC"), and
+      // consecutive spaces ("[   ]"), plus iOS's documented system double-space "."
+      // shortcut after word characters ("left   space" -> "left.  space") even when
+      // UITextField disables autocorrection and smart punctuation.
+      const tapped = await processInstruction(client, `tap at ${centerX}, ${centerY}`);
+      expect(tapped.structured.success).toBe(true);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      const targetSample = '0123 AbC left   space';
+      const expectedUiValue = 'Value: 0123 AbC left.  space';
+      const focusedTyped = await processInstruction(client, `input text ${targetSample}`);
+      expect(focusedTyped.structured.success).toBe(true);
+
+      const echoDeadline = Date.now() + 60_000;
+      let observedLabel = null;
+      while (Date.now() < echoDeadline && observedLabel !== expectedUiValue) {
+        const described = await processInstruction(client, 'describe all elements');
+        if (described.structured?.success && Array.isArray(described.structured.data)) {
+          const currentEcho = flattenElements(described.structured.data)
+            .find(el => el.identifier === 'fixtureEchoLabel');
+          observedLabel = currentEcho?.label ?? null;
+        }
+        if (observedLabel !== expectedUiValue) {
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
       }
-    }
-    expect(defined(textField)).toBe(true);
-    expect(defined(echoLabel)).toBe(true);
-    expect(echoLabel.label).toBe('Value: ');
+      expect(observedLabel).toBe(expectedUiValue);
 
-    const centerX = Math.round(textField.frame.x + textField.frame.width / 2);
-    const centerY = Math.round(textField.frame.y + textField.frame.height / 2);
-
-    // Verify `describe point` through MCP at the text field's coordinates.
-    const pointDescribed = await processInstruction(client, `describe point ${centerX}, ${centerY}`);
-    expect(pointDescribed.structured.success).toBe(true);
-    expect(defined(pointDescribed.structured.data)).toBe(true);
-    expect(typeof pointDescribed.structured.data.frame?.width).toBe('number');
-
-    // 1. Typing BEFORE focusing the text field returns success: true (HID events sent)
-    // while leaving the unfocused field unchanged.
-    const unfocusedTyped = await processInstruction(client, 'input text unfocused999');
-    expect(unfocusedTyped.structured.success).toBe(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    const afterUnfocused = await processInstruction(client, 'describe all elements');
-    expect(afterUnfocused.structured.success).toBe(true);
-    const unfocusedEcho = flattenElements(afterUnfocused.structured.data)
-      .find(el => el.identifier === 'fixtureEchoLabel');
-    expect(unfocusedEcho?.label).toBe('Value: ');
-
-    // 2. Focus the text field via MCP `tap`, wait for the software keyboard / responder,
-    // and verify exact preservation of leading zeros ("0123"), mixed case ("AbC"), and
-    // consecutive spaces ("[   ]"), plus iOS's documented system double-space "."
-    // shortcut after word characters ("left   space" -> "left.  space") even when
-    // UITextField disables autocorrection and smart punctuation.
-    const tapped = await processInstruction(client, `tap at ${centerX}, ${centerY}`);
-    expect(tapped.structured.success).toBe(true);
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    const targetSample = '0123 AbC left   space';
-    const expectedUiValue = 'Value: 0123 AbC left.  space';
-    const focusedTyped = await processInstruction(client, `input text ${targetSample}`);
-    expect(focusedTyped.structured.success).toBe(true);
-
-    const echoDeadline = Date.now() + 60_000;
-    let observedLabel = null;
-    while (Date.now() < echoDeadline && observedLabel !== expectedUiValue) {
-      const described = await processInstruction(client, 'describe all elements');
-      if (described.structured?.success && Array.isArray(described.structured.data)) {
-        const currentEcho = flattenElements(described.structured.data)
-          .find(el => el.identifier === 'fixtureEchoLabel');
-        observedLabel = currentEcho?.label ?? null;
-      }
-      if (observedLabel !== expectedUiValue) {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-      }
-    }
-    expect(observedLabel).toBe(expectedUiValue);
-
-    await processInstruction(client, `terminate app ${FIXTURE_BUNDLE_ID}`);
-  });
+      await processInstruction(client, `terminate app ${FIXTURE_BUNDLE_ID}`);
+    });
+  }
 
   it('records an MP4 video file and manages debug server start/status/stop', async () => {
     ({ client, transport } = await startMcpServer());
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-it-fixture-'));
-    const appPath = await buildFixtureApp(tmp);
+    const appPath = await buildFixtureApp(tmp, { platform: ACTIVE_PLATFORM });
     const videoPath = path.join(state.stateDir, `recording-${Date.now()}.mp4`);
 
     await processInstruction(client, `create session with ${state.name}`);
@@ -384,11 +415,146 @@ describe('accessibility describe, deterministic input text, video, and debug ser
   });
 });
 
+describeTvosOnly('tvOS Siri Remote navigation, hardware buttons, and touch/posture guardrails', () => {
+  // The always-on tvOS journey proves behavior from the pixels a user would see:
+  // accessibility reads on an Apple TV need an idb build that routes to its TV
+  // output (upstream facebook/idb 81d0f6416, after v1.7.8), so they are covered
+  // by the opt-in scenario below instead of gating the whole tvOS pass.
+  it('moves focus and activates controls with the Siri Remote, accepts media buttons, and rejects touch/posture commands', async () => {
+    ({ client, transport } = await startMcpServer());
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-it-tvos-fixture-'));
+    const appPath = await buildFixtureApp(tmp, { platform: 'tvos' });
+
+    await processInstruction(client, `create session with ${state.name}`);
+    const installed = await processInstruction(client, `install app ${appPath}`);
+    expect(installed.structured.success).toBe(true);
+    const launched = await processInstruction(client, `launch app ${FIXTURE_BUNDLE_ID}`);
+    expect(launched.structured.success).toBe(true);
+    await sleep(4000);
+    const baseline = await screenshotDigest(client, 'initial');
+
+    // Touch and mobile-posture commands fail honestly with actionable guidance.
+    for (const instruction of ['tap at 100, 200', 'swipe from 100, 100 to 300, 300', 'set orientation to landscape left']) {
+      const rejected = await processInstruction(client, instruction);
+      expect(rejected.structured.success).toBe(false);
+      expect(rejected.structured.error).toMatch(/not supported on tvOS simulators/i);
+    }
+
+    // Focus moves from Primary Action to Secondary Action.
+    const movedDown = await processInstruction(client, 'press remote down');
+    expect(movedDown.structured.success).toBe(true);
+    const afterDown = await settledScreenChange(client, baseline, 'after-down');
+    expect(afterDown).not.toBe(baseline);
+
+    // Selecting the focused control updates the fixture's status label.
+    const selected = await processInstruction(client, 'press remote select');
+    expect(selected.structured.success).toBe(true);
+    const afterSelect = await settledScreenChange(client, afterDown, 'after-select');
+    expect(afterSelect).not.toBe(afterDown);
+
+    // Spanish phrasing moves focus back up.
+    const movedUp = await processInstruction(client, 'pulsar mando arriba');
+    expect(movedUp.structured.success).toBe(true);
+    const afterUp = await settledScreenChange(client, afterSelect, 'after-up');
+    expect(afterUp).not.toBe(afterSelect);
+
+    const playPause = await processInstruction(client, 'press device button PLAY_PAUSE');
+    expect(playPause.structured.success).toBe(true);
+    const menu = await processInstruction(client, 'press remote menu');
+    expect(menu.structured.success).toBe(true);
+
+    await processInstruction(client, `terminate app ${FIXTURE_BUNDLE_ID}`);
+  });
+});
+
+// Opt-in: requires an idb build that routes accessibility to an Apple TV's TV
+// output. idb 1.7.8 fails these reads with "no active integrated display".
+const itTvosAccessibility = process.env.SIM_TVOS_ACCESSIBILITY === '1' ? it : it.skip;
+describeTvosOnly('tvOS accessibility focus state and element tap (needs idb with tvOS display routing)', () => {
+  itTvosAccessibility('reports focused state, follows Siri Remote focus, and activates elements by label', async () => {
+    ({ client, transport } = await startMcpServer());
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-it-tvos-fixture-'));
+    const appPath = await buildFixtureApp(tmp, { platform: 'tvos' });
+    await processInstruction(client, `create session with ${state.name}`);
+    expect((await processInstruction(client, `install app ${appPath}`)).structured.success).toBe(true);
+    expect((await processInstruction(client, `launch app ${FIXTURE_BUNDLE_ID}`)).structured.success).toBe(true);
+
+    const find = async predicate => {
+      const described = await processInstruction(client, 'describe all elements');
+      return described.structured?.success ? flattenElements(described.structured.data).find(predicate) ?? null : null;
+    };
+    const waitFor = async (predicate, timeoutMs = 60_000) => {
+      const deadline = Date.now() + timeoutMs;
+      let found = null;
+      while (Date.now() < deadline && !found) {
+        found = await find(predicate);
+        if (!found) await sleep(1500);
+      }
+      return found;
+    };
+
+    const primary = await waitFor(el => el.identifier === 'fixturePrimaryButton');
+    expect(defined(primary)).toBe(true);
+    expect(primary.focused).toBe(true);
+
+    expect((await processInstruction(client, 'press remote down')).structured.success).toBe(true);
+    expect(defined(await waitFor(el => el.identifier === 'fixtureSecondaryButton' && el.focused === true))).toBe(true);
+
+    expect((await processInstruction(client, 'tap element "Primary Action"')).structured.success).toBe(true);
+    expect(defined(await waitFor(el => el.identifier === 'fixtureStatusLabel' && el.label === 'Status: primary'))).toBe(true);
+
+    expect((await processInstruction(client, 'tap element with id "fixtureSecondaryButton"')).structured.success).toBe(true);
+    expect(defined(await waitFor(el => el.identifier === 'fixtureStatusLabel' && el.label === 'Status: secondary'))).toBe(true);
+
+    await processInstruction(client, `terminate app ${FIXTURE_BUNDLE_ID}`);
+  });
+});
+
+describeIosOnly('element-targeted tap on iOS', () => {
+  it('focuses the fixture text field by accessibility id (no coordinates) and types into it', async () => {
+    ({ client, transport } = await startMcpServer());
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-it-fixture-'));
+    const appPath = await buildFixtureApp(tmp, { platform: 'ios' });
+    await processInstruction(client, `create session with ${state.name}`);
+    expect((await processInstruction(client, `install app ${appPath}`)).structured.success).toBe(true);
+    expect((await processInstruction(client, `launch app ${FIXTURE_BUNDLE_ID}`)).structured.success).toBe(true);
+
+    const readyDeadline = Date.now() + 180_000;
+    let ready = false;
+    while (Date.now() < readyDeadline && !ready) {
+      const described = await processInstruction(client, 'describe all elements');
+      ready = Boolean(described.structured?.success &&
+        flattenElements(described.structured.data).some(el => el.identifier === 'fixtureTextField'));
+      if (!ready) await sleep(2000);
+    }
+    expect(ready).toBe(true);
+
+    const tapped = await processInstruction(client, 'tap element with id "fixtureTextField"');
+    expect(tapped.structured.success).toBe(true);
+    expect(tapped.structured.data).toEqual({ marker: 'fixtureTextField', matchKey: 'AXUniqueId' });
+    await sleep(2000);
+
+    expect((await processInstruction(client, 'input text abc')).structured.success).toBe(true);
+    const echoDeadline = Date.now() + 60_000;
+    let echo = null;
+    while (Date.now() < echoDeadline && echo !== 'Value: abc') {
+      const described = await processInstruction(client, 'describe all elements');
+      if (described.structured?.success) {
+        echo = flattenElements(described.structured.data).find(el => el.identifier === 'fixtureEchoLabel')?.label ?? null;
+      }
+      if (echo !== 'Value: abc') await sleep(1500);
+    }
+    expect(echo).toBe('Value: abc');
+
+    await processInstruction(client, `terminate app ${FIXTURE_BUNDLE_ID}`);
+  });
+});
+
 describe('fixture app install/uninstall and verification commands', () => {
   it('installs the fixture, reports its real bundle id, and answers natural-language verification checks', async () => {
     ({ client, transport } = await startMcpServer());
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-it-fixture-'));
-    const appPath = await buildFixtureApp(tmp);
+    const appPath = await buildFixtureApp(tmp, { platform: ACTIVE_PLATFORM });
 
     await processInstruction(client, `create session with ${state.name}`);
 
