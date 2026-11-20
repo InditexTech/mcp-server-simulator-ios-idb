@@ -1,0 +1,25 @@
+README.md
+  s_a80d1753c23751::t_44e92cd61b4b1d 17-37
+REUSE.toml
+  s_a80d1753c23751::t_01e5f9e685b7ff 57-61
+demo/tvos/demo-tvos.mjs
+  s_a80d1753c23751::t_e1d2a5b95b176d 1-64
+demo/tvos/transcript.md
+  s_a80d1753c23751::t_86361c19de7ed2 1-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "1429857857ac58e644706c99cd8a2775636c8ae8",
+  "prompts": {},
+  "sessions": {
+    "s_a80d1753c23751": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e0c718032ffeqUU7RoK0t4sGJe",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
