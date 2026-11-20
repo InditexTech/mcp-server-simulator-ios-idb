@@ -1,0 +1,31 @@
+README.md
+  s_a80d1753c23751::t_397b4c9b41b567 5,9,30-31,33,60-62,97,100-103,272-275,280-281,287,289,396-399
+src/__integration__/mcpProtocol.integration.test.js
+  s_a80d1753c23751::t_f51f351a50181b 15,21,25-51,160,292-318,320-369,371,373-375,380,418-552,557
+src/__tests__/simulatorHarnessCleanup.test.ts
+  s_8e7cd8d8c1ba21::t_512c73b34f4ab5 894-958
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "890d0b95e5483e72ed5c8dd055c80760db2ad766",
+  "prompts": {},
+  "sessions": {
+    "s_8e7cd8d8c1ba21": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e16c43f7bffe55fF78GuXI3IoA",
+        "model": "inditex/KAIA/glm-5.3-flash"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    },
+    "s_a80d1753c23751": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e0c718032ffeqUU7RoK0t4sGJe",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
