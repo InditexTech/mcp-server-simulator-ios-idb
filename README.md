@@ -14,6 +14,27 @@ Check out the Architecture section to understand how the components work togethe
 
 ![demo](demo/demo.gif)
 
+### 📺 tvOS demo (real Apple TV simulator)
+
+Recorded against a disposable Apple TV simulator by sending natural-language instructions to the MCP server. Left to right, top to bottom: the focus starts on *Primary Action* (`Status: idle`); `press remote down` moves it to *Secondary Action*; `press remote select` activates it (`Status: secondary`); `pulsar mando arriba` moves it back; `press remote select` activates *Primary* (`Status: primary`); `press remote menu` returns to the tvOS home screen.
+
+![tvOS demo contact sheet](demo/tvos/contact-sheet.png)
+
+![tvOS demo](demo/tvos/tvos-demo.gif)
+
+- [Full video (MP4)](demo/tvos/tvos-demo.mp4)
+- [Instruction transcript](demo/tvos/transcript.md), including the honest rejection of `tap`, `swipe` and `set orientation` on a device without a touchscreen.
+
+Reproduce it (requires Xcode, a tvOS Simulator runtime and `idb`; the script creates and deletes its own disposable simulator):
+
+```bash
+npm ci && npm run build
+xcodebuild -downloadPlatform tvOS   # once, if no tvOS runtime is installed
+node demo/tvos/demo-tvos.mjs ./tvos-demo-out
+```
+
+Accessibility reads (`focused`) and `tap element` on tvOS are not part of this demo; see the note on `idb` 1.7.8 under *Supported Commands*.
+
 ### 🎮 Simulator Control
 - Create and manage simulator sessions
 - Boot, shutdown, and monitor simulator states
