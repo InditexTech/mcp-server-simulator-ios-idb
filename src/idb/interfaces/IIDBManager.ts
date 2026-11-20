@@ -8,6 +8,8 @@
  * using the idb tool (https://fbidb.io/docs/commands).
  */
 
+export type SimulatorPlatform = 'ios' | 'tvos' | 'watchos' | 'visionos' | 'unknown';
+
 export interface SimulatorInfo {
   udid: string;
   name: string;
