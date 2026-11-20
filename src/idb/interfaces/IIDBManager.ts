@@ -8,6 +8,8 @@
  * using the idb tool (https://fbidb.io/docs/commands).
  */
 
+export type SimulatorPlatform = 'ios' | 'tvos' | 'watchos' | 'visionos' | 'unknown';
+
 export interface SimulatorInfo {
   udid: string;
   name: string;
@@ -29,7 +31,18 @@ export interface SessionConfig {
   autoboot?: boolean;
 }
 
-export type ButtonType = 'APPLE_PAY' | 'HOME' | 'LOCK' | 'SIDE_BUTTON' | 'SIRI';
+export type ButtonType =
+  | 'APPLE_PAY'
+  | 'HOME'
+  | 'LOCK'
+  | 'SIDE_BUTTON'
+  | 'SIRI'
+  | 'PLAY_PAUSE'
+  | 'VOLUME_UP'
+  | 'VOLUME_DOWN'
+  | 'EJECT';
+
+export type RemoteAction = 'up' | 'down' | 'left' | 'right' | 'select' | 'menu';
 
 export type DeviceOrientation =
   | 'PORTRAIT'
@@ -94,6 +107,8 @@ export interface CrashLogInfo {
   path: string;
 }
 
+export type AccessibilityMatchKey = 'AXLabel' | 'AXUniqueId';
+
 export interface AccessibilityInfo {
   identifier?: string;
   label?: string;
@@ -105,6 +120,8 @@ export interface AccessibilityInfo {
   };
   type?: string;
   value?: string;
+  focused?: boolean;
+  enabled?: boolean;
   children?: AccessibilityInfo[];
 }
 
@@ -295,6 +312,18 @@ export interface IIDBManager {
   ): Promise<void>;
 
   /**
+   * Sends a Siri Remote focus-navigation action (tvOS)
+   * @param sessionId Session ID of the simulator
+   * @param action Siri Remote action ('up' | 'down' | 'left' | 'right' | 'select' | 'menu')
+   * @param duration Press duration in milliseconds (optional)
+   */
+  pressRemote?(
+    sessionId: string,
+    action: RemoteAction,
+    duration?: number
+  ): Promise<void>;
+
+  /**
    * Inputs text into the simulator
    * @param sessionId Session ID of the simulator
    * @param text Text to input
@@ -344,6 +373,18 @@ export interface IIDBManager {
     x: number,
     y: number
   ): Promise<AccessibilityInfo | null>;
+
+  /**
+   * Activates an accessibility element matched by label or unique identifier
+   * @param sessionId Session ID of the simulator
+   * @param marker Accessibility label or unique identifier to match
+   * @param matchKey Attribute to match against ('AXLabel' default, or 'AXUniqueId')
+   */
+  tapElement?(
+    sessionId: string,
+    marker: string,
+    matchKey?: AccessibilityMatchKey
+  ): Promise<void>;
 
   // === Screenshots and Logs ===
 

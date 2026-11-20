@@ -35,11 +35,13 @@ describe('PR #71 regression matrix', () => {
     'tap',
     'swipe',
     'pressButton',
+    'pressRemote',
     'inputText',
     'pressKey',
     'pressKeySequence',
     'describeAllElements',
     'describePointElement',
+    'tapElement',
     'takeScreenshot',
     'startVideoRecording',
     'stopVideoRecording',
@@ -250,6 +252,8 @@ describe('PR #71 regression matrix', () => {
   // supported, and still fail explicitly without fallback when omitted by a
   // custom IIDBManager implementation.
   it.each([
+    ['press remote select', 'pressRemote'],
+    ['tap element "Play"', 'tapElement'],
     ['describe all elements', 'describeAllElements'],
     ['describe point 150, 300', 'describePointElement'],
     ['record video /tmp/out.mp4', 'startVideoRecording'],

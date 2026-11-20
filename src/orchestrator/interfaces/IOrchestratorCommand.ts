@@ -32,6 +32,7 @@ export enum CommandType {
   TAP = 'tap',
   SWIPE = 'swipe',
   PRESS_BUTTON = 'pressButton',
+  PRESS_REMOTE = 'pressRemote',
   INPUT_TEXT = 'inputText',
   PRESS_KEY = 'pressKey',
   PRESS_KEY_SEQUENCE = 'pressKeySequence',
@@ -39,6 +40,7 @@ export enum CommandType {
   // Accessibility commands
   DESCRIBE_ALL_ELEMENTS = 'describeAllElements',
   DESCRIBE_POINT_ELEMENT = 'describePointElement',
+  TAP_ELEMENT = 'tapElement',
 
   // Capture and logging commands
   TAKE_SCREENSHOT = 'takeScreenshot',

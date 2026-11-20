@@ -202,6 +202,11 @@ export class OrchestratorToIDB {
           result = { button: params.button };
           break;
 
+        case CommandType.PRESS_REMOTE:
+          await this.requireMethod('pressRemote')(sid, params.action, params.duration);
+          result = { action: params.action };
+          break;
+
         case CommandType.INPUT_TEXT:
           await this.requireMethod('inputText')(sid, params.text);
           result = { text: params.text };
@@ -224,6 +229,11 @@ export class OrchestratorToIDB {
 
         case CommandType.DESCRIBE_POINT_ELEMENT:
           result = await this.requireMethod('describePointElement')(sid, params.x, params.y);
+          break;
+
+        case CommandType.TAP_ELEMENT:
+          await this.requireMethod('tapElement')(sid, params.marker, params.matchKey);
+          result = { marker: params.marker, matchKey: params.matchKey ?? 'AXLabel' };
           break;
 
         case CommandType.START_VIDEO_RECORDING:

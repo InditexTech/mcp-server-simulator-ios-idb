@@ -891,4 +891,69 @@ describe('mcpClient stderr surfacing on unexpected server death', () => {
     expect(stderrText).toContain('[mcp-child-stderr]');
     rmSync(dir, { recursive: true, force: true });
   });
+
+  it('selects compatible iOS and tvOS simulator pairs from stubbed xcrun runtimes and rejects unknown SIM_PLATFORM', () => {
+    const dir = probeDir('harness-platform-select-');
+    const scenarioDir = path.join(dir, 'scenario');
+    mkdirSync(scenarioDir, { recursive: true });
+    writeXcrunStub(dir);
+    writeFileSync(path.join(scenarioDir, 'runtimes.json'), JSON.stringify({
+      runtimes: [
+        {
+          isAvailable: true,
+          version: '27.2',
+          identifier: 'com.apple.CoreSimulator.SimRuntime.tvOS-27-2',
+          supportedDeviceTypes: [
+            { identifier: 'com.apple.CoreSimulator.SimDeviceType.Apple-TV-4K-4th-generation-4K' },
+            { identifier: 'com.apple.CoreSimulator.SimDeviceType.Apple-TV-4K-4th-generation-1080p' }
+          ]
+        },
+        {
+          isAvailable: true,
+          version: '27.1',
+          identifier: 'com.apple.CoreSimulator.SimRuntime.iOS-27-1',
+          supportedDeviceTypes: [
+            { identifier: 'com.apple.CoreSimulator.SimDeviceType.iPhone-17' },
+            { identifier: 'com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro' }
+          ]
+        }
+      ]
+    }));
+
+    const script = `
+      const mod = await import(${JSON.stringify(new URL('../__integration__/support/simulatorHarness.js', import.meta.url).href)});
+      const iosChoice = await mod.selectCompatibleDevice('ios');
+      const tvosChoice = await mod.selectCompatibleDevice('tvos');
+      const defaultPlatform = mod.resolveSimPlatform(undefined);
+      let badErr = null;
+      try { mod.resolveSimPlatform('macos'); } catch (e) { badErr = e.message; }
+      process.stdout.write(JSON.stringify({ iosChoice, tvosChoice, defaultPlatform, badErr }));
+    `;
+    const probe = spawnSync(process.execPath, ['--experimental-vm-modules', '--input-type=module', '-e', script], {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        PATH: `${path.join(dir, 'bin')}:${process.env.PATH}`,
+        PROBE_SCENARIO: scenarioDir,
+        PROBE_LOG: path.join(dir, 'calls.log')
+      }
+    });
+    expect(probe.status).toBe(0);
+    const outcome = JSON.parse(probe.stdout);
+    expect(outcome.defaultPlatform).toBe('ios');
+    expect(outcome.iosChoice).toEqual({
+      deviceType: 'com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro',
+      runtime: 'com.apple.CoreSimulator.SimRuntime.iOS-27-1',
+      runtimeVersion: '27.1',
+      platform: 'ios'
+    });
+    expect(outcome.tvosChoice).toEqual({
+      deviceType: 'com.apple.CoreSimulator.SimDeviceType.Apple-TV-4K-4th-generation-1080p',
+      runtime: 'com.apple.CoreSimulator.SimRuntime.tvOS-27-2',
+      runtimeVersion: '27.2',
+      platform: 'tvos'
+    });
+    expect(outcome.badErr).toContain('Unsupported SIM_PLATFORM "macos"');
+    rmSync(dir, { recursive: true, force: true });
+  });
 });
