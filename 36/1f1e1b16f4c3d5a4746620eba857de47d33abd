@@ -1,0 +1,25 @@
+src/idb/__tests__/IDBManager.test.ts
+  s_2bcec98eb3d51e::t_8a47e4b627a149 1789-1875
+src/orchestrator/__tests__/CommandRegressionMatrix.test.ts
+  s_2bcec98eb3d51e::t_068019c74c4131 44,256
+src/orchestrator/__tests__/CommandWiring.test.ts
+  s_2bcec98eb3d51e::t_6b8967a76f01c4 61,237-242,426
+src/parser/__tests__/NLParser.test.ts
+  s_2bcec98eb3d51e::t_e94c80d9f8a824 275-299
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "361f1e1b16f4c3d5a4746620eba857de47d33abd",
+  "prompts": {},
+  "sessions": {
+    "s_2bcec98eb3d51e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1c2766f2ffe7zbB7MyUtgIVv3",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
