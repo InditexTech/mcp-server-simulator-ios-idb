@@ -4,6 +4,7 @@
 import { IParser, ParseResult, ValidationResult } from './interfaces/IParser.js';
 import { CommandRegistry } from './commands/CommandRegistry.js';
 import { SimulatorCommands } from './commands/SimulatorCommands.js';
+import { DeviceCommands } from './commands/DeviceCommands.js';
 import { AppCommands } from './commands/AppCommands.js';
 import { UICommands } from './commands/UICommands.js';
 import { AccessibilityCommands } from './commands/AccessibilityCommands.js';
@@ -47,6 +48,7 @@ export class NLParser implements IParser {
     
     // Register all command handlers
     this.commandRegistry.registerHandler(new SimulatorCommands());
+    this.commandRegistry.registerHandler(new DeviceCommands());
     this.commandRegistry.registerHandler(new AppCommands());
     this.commandRegistry.registerHandler(new UICommands());
     this.commandRegistry.registerHandler(new AccessibilityCommands());

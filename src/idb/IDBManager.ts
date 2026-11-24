@@ -11,6 +11,8 @@ import {
   IIDBManager, 
   SimulatorPlatform,
   SimulatorInfo, 
+  DeviceInfo,
+  DEVICE_AVAILABLE_STATE,
   AppInfo, 
   SessionConfig,
   ButtonType,
@@ -224,6 +226,30 @@ function classifySimulatorPlatform(
   return 'unknown';
 }
 
+function formatDeviceOs(osVersion: string, architecture: string): string {
+  return architecture ? `${osVersion} (${architecture})` : osVersion;
+}
+
+/** Splits `idb`'s "iOS 27.1 arm64e"-style OS version into version and arch. */
+function splitOsVersion(osVersion?: string): [string, string] {
+  const parts = (osVersion ?? '').trim().split(/\s+/);
+  const architecture = parts.length > 1 && parts[parts.length - 1].startsWith('arm') ? parts.pop()! : '';
+  const version = parts.length > 0 ? parts.join(' ') : 'Unknown';
+  return [version, architecture];
+}
+
+/** Per-target JSON of `idb list-targets --json`/`idb describe --json`. Devices
+ * additionally carry `connection` and `model`; simulators do not. */
+interface DeviceTargetInfo {  udid?: string;
+  name?: string;
+  type?: string;
+  state?: string;
+  os_version?: string;
+  architecture?: string;
+  model?: string;
+  connection?: string;
+}
+
 interface IDBAppInfo {
   bundle_id: string;
   name?: string;
@@ -263,6 +289,7 @@ const MAX_STDERR_TAIL_CHARS = 4_096;
 export class IDBManager implements IIDBManager {
   private readonly sessions: Map<string, string> = new Map(); // sessionId -> udid
   private readonly sessionPlatforms: Map<string, SimulatorPlatform> = new Map();
+  private readonly sessionKinds: Map<string, 'simulator' | 'device'> = new Map();
   private readonly activeRecordings: Map<string, ActiveVideoRecording> = new Map();
   private sessionCounter: number = 0;
   private recordingCounter: number = 0;
@@ -303,6 +330,17 @@ export class IDBManager implements IIDBManager {
       throw new Error(`Session not found: ${sessionId}`);
     }
     return udid;
+  }
+
+  /** Rejects simulator-only operations on real-device sessions. */
+  private requireSimulatorSession(sessionId: string, operation: string): string {
+    if (this.sessionKinds.get(sessionId) === 'device') {
+      throw new Error(
+        `${operation} is only supported on simulators: session ${sessionId} targets a physical device. ` +
+        'Create a simulator session for it ("create session").'
+      );
+    }
+    return this.requireSessionUDID(sessionId);
   }
 
   private assertTouchSupported(sessionId: string, operation: string): void {
@@ -467,7 +505,71 @@ export class IDBManager implements IIDBManager {
     const sessionId = this.generateSessionId();
     this.sessions.set(sessionId, selectedSimulator.udid);
     this.sessionPlatforms.set(sessionId, classifySimulatorPlatform(selectedSimulator));
+    this.sessionKinds.set(sessionId, 'simulator');
     return sessionId;
+  }
+
+  async createDeviceSession(config?: SessionConfig): Promise<string> {
+    await this.verifyIDBAvailability();
+    const devices = await this.listConnectedDevices();
+
+    let selected: DeviceInfo | undefined;
+    if (config?.deviceName) {
+      const wanted = config.deviceName.trim().toLowerCase();
+      selected = devices.find(device =>
+        device.name.toLowerCase() === wanted || device.udid.toLowerCase() === wanted
+      );
+      if (!selected) {
+        throw new Error(`No connected device found with name or UDID ${config.deviceName}`);
+      }
+    } else {
+      if (devices.length === 0) {
+        throw new Error('No connected devices found. Pair the device with this Mac and trust the computer.');
+      }
+      // Unambiguous single device: use it; otherwise ask for a name.
+      if (devices.length > 1) {
+        throw new Error(
+          'Multiple devices connected: ' + devices.map(d => `${d.name} (${d.udid})`).join(', ') +
+          '. Specify a device name or UDID.'
+        );
+      }
+      selected = devices[0];
+    }
+
+    if (selected.state !== DEVICE_AVAILABLE_STATE) {
+      throw new Error(`Device is not available: ${selected.name} (${selected.state})`);
+    }
+
+    const sessionId = this.generateSessionId();
+    this.sessions.set(sessionId, selected.udid);
+    this.sessionPlatforms.set(sessionId, 'ios');
+    this.sessionKinds.set(sessionId, 'device');
+    return sessionId;
+  }
+
+  async listConnectedDevices(): Promise<DeviceInfo[]> {
+    await this.verifyIDBAvailability();
+    const lines = await this.executeIDBCommand(['list-targets', '--only', 'device', '--json']);
+    return lines
+      .split('\n')
+      .filter(Boolean)
+      .map(line => JSON.parse(line) as DeviceTargetInfo)
+      .filter(target => target.type === 'device' && target.udid)
+      .map(target => this.toDeviceInfo(target));
+  }
+
+  private toDeviceInfo(target: DeviceTargetInfo): DeviceInfo {
+    if (!target.udid) {
+      throw new Error('Device target has no UDID');
+    }
+    return {
+      udid: target.udid,
+      name: target.name ?? 'Unknown',
+      os: formatDeviceOs(...splitOsVersion(target.os_version)),
+      deviceType: target.model ?? 'Unknown',
+      connection: target.connection?.trim().toLowerCase() ?? 'Unknown',
+      state: target.state === DEVICE_AVAILABLE_STATE ? DEVICE_AVAILABLE_STATE : 'Unknown'
+    };
   }
 
   async terminateSimulatorSession(sessionId: string): Promise<void> {
@@ -475,6 +577,7 @@ export class IDBManager implements IIDBManager {
     await this.cleanupSessionRecordings(sessionId);
     this.sessions.delete(sessionId);
     this.sessionPlatforms.delete(sessionId);
+    this.sessionKinds.delete(sessionId);
   }
 
   async listAvailableSimulators(): Promise<SimulatorInfo[]> {
@@ -517,6 +620,20 @@ export class IDBManager implements IIDBManager {
     await this.bootAndAwaitSimulator(udid);
   }
 
+  /**
+   * Guards an operation that only makes sense for a bootable target: real
+   * devices cannot be booted, shut down or focused by the host.
+   */
+  private requireBootedTargetSession(sessionId: string, operation: string): string {
+    if (this.sessionKinds.get(sessionId) === 'device') {
+      throw new Error(
+        `${operation} is not supported on real devices (the host does not control their power): ` +
+        `session ${sessionId}. Unplug the device or unpair it to disconnect.`
+      );
+    }
+    return this.requireSessionUDID(sessionId);
+  }
+
   private async bootAndAwaitSimulator(udid: string): Promise<void> {
     await this.executeCommand('xcrun', ['simctl', 'boot', udid]);
     const maxAttempts = 30;
@@ -538,7 +655,7 @@ export class IDBManager implements IIDBManager {
   }
 
   async shutdownSimulator(sessionId: string): Promise<void> {
-    const udid = this.requireSessionUDID(sessionId);
+    const udid = this.requireBootedTargetSession(sessionId, 'Shutting down');
     await this.cleanupSessionRecordings(sessionId);
     await this.shutdownSimulatorByUDID(udid);
   }
@@ -578,7 +695,21 @@ export class IDBManager implements IIDBManager {
   async tap(sessionId: string, x: number, y: number): Promise<void> {
     const udid = this.requireSessionUDID(sessionId);
     this.assertTouchSupported(sessionId, 'tap');
+    this.requireSimulatorHid(sessionId, 'A coordinate tap');
     await this.executeIDBCommand(['ui', 'tap', String(x), String(y), '--udid', udid]);
+  }
+
+  /**
+   * Rejects synthesized HID input on real devices: the host cannot inject a
+   * fake finger into an iPhone, so any such command keeps failing in idb.
+   */
+  private requireSimulatorHid(sessionId: string, operation: string): void {
+    if (this.sessionKinds.get(sessionId) === 'device') {
+      throw new Error(
+        `${operation} is not supported on real devices: the host cannot synthesize HID input on an iPhone. ` +
+        'Use accessibility element activation ("tap element ...") or drive the flow on a simulator instead.'
+      );
+    }
   }
 
   async swipe(
@@ -591,6 +722,7 @@ export class IDBManager implements IIDBManager {
   ): Promise<void> {
     const udid = this.requireSessionUDID(sessionId);
     this.assertTouchSupported(sessionId, 'swipe');
+    this.requireSimulatorHid(sessionId, 'A swipe');
     await this.executeIDBCommand([
       'ui',
       'swipe',
@@ -947,7 +1079,7 @@ export class IDBManager implements IIDBManager {
   }
 
   async setHingeAngle(sessionId: string, angle: number): Promise<HingeAngleResult> {
-    const udid = this.requireSessionUDID(sessionId);
+    const udid = this.requireSimulatorSession(sessionId, 'Hinge angle');
     this.assertMobilePostureSupported(sessionId, 'Hinge angle control');
     if (typeof angle !== 'number' || !Number.isFinite(angle) || angle < 0 || angle > 180) {
       throw new Error('Hinge angle must be a finite number between 0 and 180 degrees');
@@ -1004,7 +1136,7 @@ export class IDBManager implements IIDBManager {
   }
 
   async getPosture(sessionId: string): Promise<SimulatorPosture> {
-    const udid = this.requireSessionUDID(sessionId);
+    const udid = this.requireSimulatorSession(sessionId, 'Posture');
     const [displays, orientation] = await Promise.all([
       this.enumerateIntegratedDisplays(udid),
       this.readOrientation(udid)
@@ -1038,7 +1170,7 @@ export class IDBManager implements IIDBManager {
     orientation: DeviceOrientation,
     expectedPosture?: ExpectedPosture
   ): Promise<SimulatorPosture> {
-    const udid = this.requireSessionUDID(sessionId);
+    const udid = this.requireSimulatorSession(sessionId, 'Device orientation control');
     this.assertMobilePostureSupported(sessionId, 'Device orientation control');
     if (!VALID_ORIENTATIONS.has(orientation)) {
       throw new Error(`Invalid device orientation: ${orientation}`);
@@ -1084,6 +1216,27 @@ export class IDBManager implements IIDBManager {
     display?: string
   ): Promise<Buffer | string | LabelledScreenshot[] | SavedDisplayScreenshot[]> {
     const udid = this.requireSessionUDID(sessionId);
+    if (this.sessionKinds.get(sessionId) === 'device') {
+      if (display !== undefined) {
+        throw new Error('Display selection is only supported on simulators');
+      }
+      const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'mcp-device-screenshot-'));
+      const tempPath = path.join(tempDir, 'screenshot.png');
+      try {
+        await this.executeIDBCommand(['screenshot', '--udid', udid, '--', tempPath]);
+        if (outputPath) {
+          await fs.promises.copyFile(tempPath, outputPath);
+          return outputPath;
+        }
+        return await fs.promises.readFile(tempPath);
+      } finally {
+        try {
+          await fs.promises.rm(tempDir, { recursive: true, force: true });
+        } catch {
+          // Best-effort cleanup: do not mask a screenshot or read error.
+        }
+      }
+    }
     const normalizedSelector = display !== undefined ? this.normalizeDisplaySelector(display) : undefined;
 
     if (normalizedSelector === undefined) {
@@ -1203,9 +1356,15 @@ export class IDBManager implements IIDBManager {
   }
 
   async isSimulatorBooted(sessionId: string): Promise<boolean> {
-    const udid = this.requireSessionUDID(sessionId);
+    const udid = this.requireBootedTargetSession(sessionId, 'Booted-state check');
     const simulators = await this.listBootedSimulators();
     return simulators.some(sim => sim.udid === udid);
+  }
+
+  async isDeviceConnected(sessionId: string): Promise<boolean> {
+    const udid = this.requireSessionUDID(sessionId);
+    const devices = await this.listConnectedDevices();
+    return devices.some(device => device.udid === udid && device.state === DEVICE_AVAILABLE_STATE);
   }
 
   async isAppInstalled(sessionId: string, bundleId: string): Promise<boolean> {
@@ -1217,7 +1376,7 @@ export class IDBManager implements IIDBManager {
   }
 
   async focusSimulator(sessionId: string): Promise<void> {
-    const udid = this.requireSessionUDID(sessionId);
+    const udid = this.requireBootedTargetSession(sessionId, 'Focusing');
     await this.executeIDBCommand(['focus', '--udid', udid]);
   }
 
@@ -1241,6 +1400,7 @@ export class IDBManager implements IIDBManager {
     if (!VALID_BUTTONS.has(button)) {
       throw new Error(`Invalid device button: ${button}`);
     }
+    this.requireSimulatorHid(sessionId, 'A hardware button press');
     const args = ['ui', 'button', button];
     if (duration) args.push('--duration', String(duration / 1000));
     args.push('--udid', udid);
@@ -1248,7 +1408,7 @@ export class IDBManager implements IIDBManager {
   }
 
   async pressRemote(sessionId: string, action: RemoteAction, duration?: number): Promise<void> {
-    const udid = this.requireSessionUDID(sessionId);
+    const udid = this.requireSimulatorSession(sessionId, 'Siri Remote input');
     if (!VALID_REMOTE_ACTIONS.has(action)) {
       throw new Error(`Invalid Siri Remote action: ${action}`);
     }
@@ -1260,11 +1420,13 @@ export class IDBManager implements IIDBManager {
 
   async inputText(sessionId: string, text: string): Promise<void> {
     const udid = this.requireSessionUDID(sessionId);
+    this.requireSimulatorHid(sessionId, 'Keyboard text input');
     await this.executeIDBCommand(['ui', 'text', '--udid', udid, '--', text]);
   }
 
   async pressKey(sessionId: string, keyCode: number, duration?: number): Promise<void> {
     const udid = this.requireSessionUDID(sessionId);
+    this.requireSimulatorHid(sessionId, 'A key press');
     const args = ['ui', 'key', String(keyCode)];
     if (duration) args.push('--duration', String(duration / 1000));
     args.push('--udid', udid);
@@ -1273,6 +1435,7 @@ export class IDBManager implements IIDBManager {
 
   async pressKeySequence(sessionId: string, keyCodes: number[]): Promise<void> {
     const udid = this.requireSessionUDID(sessionId);
+    this.requireSimulatorHid(sessionId, 'A key sequence');
     await this.executeIDBCommand([
       'ui',
       'key-sequence',
@@ -1350,8 +1513,18 @@ export class IDBManager implements IIDBManager {
     ]);
   }
 
-  async startVideoRecording(sessionId: string, outputPath: string): Promise<string> {
+  async getDeviceInfo(sessionId: string): Promise<DeviceInfo> {
     const udid = this.requireSessionUDID(sessionId);
+    const output = await this.executeIDBCommand(['describe', '--udid', udid, '--json']);
+    const info = JSON.parse(output) as DeviceTargetInfo;
+    if (!info.udid) {
+      throw new Error(`Could not describe device ${udid}: ${output}`);
+    }
+    return this.toDeviceInfo(info);
+  }
+
+  async startVideoRecording(sessionId: string, outputPath: string): Promise<string> {
+    const udid = this.requireBootedTargetSession(sessionId, 'Video recording');
 
     for (const existing of this.activeRecordings.values()) {
       if (existing.sessionId === sessionId && !existing.exitResult) {

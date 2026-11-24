@@ -31,6 +31,20 @@ export interface SessionConfig {
   autoboot?: boolean;
 }
 
+/** A physical iOS device paired with the host (iPhone, iPad, ...). */
+export interface DeviceInfo {
+  udid: string;
+  name: string;
+  os: string;
+  deviceType: string;
+  /** Transport used by `idb` to reach the device (usb or network). */
+  connection: string;
+  state: 'Available' | 'Unknown';
+}
+
+/** The only state in which `idb` will service device commands. */
+export const DEVICE_AVAILABLE_STATE = 'Available' as const;
+
 export type ButtonType =
   | 'APPLE_PAY'
   | 'HOME'
@@ -183,6 +197,34 @@ export interface IIDBManager {
    * @returns true if booted, false otherwise
    */
   isSimulatorBooted(sessionId: string): Promise<boolean>;
+
+  // === Real device management ===
+
+  /**
+   * Initializes a session on a physical device paired with the host
+   * @param config Optional configuration (deviceName accepts a name or UDID)
+   * @returns Created session ID
+   */
+  createDeviceSession?(config?: SessionConfig): Promise<string>;
+
+  /**
+   * Lists real devices paired with the host
+   * @returns List of device information
+   */
+  listConnectedDevices?(): Promise<DeviceInfo[]>;
+
+  /**
+   * Verifies that a device session is still connected and available
+   * @param sessionId Session ID of the device
+   * @returns true if still connected and available
+   */
+  isDeviceConnected?(sessionId: string): Promise<boolean>;
+
+  /**
+   * Describes the real device behind a session (name, OS, connection)
+   * @param sessionId Session ID of the device
+   */
+  getDeviceInfo?(sessionId: string): Promise<DeviceInfo>;
 
   /**
    * Focuses the simulator window
