@@ -1,0 +1,21 @@
+ARCHITECTURE.md
+  s_f70df5e383f046::t_acf5db5718fc60 55,82-96
+README.md
+  s_f70df5e383f046::t_974826527a5744 280-297
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "820873519e6d17f3f3e98a5c7efed05b2176cb37",
+  "prompts": {},
+  "sessions": {
+    "s_f70df5e383f046": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_df1e64137ffeNEEzs6vVlVxJ0u",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
