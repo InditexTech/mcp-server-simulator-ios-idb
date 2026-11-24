@@ -18,6 +18,10 @@ function unquoteMarker(raw?: string): string | undefined {
   return trimmed;
 }
 
+// Shared verb + element prefix of the `tap element` patterns (by id and by label).
+const TAP_ELEMENT_EN = String.raw`^(?:tap|press|activate|select)\s+(?:the\s+)?(?:accessibility\s+)?element`;
+const TAP_ELEMENT_ES = String.raw`^(?:tocar|pulsar|activar|seleccionar)\s+(?:el\s+)?elemento(?:\s+de\s+accesibilidad)?`;
+
 export class AccessibilityCommands extends BaseCommandDefinition {
   protected definitions: CommandDefinition[] = [
     {
@@ -60,10 +64,10 @@ export class AccessibilityCommands extends BaseCommandDefinition {
     {
       command: 'tap element',
       patterns: [
-        /^(?:tap|press|activate|select)\s+(?:the\s+)?(?:accessibility\s+)?element\s+(?:with\s+|by\s+)?(?:id|identifier)\s+(?<idMarker>.+)$/i,
-        /^(?:tocar|pulsar|activar|seleccionar)\s+(?:el\s+)?elemento(?:\s+de\s+accesibilidad)?\s+(?:con\s+|por\s+)?(?:id|identificador)\s+(?<idMarker>.+)$/i,
-        /^(?:tap|press|activate|select)\s+(?:the\s+)?(?:accessibility\s+)?element(?:\s+(?:with\s+|by\s+)?label)?\s+(?!(?:with\s+|by\s+)?(?:id|identifier)(?:\s|$))(?<labelMarker>.+)$/i,
-        /^(?:tocar|pulsar|activar|seleccionar)\s+(?:el\s+)?elemento(?:\s+de\s+accesibilidad)?(?:\s+(?:con\s+|por\s+)?etiqueta)?\s+(?!(?:con\s+|por\s+)?(?:id|identificador)(?:\s|$))(?<labelMarker>.+)$/i
+        new RegExp(String.raw`${TAP_ELEMENT_EN}\s+(?:with\s+|by\s+)?(?:id|identifier)\s+(?<idMarker>.+)$`, 'i'),
+        new RegExp(String.raw`${TAP_ELEMENT_ES}\s+(?:con\s+|por\s+)?(?:id|identificador)\s+(?<idMarker>.+)$`, 'i'),
+        new RegExp(String.raw`${TAP_ELEMENT_EN}(?:\s+(?:with\s+|by\s+)?label)?\s+(?!(?:with\s+|by\s+)?(?:id|identifier)(?:\s|$))(?<labelMarker>.+)$`, 'i'),
+        new RegExp(String.raw`${TAP_ELEMENT_ES}(?:\s+(?:con\s+|por\s+)?etiqueta)?\s+(?!(?:con\s+|por\s+)?(?:id|identificador)(?:\s|$))(?<labelMarker>.+)$`, 'i')
       ],
       description: 'Activates an accessibility element by label or unique identifier',
       requiredParameters: ['marker'],

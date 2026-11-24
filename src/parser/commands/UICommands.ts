@@ -5,7 +5,15 @@ import { BaseCommandDefinition, CommandDefinition } from './BaseCommandDefinitio
 import { ButtonType, RemoteAction } from '../../idb/interfaces/IIDBManager.js';
 
 const BUTTON_TOKEN =
-  'APPLE[\\s_-]*PAY|SIDE[\\s_-]*BUTTON|PLAY[\\s_-]*PAUSE|VOLUME[\\s_-]*UP|VOLUME[\\s_-]*DOWN|HOME|LOCK|SIRI|EJECT';
+  String.raw`APPLE[\s_-]*PAY|SIDE[\s_-]*BUTTON|PLAY[\s_-]*PAUSE|VOLUME[\s_-]*UP|VOLUME[\s_-]*DOWN|HOME|LOCK|SIRI|EJECT`;
+
+// Optional trailing duration shared by the hardware-button and Siri Remote patterns.
+const DURATION_EN = String.raw`(?:\s+(?:with\s+duration|for)\s+(?<duration>\d+)(?:\s*ms)?)?\.?$`;
+const DURATION_ES = String.raw`(?:\s+con\s+duraci[oó]n\s+(?<duration>\d+)(?:\s*ms)?)?\.?$`;
+
+const REMOTE_ACTION_EN = 'up|down|left|right|select|menu';
+const REMOTE_ACTION_ES = 'arriba|abajo|izquierda|derecha|seleccionar|select|men[uú]|up|down|left|right';
+const REMOTE_DEVICE_ES = String.raw`(?:mando|control\s+remoto|siri\s+remote)`;
 
 function normalizeButtonToken(raw?: string): ButtonType | undefined {
   if (!raw) return undefined;
@@ -75,12 +83,12 @@ export class UICommands extends BaseCommandDefinition {
     {
       command: 'press device button',
       patterns: [
-        new RegExp(`^presionar\\s+(?:el\\s+)?bot[oó]n\\s+del\\s+dispositivo\\s+(?<button>${BUTTON_TOKEN})(?:\\s+con\\s+duraci[oó]n\\s+(?<duration>\\d+)(?:\\s*ms)?)?\\.?$`, 'i'),
-        new RegExp(`^pulsar\\s+(?:el\\s+)?bot[oó]n\\s+del\\s+dispositivo\\s+(?<button>${BUTTON_TOKEN})(?:\\s+con\\s+duraci[oó]n\\s+(?<duration>\\d+)(?:\\s*ms)?)?\\.?$`, 'i'),
-        new RegExp(`^presionar\\s+(?:el\\s+)?bot[oó]n\\s+f[ií]sico\\s+(?<button>${BUTTON_TOKEN})(?:\\s+con\\s+duraci[oó]n\\s+(?<duration>\\d+)(?:\\s*ms)?)?\\.?$`, 'i'),
-        new RegExp(`^press\\s+(?:the\\s+)?device\\s+button\\s+(?<button>${BUTTON_TOKEN})(?:\\s+(?:with\\s+duration|for)\\s+(?<duration>\\d+)(?:\\s*ms)?)?\\.?$`, 'i'),
-        new RegExp(`^push\\s+(?:the\\s+)?device\\s+button\\s+(?<button>${BUTTON_TOKEN})(?:\\s+(?:with\\s+duration|for)\\s+(?<duration>\\d+)(?:\\s*ms)?)?\\.?$`, 'i'),
-        new RegExp(`^tap\\s+(?:the\\s+)?device\\s+button\\s+(?<button>${BUTTON_TOKEN})(?:\\s+(?:with\\s+duration|for)\\s+(?<duration>\\d+)(?:\\s*ms)?)?\\.?$`, 'i')
+        new RegExp(String.raw`^presionar\s+(?:el\s+)?bot[oó]n\s+del\s+dispositivo\s+(?<button>${BUTTON_TOKEN})${DURATION_ES}`, 'i'),
+        new RegExp(String.raw`^pulsar\s+(?:el\s+)?bot[oó]n\s+del\s+dispositivo\s+(?<button>${BUTTON_TOKEN})${DURATION_ES}`, 'i'),
+        new RegExp(String.raw`^presionar\s+(?:el\s+)?bot[oó]n\s+f[ií]sico\s+(?<button>${BUTTON_TOKEN})${DURATION_ES}`, 'i'),
+        new RegExp(String.raw`^press\s+(?:the\s+)?device\s+button\s+(?<button>${BUTTON_TOKEN})${DURATION_EN}`, 'i'),
+        new RegExp(String.raw`^push\s+(?:the\s+)?device\s+button\s+(?<button>${BUTTON_TOKEN})${DURATION_EN}`, 'i'),
+        new RegExp(String.raw`^tap\s+(?:the\s+)?device\s+button\s+(?<button>${BUTTON_TOKEN})${DURATION_EN}`, 'i')
       ],
       description: 'Presses a hardware device button',
       requiredParameters: ['button'],
@@ -96,15 +104,15 @@ export class UICommands extends BaseCommandDefinition {
       ],
       parameterExtractors: {
         button: (match) => normalizeButtonToken(match.groups?.button),
-        duration: (match) => match.groups?.duration ? parseInt(match.groups.duration, 10) : undefined
+        duration: (match) => match.groups?.duration ? Number.parseInt(match.groups.duration, 10) : undefined
       }
     },
     {
       command: 'press remote',
       patterns: [
-        /^(?:(?:press|push|tap|send)\s+(?:the\s+)?(?:siri\s+)?remote(?:\s+button)?|remote)\s+(?<action>up|down|left|right|select|menu)(?:\s+(?:with\s+duration|for)\s+(?<duration>\d+)(?:\s*ms)?)?\.?$/i,
-        /^(?:presionar|pulsar|enviar)\s+(?:el\s+)?(?:bot[oó]n\s+)?(?<action>arriba|abajo|izquierda|derecha|seleccionar|select|men[uú]|up|down|left|right)\s+(?:en|del)\s+(?:el\s+)?(?:mando|control\s+remoto|siri\s+remote)(?:\s+con\s+duraci[oó]n\s+(?<duration>\d+)(?:\s*ms)?)?\.?$/i,
-        /^(?:presionar|pulsar)\s+(?:el\s+)?(?:mando|control\s+remoto|siri\s+remote)\s+(?<action>arriba|abajo|izquierda|derecha|seleccionar|select|men[uú]|up|down|left|right)(?:\s+con\s+duraci[oó]n\s+(?<duration>\d+)(?:\s*ms)?)?\.?$/i
+        new RegExp(String.raw`^(?:(?:press|push|tap|send)\s+(?:the\s+)?(?:siri\s+)?remote(?:\s+button)?|remote)\s+(?<action>${REMOTE_ACTION_EN})${DURATION_EN}`, 'i'),
+        new RegExp(String.raw`^(?:presionar|pulsar|enviar)\s+(?:el\s+)?(?:bot[oó]n\s+)?(?<action>${REMOTE_ACTION_ES})\s+(?:en|del)\s+(?:el\s+)?${REMOTE_DEVICE_ES}${DURATION_ES}`, 'i'),
+        new RegExp(String.raw`^(?:presionar|pulsar)\s+(?:el\s+)?${REMOTE_DEVICE_ES}\s+(?<action>${REMOTE_ACTION_ES})${DURATION_ES}`, 'i')
       ],
       description: 'Sends a Siri Remote focus-navigation action for tvOS',
       requiredParameters: ['action'],
@@ -120,7 +128,7 @@ export class UICommands extends BaseCommandDefinition {
       ],
       parameterExtractors: {
         action: (match) => normalizeRemoteActionToken(match.groups?.action),
-        duration: (match) => match.groups?.duration ? parseInt(match.groups.duration, 10) : undefined
+        duration: (match) => match.groups?.duration ? Number.parseInt(match.groups.duration, 10) : undefined
       }
     },
     {
