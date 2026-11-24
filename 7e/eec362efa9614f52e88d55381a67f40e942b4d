@@ -1,0 +1,73 @@
+src/adapters/OrchestratorToIDB.ts
+  s_6ef7fe415ac87f::t_d0d269e9e2e6a9 74-89
+src/idb/IDBManager.ts
+  s_f15026a7d96083::t_39cf76f4d3eeef 14-15,229-252,292,335-345,508,512-574,580,623-636,658,698,702-714,725,1082,1139,1173,1219-1239,1359,1364-1369,1379,1403,1411,1423,1429,1438,1516,1518-1527
+src/idb/interfaces/IIDBManager.ts
+  s_f70df5e383f046::t_2642f410c8ae8b 34-47,201-228
+src/orchestrator/MCPOrchestrator.ts
+  s_68dcf88542451f::t_b522584ed4f10d 194-199
+src/orchestrator/__tests__/CommandWiring.test.ts
+  s_d92eaa75e38d13::t_7a4d81242c4e5b 17,21,37-40,342-365,372-382
+src/parser/NLParser.ts
+  s_68dcf88542451f::t_24bb7e43ce1d89 7,51
+src/parser/__tests__/NLParser.test.ts
+  s_9b504a12a30c02::t_daa6a1d8b56e2b 331-363
+src/parser/commands/DeviceCommands.ts
+  s_d92eaa75e38d13::t_d108b77604872d 1-111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "7eeec362efa9614f52e88d55381a67f40e942b4d",
+  "prompts": {},
+  "sessions": {
+    "s_68dcf88542451f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_df266febdffeVH4umP3lH6GELr",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    },
+    "s_6ef7fe415ac87f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e07cd3adaffedIcLfnwiDQNfo0",
+        "model": "inditex/KAIA/glm-5.3-flash"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    },
+    "s_9b504a12a30c02": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_df1d90018ffeqiMdXsw0h1QmlO",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    },
+    "s_d92eaa75e38d13": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_df1d317e9ffeDS3wCv31ojPy16",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    },
+    "s_f15026a7d96083": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_df31ec6a6ffe4u71CM9npTXQuo",
+        "model": "inditex/KAIA/glm-5.3-flash"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    },
+    "s_f70df5e383f046": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_df1e64137ffeNEEzs6vVlVxJ0u",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
