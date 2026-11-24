@@ -26,6 +26,23 @@ import { listSimulators, run, tryRun, pollUntil } from './simctl.js';
 const execFileAsync = promisify(execFile);
 
 const OWNED_NAME_PREFIX = 'mcp-integration-';
+const SUPPORTED_SIM_PLATFORMS = new Set(['ios', 'tvos']);
+
+/**
+ * Resolves the target simulator platform for the integration suite.
+ * Defaults to 'ios' when SIM_PLATFORM is unset.
+ * @param {string} [raw]
+ * @returns {'ios' | 'tvos'}
+ */
+export function resolveSimPlatform(raw = process.env.SIM_PLATFORM) {
+  const normalized = typeof raw === 'string' && raw.trim().length > 0
+    ? raw.trim().toLowerCase()
+    : 'ios';
+  if (!SUPPORTED_SIM_PLATFORMS.has(normalized)) {
+    throw new Error(`Unsupported SIM_PLATFORM "${raw}" (expected "ios" or "tvos")`);
+  }
+  return /** @type {'ios' | 'tvos'} */ (normalized);
+}
 
 /**
  * Cold-start barrier. CoreSimulator's Booted state
@@ -206,24 +223,38 @@ export function isOwned(name, udid, ownedUdid) {
  * creation is incompatible (some shipping device types reject specific
  * runtimes), it keeps trying candidate pairs from the supported lists.
  */
-export async function selectCompatibleDevice() {
+export async function selectCompatibleDevice(platform = resolveSimPlatform()) {
+  const targetPlatform = resolveSimPlatform(platform);
   const runtimesOutput = await run('xcrun', ['simctl', 'list', 'runtimes', '--json']);
   const runtimes = JSON.parse(runtimesOutput).runtimes
     .filter(rt => rt.isAvailable)
     .sort((a, b) => String(b.version).localeCompare(String(a.version)));
   if (runtimes.length === 0) {
-    throw new Error('No available iOS simulator runtime found');
+    throw new Error(
+      `No available ${targetPlatform === 'tvos' ? 'tvOS' : 'iOS'} simulator runtime found`
+    );
   }
   for (const runtime of runtimes) {
     const supported = (runtime.supportedDeviceTypes || [])
       .map(dt => dt.identifier || dt)
-      .filter(id => /iPhone/.test(id) && !/SE/.test(id));
-    const preferred = supported.find(id => id.endsWith('Pro')) || supported[0];
+      .filter(id =>
+        targetPlatform === 'tvos'
+          ? /Apple-TV/i.test(id)
+          : /iPhone/.test(id) && !/SE/.test(id)
+      );
+    const preferred = targetPlatform === 'tvos'
+      ? supported.find(id => /1080p/i.test(id)) || supported[0]
+      : supported.find(id => id.endsWith('Pro')) || supported[0];
     if (preferred) {
-      return { deviceType: preferred, runtime: runtime.identifier, runtimeVersion: runtime.version };
+      return {
+        deviceType: preferred,
+        runtime: runtime.identifier,
+        runtimeVersion: runtime.version,
+        platform: targetPlatform
+      };
     }
   }
-  throw new Error('No compatible device type/runtime pair found');
+  throw new Error(`No compatible ${targetPlatform} device type/runtime pair found`);
 }
 
 /**
@@ -458,11 +489,12 @@ export async function cleanupOwnedCompanions(udid, userName) {
  * if any step escapes the owned UDID.
  * @param {string} runId Unique per-run suffix
  */
-export async function createOwnedSimulator(runId) {
+export async function createOwnedSimulator(runId, { platform = resolveSimPlatform() } = {}) {
+  const targetPlatform = resolveSimPlatform(platform);
   const uniqueName = `${OWNED_NAME_PREFIX}${runId}`;
   const before = await listSimulators();
 
-  const { deviceType, runtime } = await selectCompatibleDevice();
+  const { deviceType, runtime } = await selectCompatibleDevice(targetPlatform);
   const created = await run('xcrun', ['simctl', 'create', uniqueName, deviceType, runtime]);
   const udid = created.trim();
   if (!/^[0-9A-Fa-f-]{36}$/.test(udid)) {
@@ -505,7 +537,7 @@ export async function createOwnedSimulator(runId) {
     }, 120_000);
 
     succeeded = true;
-    return { udid, name: uniqueName, deviceType, runtime };
+    return { udid, name: uniqueName, deviceType, runtime, platform: targetPlatform };
   } finally {
     if (!succeeded) {
       // Failure containment: shut down and delete exactly the device this

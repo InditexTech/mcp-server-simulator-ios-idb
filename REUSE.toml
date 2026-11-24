@@ -55,6 +55,11 @@ SPDX-FileCopyrightText = "2025 Industria Textil de Diseño, S.A."
 SPDX-License-Identifier = "Apache-2.0"
 
 [[annotations]]
+path = "demo/tvos/**"
+SPDX-FileCopyrightText = "2025 Industria Textil de Diseño, S.A."
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
 path = "src/**/__tests__/*"
 SPDX-FileCopyrightText = "2025 Industria Textil de Diseño, S.A."
 SPDX-License-Identifier = "Apache-2.0"

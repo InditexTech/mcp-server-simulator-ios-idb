@@ -1606,4 +1606,271 @@ describe('IDBManager', () => {
     await jest.runAllTimersAsync();
     await stuckBootAssertion;
   });
+
+  it('filters unavailable simulators, prioritizes iOS on default session creation, and guards tvOS non-touch/posture actions', async () => {
+    const manager = new IDBManager();
+    let devicesPayload: Record<string, unknown[]> = {
+      'com.apple.CoreSimulator.SimRuntime.tvOS-27-2': [
+        {
+          udid: 'tv-booted',
+          name: 'Apple TV 4K (4th generation)',
+          state: 'Booted',
+          isAvailable: true,
+          deviceTypeIdentifier: 'com.apple.CoreSimulator.SimDeviceType.Apple-TV-4K-4th-generation-1080p'
+        },
+        {
+          udid: 'tv-unavailable',
+          name: 'Deleted Apple TV',
+          state: 'Shutdown',
+          isAvailable: false,
+          deviceTypeIdentifier: 'com.apple.CoreSimulator.SimDeviceType.Apple-TV-1080p'
+        }
+      ],
+      'com.apple.CoreSimulator.SimRuntime.iOS-27-1': [
+        {
+          udid: 'iphone-booted',
+          name: 'iPhone 17 Pro',
+          state: 'Booted',
+          isAvailable: true,
+          deviceTypeIdentifier: 'com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro'
+        }
+      ],
+      'com.apple.CoreSimulator.SimRuntime.watchOS-27-0': [
+        {
+          udid: 'watch-shutdown',
+          name: 'Apple Watch Series 12',
+          state: 'Shutdown',
+          isAvailable: true,
+          deviceTypeIdentifier: 'com.apple.CoreSimulator.SimDeviceType.Apple-Watch-Series-12-46mm'
+        }
+      ],
+      'com.apple.CoreSimulator.SimRuntime.visionOS-27-0': [
+        {
+          udid: 'vision-shutdown',
+          name: 'Apple Vision Pro',
+          state: 'Shutdown',
+          isAvailable: true,
+          deviceTypeIdentifier: 'com.apple.CoreSimulator.SimDeviceType.Apple-Vision-Pro'
+        }
+      ]
+    };
+
+    const executeCommand = jest
+      .spyOn(manager as any, 'executeCommand')
+      .mockImplementation(async (...parameters: unknown[]) => {
+        const command = parameters[0] as string;
+        const args = parameters[1] as string[];
+        if (command === 'xcrun' && args[1] === 'list') {
+          return JSON.stringify({ devices: devicesPayload });
+        }
+        return '';
+      });
+
+    const available = await manager.listAvailableSimulators();
+    expect(available.map(s => s.udid)).toEqual([
+      'tv-booted',
+      'iphone-booted',
+      'watch-shutdown',
+      'vision-shutdown'
+    ]);
+
+    // Unqualified createSimulatorSession prefers iOS even when tvOS appears first in simctl JSON
+    const defaultSession = await manager.createSimulatorSession({ autoboot: false });
+    await manager.tap(defaultSession, 10, 20);
+    expect(executeCommand).toHaveBeenCalledWith('idb', ['ui', 'tap', '10', '20', '--udid', 'iphone-booted']);
+
+    // Explicit platformVersion without deviceName selects matching tvOS simulator
+    const tvByPlatform = await manager.createSimulatorSession({
+      platformVersion: 'tvOS',
+      autoboot: false
+    });
+    await expect(
+      manager.createSimulatorSession({ platformVersion: 'tvOS-99', autoboot: false })
+    ).rejects.toThrow('No simulator found for platform tvOS-99');
+
+    // Explicit deviceName selects Apple TV and activates tvOS guardrails
+    const tvByName = await manager.createSimulatorSession({
+      deviceName: 'Apple TV 4K (4th generation)',
+      autoboot: false
+    });
+
+    await expect(manager.tap(tvByPlatform, 100, 200)).rejects.toThrow(
+      /Touch input \(tap\) is not supported on tvOS simulators/
+    );
+    await expect(manager.swipe(tvByName, 0, 0, 100, 100)).rejects.toThrow(
+      /Touch input \(swipe\) is not supported on tvOS simulators/
+    );
+    await expect(manager.setHingeAngle(tvByName, 90)).rejects.toThrow(
+      'Hinge angle control is not supported on tvOS simulators.'
+    );
+    await expect(manager.setOrientation(tvByName, 'LANDSCAPE_LEFT')).rejects.toThrow(
+      'Device orientation control is not supported on tvOS simulators.'
+    );
+
+    // Non-touch operations (e.g. focusSimulator) still proceed on tvOS sessions
+    await manager.focusSimulator(tvByName);
+    expect(executeCommand).toHaveBeenCalledWith('idb', ['focus', '--udid', 'tv-booted']);
+
+    await manager.terminateSimulatorSession(tvByName);
+    await manager.terminateSimulatorSession(tvByPlatform);
+
+    // Fallback when no iOS simulators exist in inventory
+    devicesPayload = {
+      'com.apple.CoreSimulator.SimRuntime.tvOS-27-2': [
+        {
+          udid: 'tv-only',
+          name: 'Apple TV',
+          state: 'Booted',
+          deviceTypeIdentifier: 'com.apple.CoreSimulator.SimDeviceType.Apple-TV-1080p'
+        }
+      ],
+      'com.apple.CoreSimulator.SimRuntime.Custom-1-0': [
+        {
+          udid: 'custom-sim',
+          name: 'Custom',
+          state: 'Shutdown',
+          deviceTypeIdentifier: 'CustomType'
+        }
+      ]
+    };
+    const fallbackSession = await manager.createSimulatorSession({ autoboot: false });
+    await expect(manager.tap(fallbackSession, 1, 1)).rejects.toThrow(/not supported on tvOS/);
+    const customSession = await manager.createSimulatorSession({ deviceName: 'Custom', autoboot: false });
+    await manager.tap(customSession, 5, 6);
+    expect(executeCommand).toHaveBeenCalledWith('idb', ['ui', 'tap', '5', '6', '--udid', 'custom-sim']);
+  });
+
+  it('sends Siri Remote focus actions and extended hardware buttons via idb', async () => {
+    const manager = new IDBManager();
+    manager['sessions'].set('tv-session', 'tv-udid');
+    const executeCommand = jest
+      .spyOn(manager as any, 'executeCommand')
+      .mockResolvedValue('');
+
+    await expect(manager.pressRemote('ghost-session', 'select'))
+      .rejects.toThrow('Session not found: ghost-session');
+    await expect(manager.pressRemote('tv-session', 'diagonal' as any))
+      .rejects.toThrow('Invalid Siri Remote action: diagonal');
+    await expect(manager.pressButton('tv-session', 'POWER_OFF' as any))
+      .rejects.toThrow('Invalid device button: POWER_OFF');
+
+    for (const action of ['up', 'down', 'left', 'right', 'select', 'menu'] as const) {
+      await manager.pressRemote('tv-session', action);
+      expect(executeCommand).toHaveBeenCalledWith('idb', ['ui', 'remote', action, '--udid', 'tv-udid']);
+    }
+
+    await manager.pressRemote('tv-session', 'select', 350);
+    expect(executeCommand).toHaveBeenCalledWith('idb', [
+      'ui',
+      'remote',
+      'select',
+      '--duration',
+      '0.35',
+      '--udid',
+      'tv-udid'
+    ]);
+
+    for (const button of ['PLAY_PAUSE', 'VOLUME_UP', 'VOLUME_DOWN', 'EJECT'] as const) {
+      await manager.pressButton('tv-session', button);
+      expect(executeCommand).toHaveBeenCalledWith('idb', ['ui', 'button', button, '--udid', 'tv-udid']);
+    }
+
+    await manager.pressButton('tv-session', 'PLAY_PAUSE', 500);
+    expect(executeCommand).toHaveBeenCalledWith('idb', [
+      'ui',
+      'button',
+      'PLAY_PAUSE',
+      '--duration',
+      '0.5',
+      '--udid',
+      'tv-udid'
+    ]);
+  });
+
+  it('preserves focused/enabled accessibility attributes and taps elements by label or identifier on tvOS and iOS', async () => {
+    const manager = new IDBManager();
+    manager['sessions'].set('tv-session', 'tv-udid');
+    manager['sessionPlatforms'].set('tv-session', 'tvos');
+
+    const executeCommand = jest
+      .spyOn(manager as any, 'executeCommand')
+      .mockImplementation(async (...parameters: unknown[]) => {
+        const args = parameters[1] as string[];
+        if (args[1] === 'describe-all') {
+          return JSON.stringify([
+            {
+              AXUniqueId: 'fixturePrimaryButton',
+              AXLabel: 'Primary Action',
+              type: 'Button',
+              focused: true,
+              enabled: true,
+              frame: { x: 200, y: 300, width: 400, height: 80 },
+              children: [
+                {
+                  AXLabel: 'Subtitle',
+                  type: 'StaticText',
+                  focused: false,
+                  enabled: false,
+                  frame: { x: 210, y: 340, width: 200, height: 30 }
+                }
+              ]
+            }
+          ]);
+        }
+        return '';
+      });
+
+    const elements = await manager.describeAllElements('tv-session');
+    expect(elements).toEqual([
+      {
+        identifier: 'fixturePrimaryButton',
+        label: 'Primary Action',
+        type: 'Button',
+        focused: true,
+        enabled: true,
+        frame: { x: 200, y: 300, width: 400, height: 80 },
+        children: [
+          {
+            label: 'Subtitle',
+            type: 'StaticText',
+            focused: false,
+            enabled: false,
+            frame: { x: 210, y: 340, width: 200, height: 30 }
+          }
+        ]
+      }
+    ]);
+
+    await expect(manager.tapElement('ghost-session', 'Play'))
+      .rejects.toThrow('Session not found: ghost-session');
+    await expect(manager.tapElement('tv-session', '   '))
+      .rejects.toThrow('Accessibility marker must be a non-empty string');
+    await expect(manager.tapElement('tv-session', 'Play', 'AXRole' as any))
+      .rejects.toThrow('Invalid accessibility match key: AXRole');
+
+    // Works on tvOS sessions even though coordinate tap is blocked
+    await manager.tapElement('tv-session', 'Primary Action');
+    expect(executeCommand).toHaveBeenCalledWith('idb', [
+      'ui',
+      'tap',
+      '--match-key',
+      'AXLabel',
+      '--udid',
+      'tv-udid',
+      '--',
+      'Primary Action'
+    ]);
+
+    await manager.tapElement('tv-session', '--leading-dash-id', 'AXUniqueId');
+    expect(executeCommand).toHaveBeenCalledWith('idb', [
+      'ui',
+      'tap',
+      '--match-key',
+      'AXUniqueId',
+      '--udid',
+      'tv-udid',
+      '--',
+      '--leading-dash-id'
+    ]);
+  });
 });

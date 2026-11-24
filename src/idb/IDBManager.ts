@@ -9,10 +9,12 @@ import * as path from 'node:path';
 import * as zlib from 'node:zlib';
 import { 
   IIDBManager, 
+  SimulatorPlatform,
   SimulatorInfo, 
   AppInfo, 
   SessionConfig,
   ButtonType,
+  RemoteAction,
   DeviceOrientation,
   DisplayRole,
   SimulatorDisplayInfo,
@@ -21,6 +23,7 @@ import {
   HingeAngleResult,
   LabelledScreenshot,
   SavedDisplayScreenshot,
+  AccessibilityMatchKey,
   AccessibilityInfo,
   CrashLogInfo
 } from './interfaces/IIDBManager.js';
@@ -32,6 +35,32 @@ const VALID_ORIENTATIONS = new Set<DeviceOrientation>([
   'PORTRAIT_UPSIDE_DOWN',
   'LANDSCAPE_LEFT',
   'LANDSCAPE_RIGHT'
+]);
+
+const VALID_BUTTONS = new Set<ButtonType>([
+  'APPLE_PAY',
+  'HOME',
+  'LOCK',
+  'SIDE_BUTTON',
+  'SIRI',
+  'PLAY_PAUSE',
+  'VOLUME_UP',
+  'VOLUME_DOWN',
+  'EJECT'
+]);
+
+const VALID_REMOTE_ACTIONS = new Set<RemoteAction>([
+  'up',
+  'down',
+  'left',
+  'right',
+  'select',
+  'menu'
+]);
+
+const VALID_ACCESSIBILITY_MATCH_KEYS = new Set<AccessibilityMatchKey>([
+  'AXLabel',
+  'AXUniqueId'
 ]);
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -177,6 +206,24 @@ function appendSuffixBeforeExtension(filePath: string, suffix: string): string {
   return `${base}${suffix}${ext}`;
 }
 
+function classifySimulatorPlatform(
+  sim: Pick<SimulatorInfo, 'os' | 'deviceType'>
+): SimulatorPlatform {
+  if (/^tvOS\b/i.test(sim.os) || /Apple-TV/i.test(sim.deviceType)) {
+    return 'tvos';
+  }
+  if (/^iOS\b/i.test(sim.os) || /\b(iPhone|iPad)\b/i.test(sim.deviceType)) {
+    return 'ios';
+  }
+  if (/^watchOS\b/i.test(sim.os) || /Apple-Watch/i.test(sim.deviceType)) {
+    return 'watchos';
+  }
+  if (/^(visionOS|xrOS)\b/i.test(sim.os) || /Apple-Vision/i.test(sim.deviceType)) {
+    return 'visionos';
+  }
+  return 'unknown';
+}
+
 interface IDBAppInfo {
   bundle_id: string;
   name?: string;
@@ -215,6 +262,7 @@ const MAX_STDERR_TAIL_CHARS = 4_096;
  */
 export class IDBManager implements IIDBManager {
   private readonly sessions: Map<string, string> = new Map(); // sessionId -> udid
+  private readonly sessionPlatforms: Map<string, SimulatorPlatform> = new Map();
   private readonly activeRecordings: Map<string, ActiveVideoRecording> = new Map();
   private sessionCounter: number = 0;
   private recordingCounter: number = 0;
@@ -257,6 +305,22 @@ export class IDBManager implements IIDBManager {
     return udid;
   }
 
+  private assertTouchSupported(sessionId: string, operation: string): void {
+    if (this.sessionPlatforms.get(sessionId) === 'tvos') {
+      throw new Error(
+        `Touch input (${operation}) is not supported on tvOS simulators (no touchscreen). ` +
+        'Use Siri Remote navigation ("press remote up/down/left/right/select/menu") or ' +
+        'accessibility element activation ("tap element ...") instead.'
+      );
+    }
+  }
+
+  private assertMobilePostureSupported(sessionId: string, operation: string): void {
+    if (this.sessionPlatforms.get(sessionId) === 'tvos') {
+      throw new Error(`${operation} is not supported on tvOS simulators.`);
+    }
+  }
+
   private spawnProcess(command: string, args: string[] = []): ChildProcess {
     return spawn(command, args, { stdio: ['ignore', 'ignore', 'pipe'] });
   }
@@ -286,6 +350,12 @@ export class IDBManager implements IIDBManager {
     const value = raw?.AXValue ?? raw?.value;
     if (value !== undefined && value !== null) {
       element.value = String(value);
+    }
+    if (typeof raw?.focused === 'boolean') {
+      element.focused = raw.focused;
+    }
+    if (typeof raw?.enabled === 'boolean') {
+      element.enabled = raw.enabled;
     }
     if (Array.isArray(raw?.children)) {
       element.children = raw.children.map((child: Record<string, any>) =>
@@ -355,6 +425,7 @@ export class IDBManager implements IIDBManager {
     const simulators = (await this.listAvailableSimulators())
       .sort((a, b) => Number(b.state === 'Booted') - Number(a.state === 'Booted'));
 
+    const wantedPlatform = config?.platformVersion?.trim().toLowerCase();
     let selectedSimulator: SimulatorInfo | undefined;
     if (config?.deviceName) {
       // The parser may lowercase the instruction, so compare case-insensitively.
@@ -362,17 +433,27 @@ export class IDBManager implements IIDBManager {
       const wanted = config.deviceName.trim().toLowerCase();
       selectedSimulator = simulators.find(sim =>
         (sim.name.toLowerCase() === wanted || sim.udid.toLowerCase() === wanted) &&
-        (!config.platformVersion || sim.os.includes(config.platformVersion))
+        (!wantedPlatform || sim.os.toLowerCase().includes(wantedPlatform))
       );
 
       if (!selectedSimulator) {
         throw new Error(`No simulator found with name ${config.deviceName}`);
       }
+    } else if (wantedPlatform) {
+      selectedSimulator = simulators.find(sim =>
+        sim.os.toLowerCase().includes(wantedPlatform)
+      );
+      if (!selectedSimulator) {
+        throw new Error(`No simulator found for platform ${config!.platformVersion}`);
+      }
     } else {
       if (simulators.length === 0) {
         throw new Error('No available simulators found');
       }
-      selectedSimulator = simulators[0];
+      // Preserve iOS as the default target when tvOS/watchOS/visionOS runtimes
+      // are also installed on the host; fall back only if no iOS simulator exists.
+      selectedSimulator =
+        simulators.find(sim => classifySimulatorPlatform(sim) === 'ios') ?? simulators[0];
     }
 
     if (config?.autoboot !== false && selectedSimulator.state !== 'Booted') {
@@ -385,6 +466,7 @@ export class IDBManager implements IIDBManager {
 
     const sessionId = this.generateSessionId();
     this.sessions.set(sessionId, selectedSimulator.udid);
+    this.sessionPlatforms.set(sessionId, classifySimulatorPlatform(selectedSimulator));
     return sessionId;
   }
 
@@ -392,6 +474,7 @@ export class IDBManager implements IIDBManager {
     this.requireSessionUDID(sessionId);
     await this.cleanupSessionRecordings(sessionId);
     this.sessions.delete(sessionId);
+    this.sessionPlatforms.delete(sessionId);
   }
 
   async listAvailableSimulators(): Promise<SimulatorInfo[]> {
@@ -402,6 +485,9 @@ export class IDBManager implements IIDBManager {
     
     Object.entries(data.devices).forEach(([runtimeName, devices]: [string, any]) => {
       devices.forEach((device: any) => {
+        if (device.isAvailable === false) {
+          return;
+        }
         simulators.push({
           udid: device.udid,
           name: device.name,
@@ -491,6 +577,7 @@ export class IDBManager implements IIDBManager {
 
   async tap(sessionId: string, x: number, y: number): Promise<void> {
     const udid = this.requireSessionUDID(sessionId);
+    this.assertTouchSupported(sessionId, 'tap');
     await this.executeIDBCommand(['ui', 'tap', String(x), String(y), '--udid', udid]);
   }
 
@@ -503,6 +590,7 @@ export class IDBManager implements IIDBManager {
     duration: number = 100
   ): Promise<void> {
     const udid = this.requireSessionUDID(sessionId);
+    this.assertTouchSupported(sessionId, 'swipe');
     await this.executeIDBCommand([
       'ui',
       'swipe',
@@ -860,6 +948,7 @@ export class IDBManager implements IIDBManager {
 
   async setHingeAngle(sessionId: string, angle: number): Promise<HingeAngleResult> {
     const udid = this.requireSessionUDID(sessionId);
+    this.assertMobilePostureSupported(sessionId, 'Hinge angle control');
     if (typeof angle !== 'number' || !Number.isFinite(angle) || angle < 0 || angle > 180) {
       throw new Error('Hinge angle must be a finite number between 0 and 180 degrees');
     }
@@ -950,6 +1039,7 @@ export class IDBManager implements IIDBManager {
     expectedPosture?: ExpectedPosture
   ): Promise<SimulatorPosture> {
     const udid = this.requireSessionUDID(sessionId);
+    this.assertMobilePostureSupported(sessionId, 'Device orientation control');
     if (!VALID_ORIENTATIONS.has(orientation)) {
       throw new Error(`Invalid device orientation: ${orientation}`);
     }
@@ -1148,7 +1238,21 @@ export class IDBManager implements IIDBManager {
 
   async pressButton(sessionId: string, button: ButtonType, duration?: number): Promise<void> {
     const udid = this.requireSessionUDID(sessionId);
+    if (!VALID_BUTTONS.has(button)) {
+      throw new Error(`Invalid device button: ${button}`);
+    }
     const args = ['ui', 'button', button];
+    if (duration) args.push('--duration', String(duration / 1000));
+    args.push('--udid', udid);
+    await this.executeIDBCommand(args);
+  }
+
+  async pressRemote(sessionId: string, action: RemoteAction, duration?: number): Promise<void> {
+    const udid = this.requireSessionUDID(sessionId);
+    if (!VALID_REMOTE_ACTIONS.has(action)) {
+      throw new Error(`Invalid Siri Remote action: ${action}`);
+    }
+    const args = ['ui', 'remote', action];
     if (duration) args.push('--duration', String(duration / 1000));
     args.push('--udid', udid);
     await this.executeIDBCommand(args);
@@ -1220,6 +1324,30 @@ export class IDBManager implements IIDBManager {
       return this.normalizeAccessibilityElement(parsed);
     }
     return null;
+  }
+
+  async tapElement(
+    sessionId: string,
+    marker: string,
+    matchKey: AccessibilityMatchKey = 'AXLabel'
+  ): Promise<void> {
+    const udid = this.requireSessionUDID(sessionId);
+    if (typeof marker !== 'string' || marker.trim().length === 0) {
+      throw new Error('Accessibility marker must be a non-empty string');
+    }
+    if (!VALID_ACCESSIBILITY_MATCH_KEYS.has(matchKey)) {
+      throw new Error(`Invalid accessibility match key: ${matchKey}`);
+    }
+    await this.executeIDBCommand([
+      'ui',
+      'tap',
+      '--match-key',
+      matchKey,
+      '--udid',
+      udid,
+      '--',
+      marker
+    ]);
   }
 
   async startVideoRecording(sessionId: string, outputPath: string): Promise<string> {

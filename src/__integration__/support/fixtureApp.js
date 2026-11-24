@@ -154,15 +154,104 @@ struct ContentView: View {
 `
 };
 
+const TVOS_SWIFT_SOURCES = {
+  'main.swift': SWIFT_SOURCES['main.swift'],
+  'ContentView.swift': `import SwiftUI
+
+struct ContentView: View {
+    enum FocusedAction: Hashable {
+        case primary
+        case secondary
+    }
+
+    @FocusState private var focusedAction: FocusedAction?
+    @State private var statusText: String = "Status: idle"
+    @State private var lastOpenedUrl: String = ""
+
+    var body: some View {
+        VStack(spacing: 32) {
+            Text("MCP tvOS Fixture")
+                .font(.title2)
+            Button("Primary Action") {
+                statusText = "Status: primary"
+            }
+            .focused($focusedAction, equals: .primary)
+            .accessibilityIdentifier("fixturePrimaryButton")
+
+            Button("Secondary Action") {
+                statusText = "Status: secondary"
+            }
+            .focused($focusedAction, equals: .secondary)
+            .accessibilityIdentifier("fixtureSecondaryButton")
+
+            Text(statusText)
+                .accessibilityIdentifier("fixtureStatusLabel")
+            Text(lastOpenedUrl)
+                .accessibilityIdentifier("fixtureOpenUrlLabel")
+        }
+        .padding(48)
+        .onAppear {
+            focusedAction = .primary
+        }
+        .onOpenURL { url in
+            lastOpenedUrl = url.absoluteString
+        }
+    }
+}
+`,
+  'Entitlements.plist': SWIFT_SOURCES['Entitlements.plist'],
+  'Info.plist': `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleDisplayName</key>
+    <string>MCP Fixture</string>
+    <key>CFBundleExecutable</key>
+    <string>FixtureApp</string>
+    <key>CFBundleIdentifier</key>
+    <string>${FIXTURE_BUNDLE_ID}</string>
+    <key>CFBundleName</key>
+    <string>MCPFixture</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>com.inditex.mcp.fixture.demo.url</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>mcpfixture</string>
+            </array>
+        </dict>
+    </array>
+    <key>UIDeviceFamily</key>
+    <array>
+        <integer>3</integer>
+    </array>
+</dict>
+</plist>
+`
+};
+
 /**
- * Compiles the fixture sources into a .app bundle for the iOS simulator.
+ * Compiles the fixture sources into a .app bundle for the target simulator platform.
  * @param {string} outDir Directory to place the bundle in
+ * @param {{ platform?: 'ios' | 'tvos' }} [options]
  * @returns {Promise<string>} Absolute path of the built .app
  */
-export async function buildFixtureApp(outDir) {
+export async function buildFixtureApp(outDir, { platform = 'ios' } = {}) {
+  const isTvOS = platform === 'tvos';
+  const sources = isTvOS ? TVOS_SWIFT_SOURCES : SWIFT_SOURCES;
   const srcDir = path.join(outDir, 'fixture-src');
   fs.mkdirSync(srcDir, { recursive: true });
-  for (const [name, content] of Object.entries(SWIFT_SOURCES)) {
+  for (const [name, content] of Object.entries(sources)) {
     fs.writeFileSync(path.join(srcDir, name), content);
   }
 
@@ -173,10 +262,10 @@ export async function buildFixtureApp(outDir) {
   const swiftSources = ['main.swift', 'ContentView.swift'].map(f => path.join(srcDir, f));
 
   await execFileAsync('xcrun', [
-    '-sdk', 'iphonesimulator', 'swiftc',
+    '-sdk', isTvOS ? 'appletvsimulator' : 'iphonesimulator', 'swiftc',
     '-swift-version', '5',
     '-parse-as-library',
-    '-target', 'arm64-apple-ios15.0-simulator',
+    '-target', isTvOS ? 'arm64-apple-tvos16.0-simulator' : 'arm64-apple-ios15.0-simulator',
     '-o', binaryPath,
     ...swiftSources
   ], { timeout: 300_000 });

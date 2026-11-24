@@ -235,6 +235,68 @@ describe('NLParser', () => {
     });
   });
 
+  describe('tvOS Siri Remote and hardware media buttons', () => {
+    it.each([
+      ['press remote up', 'press remote', { action: 'up' }],
+      ['press remote down', 'press remote', { action: 'down' }],
+      ['press remote left', 'press remote', { action: 'left' }],
+      ['press remote right', 'press remote', { action: 'right' }],
+      ['press remote select', 'press remote', { action: 'select' }],
+      ['remote menu', 'press remote', { action: 'menu' }],
+      ['press siri remote down with duration 250', 'press remote', { action: 'down', duration: 250 }],
+      ['pulsar mando arriba', 'press remote', { action: 'up' }],
+      ['pulsar mando abajo con duración 300', 'press remote', { action: 'down', duration: 300 }],
+      ['presionar izquierda en el mando', 'press remote', { action: 'left' }],
+      ['enviar derecha en el control remoto', 'press remote', { action: 'right' }],
+      ['presionar seleccionar en el mando', 'press remote', { action: 'select' }],
+      ['pulsar menú del mando', 'press remote', { action: 'menu' }],
+      ['press device button PLAY_PAUSE', 'press device button', { button: 'PLAY_PAUSE' }],
+      ['press device button play pause for 400 ms', 'press device button', { button: 'PLAY_PAUSE', duration: 400 }],
+      ['press device button volume up', 'press device button', { button: 'VOLUME_UP' }],
+      ['press device button volume-down', 'press device button', { button: 'VOLUME_DOWN' }],
+      ['pulsar botón del dispositivo EJECT con duración 200', 'press device button', { button: 'EJECT', duration: 200 }],
+      ['input text press remote down', 'input text', { text: 'press remote down' }]
+    ])('parses "%s" into %s', async (instruction, expectedCommand, expectedParams) => {
+      const result = await parser.parseInstruction(instruction);
+      expect(result.command).toBe(expectedCommand);
+      expect(result.parameters).toEqual(expectedParams);
+    });
+
+    it.each([
+      'press remote diagonal',
+      'press remote up extra',
+      'press device button TURBO',
+      'pulsar mando diagonal'
+    ])('rejects malformed remote or button instructions: %s', async instruction => {
+      await expect(parser.parseInstruction(instruction)).rejects.toThrow('Could not understand the instruction');
+    });
+  });
+
+  describe('accessibility element activation', () => {
+    it.each([
+      ['tap element "Play"', { marker: 'Play', matchKey: 'AXLabel' }],
+      ['tap element Settings', { marker: 'Settings', matchKey: 'AXLabel' }],
+      ['tap element "0123"', { marker: '0123', matchKey: 'AXLabel' }],
+      ['tap element "TRUE"', { marker: 'TRUE', matchKey: 'AXLabel' }],
+      ['tap element with id "fixtureSecondaryButton"', { marker: 'fixtureSecondaryButton', matchKey: 'AXUniqueId' }],
+      ['activate element by id loginButton', { marker: 'loginButton', matchKey: 'AXUniqueId' }],
+      ['tocar elemento "Reproducir"', { marker: 'Reproducir', matchKey: 'AXLabel' }],
+      ['pulsar elemento con id "fixtureSecondaryButton"', { marker: 'fixtureSecondaryButton', matchKey: 'AXUniqueId' }]
+    ])('parses and preserves verbatim marker for "%s"', async (instruction, expectedParams) => {
+      const parsed = await parser.parseInstruction(instruction);
+      const normalized = await parser.normalizeParameters(parsed);
+      expect(normalized.command).toBe('tap element');
+      expect(normalized.parameters).toEqual(expectedParams);
+      expect(typeof normalized.parameters.marker).toBe('string');
+    });
+
+    it('rejects empty quoted markers on validation', async () => {
+      const parsed = await parser.parseInstruction('tap element ""');
+      const validation = await parser.validateInstruction(parsed);
+      expect(validation.isValid).toBe(false);
+    });
+  });
+
   describe('suggestCompletions', () => {
     it('should suggest completions for partial text', async () => {
       const suggestions = await parser.suggestCompletions('launch');

@@ -2,6 +2,38 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { BaseCommandDefinition, CommandDefinition } from './BaseCommandDefinition.js';
+import { ButtonType, RemoteAction } from '../../idb/interfaces/IIDBManager.js';
+
+const BUTTON_TOKEN =
+  String.raw`APPLE[\s_-]*PAY|SIDE[\s_-]*BUTTON|PLAY[\s_-]*PAUSE|VOLUME[\s_-]*UP|VOLUME[\s_-]*DOWN|HOME|LOCK|SIRI|EJECT`;
+
+// Optional trailing duration shared by the hardware-button and Siri Remote patterns.
+const DURATION_EN = String.raw`(?:\s+(?:with\s+duration|for)\s+(?<duration>\d+)(?:\s*ms)?)?\.?$`;
+const DURATION_ES = String.raw`(?:\s+con\s+duraci[oó]n\s+(?<duration>\d+)(?:\s*ms)?)?\.?$`;
+
+const REMOTE_ACTION_EN = 'up|down|left|right|select|menu';
+const REMOTE_ACTION_ES = 'arriba|abajo|izquierda|derecha|seleccionar|select|men[uú]|up|down|left|right';
+const REMOTE_DEVICE_ES = String.raw`(?:mando|control\s+remoto|siri\s+remote)`;
+
+function normalizeButtonToken(raw?: string): ButtonType | undefined {
+  if (!raw) return undefined;
+  return raw
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, '_') as ButtonType;
+}
+
+function normalizeRemoteActionToken(raw?: string): RemoteAction | undefined {
+  if (!raw) return undefined;
+  const cleaned = raw.trim().toLowerCase();
+  if (cleaned === 'up' || cleaned === 'arriba') return 'up';
+  if (cleaned === 'down' || cleaned === 'abajo') return 'down';
+  if (cleaned === 'left' || cleaned === 'izquierda') return 'left';
+  if (cleaned === 'right' || cleaned === 'derecha') return 'right';
+  if (cleaned === 'select' || cleaned === 'seleccionar') return 'select';
+  if (cleaned === 'menu' || cleaned === 'menú') return 'menu';
+  return undefined;
+}
 
 export class UICommands extends BaseCommandDefinition {
   protected definitions: CommandDefinition[] = [
@@ -51,12 +83,12 @@ export class UICommands extends BaseCommandDefinition {
     {
       command: 'press device button',
       patterns: [
-        /presionar\s+(el\s+)?botón\s+del\s+dispositivo\s+(?<button>APPLE_PAY|HOME|LOCK|SIDE_BUTTON|SIRI)/i,
-        /pulsar\s+(el\s+)?botón\s+del\s+dispositivo\s+(?<button>APPLE_PAY|HOME|LOCK|SIDE_BUTTON|SIRI)/i,
-        /presionar\s+(el\s+)?botón\s+físico\s+(?<button>APPLE_PAY|HOME|LOCK|SIDE_BUTTON|SIRI)/i,
-        /press\s+(the\s+)?device\s+button\s+(?<button>APPLE_PAY|HOME|LOCK|SIDE_BUTTON|SIRI)/i,
-        /push\s+(the\s+)?device\s+button\s+(?<button>APPLE_PAY|HOME|LOCK|SIDE_BUTTON|SIRI)/i,
-        /tap\s+(the\s+)?device\s+button\s+(?<button>APPLE_PAY|HOME|LOCK|SIDE_BUTTON|SIRI)/i
+        new RegExp(String.raw`^presionar\s+(?:el\s+)?bot[oó]n\s+del\s+dispositivo\s+(?<button>${BUTTON_TOKEN})${DURATION_ES}`, 'i'),
+        new RegExp(String.raw`^pulsar\s+(?:el\s+)?bot[oó]n\s+del\s+dispositivo\s+(?<button>${BUTTON_TOKEN})${DURATION_ES}`, 'i'),
+        new RegExp(String.raw`^presionar\s+(?:el\s+)?bot[oó]n\s+f[ií]sico\s+(?<button>${BUTTON_TOKEN})${DURATION_ES}`, 'i'),
+        new RegExp(String.raw`^press\s+(?:the\s+)?device\s+button\s+(?<button>${BUTTON_TOKEN})${DURATION_EN}`, 'i'),
+        new RegExp(String.raw`^push\s+(?:the\s+)?device\s+button\s+(?<button>${BUTTON_TOKEN})${DURATION_EN}`, 'i'),
+        new RegExp(String.raw`^tap\s+(?:the\s+)?device\s+button\s+(?<button>${BUTTON_TOKEN})${DURATION_EN}`, 'i')
       ],
       description: 'Presses a hardware device button',
       requiredParameters: ['button'],
@@ -66,11 +98,37 @@ export class UICommands extends BaseCommandDefinition {
         'pulsar botón del dispositivo SIRI',
         'presionar botón físico HOME',
         'press device button HOME',
+        'press device button PLAY_PAUSE',
         'push device button SIRI',
         'tap device button LOCK'
       ],
       parameterExtractors: {
-        button: (match) => match.groups?.button?.trim().toUpperCase() as any
+        button: (match) => normalizeButtonToken(match.groups?.button),
+        duration: (match) => match.groups?.duration ? Number.parseInt(match.groups.duration, 10) : undefined
+      }
+    },
+    {
+      command: 'press remote',
+      patterns: [
+        new RegExp(String.raw`^(?:(?:press|push|tap|send)\s+(?:the\s+)?(?:siri\s+)?remote(?:\s+button)?|remote)\s+(?<action>${REMOTE_ACTION_EN})${DURATION_EN}`, 'i'),
+        new RegExp(String.raw`^(?:presionar|pulsar|enviar)\s+(?:el\s+)?(?:bot[oó]n\s+)?(?<action>${REMOTE_ACTION_ES})\s+(?:en|del)\s+(?:el\s+)?${REMOTE_DEVICE_ES}${DURATION_ES}`, 'i'),
+        new RegExp(String.raw`^(?:presionar|pulsar)\s+(?:el\s+)?${REMOTE_DEVICE_ES}\s+(?<action>${REMOTE_ACTION_ES})${DURATION_ES}`, 'i')
+      ],
+      description: 'Sends a Siri Remote focus-navigation action for tvOS',
+      requiredParameters: ['action'],
+      optionalParameters: ['duration', 'sessionId'],
+      examples: [
+        'press remote up',
+        'press remote select',
+        'remote menu',
+        'press siri remote down with duration 250',
+        'pulsar mando arriba',
+        'presionar seleccionar en el mando',
+        'pulsar menú del mando'
+      ],
+      parameterExtractors: {
+        action: (match) => normalizeRemoteActionToken(match.groups?.action),
+        duration: (match) => match.groups?.duration ? Number.parseInt(match.groups.duration, 10) : undefined
       }
     },
     {

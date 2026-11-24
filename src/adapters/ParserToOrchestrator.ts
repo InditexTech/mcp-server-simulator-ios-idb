@@ -49,6 +49,7 @@ export class ParserToOrchestrator {
       'tap': CommandType.TAP,
       'swipe': CommandType.SWIPE,
       'press device button': CommandType.PRESS_BUTTON,
+      'press remote': CommandType.PRESS_REMOTE,
       'input text': CommandType.INPUT_TEXT,
       'press key': CommandType.PRESS_KEY,
       'press key sequence': CommandType.PRESS_KEY_SEQUENCE,
@@ -56,6 +57,7 @@ export class ParserToOrchestrator {
       // Accessibility commands
       'describe elements': CommandType.DESCRIBE_ALL_ELEMENTS,
       'describe point': CommandType.DESCRIBE_POINT_ELEMENT,
+      'tap element': CommandType.TAP_ELEMENT,
 
       // Capture and logging commands
       'capture screen': CommandType.TAKE_SCREENSHOT,
@@ -109,6 +111,10 @@ export class ParserToOrchestrator {
       'tocar': CommandType.TAP,
       'pulsar': CommandType.TAP,
       'deslizar': CommandType.SWIPE,
+      'pulsar mando': CommandType.PRESS_REMOTE,
+      'presionar mando': CommandType.PRESS_REMOTE,
+      'tocar elemento': CommandType.TAP_ELEMENT,
+      'pulsar elemento': CommandType.TAP_ELEMENT,
       
       // Screenshot and logs commands
       'capturar pantalla': CommandType.TAKE_SCREENSHOT,
@@ -223,6 +229,13 @@ export class ParserToOrchestrator {
       case CommandType.SET_HINGE_ANGLE:
         if (parameters.angle !== undefined) {
           parameters.angle = Number(parameters.angle);
+        }
+        break;
+
+      case CommandType.PRESS_BUTTON:
+      case CommandType.PRESS_REMOTE:
+        if (parameters.duration !== undefined) {
+          parameters.duration = Number(parameters.duration);
         }
         break;
     }
