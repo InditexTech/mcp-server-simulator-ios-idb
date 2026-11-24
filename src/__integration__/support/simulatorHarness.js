@@ -56,7 +56,9 @@ export function resolveSimPlatform(raw = process.env.SIM_PLATFORM) {
  * lazy autospawn. list-targets presence alone proves neither of these.
  * The caller owns cleanup on failure (including a partially started child).
  */
-export async function connectOwnedSimulator(udid, stateDir, { timeoutMs = 120_000, diagnostics = [] } = {}) {
+export async function connectOwnedSimulator(udid, stateDir, {
+  timeoutMs = 120_000, registrationTimeoutMs = 60_000, diagnostics = [],
+} = {}) {
   if (typeof udid !== 'string' || !/^[0-9A-Fa-f-]{36}$/.test(udid)) {
     throw new Error('cold-start refused: no valid owned UDID');
   }
@@ -75,7 +77,7 @@ export async function connectOwnedSimulator(udid, stateDir, { timeoutMs = 120_00
     const budget = Math.min(timeoutMs, recoveryDeadline - Date.now());
     if (budget <= 0) throw new Error('Owned companion recovery budget exhausted after cleanup');
     try {
-      await connectCompanion(udid, socketPath, stateDir, budget, attempt, diagnostics);
+      await connectCompanion(udid, socketPath, stateDir, budget, registrationTimeoutMs, attempt, diagnostics);
       process.stderr.write(`[integration] cold-start ready after ${Date.now() - bootStarted} ms (companion attempt ${attempt})\n`);
       return;
     } catch (error) {
@@ -103,7 +105,7 @@ function socketStatus(socketPath) {
   }
 }
 
-async function connectCompanion(udid, socketPath, stateDir, timeoutMs, attempt, diagnostics) {
+async function connectCompanion(udid, socketPath, stateDir, timeoutMs, registrationTimeoutMs, attempt, diagnostics) {
   const deadline = Date.now() + timeoutMs;
   const remaining = () => {
     const ms = deadline - Date.now();
@@ -121,11 +123,13 @@ async function connectCompanion(udid, socketPath, stateDir, timeoutMs, attempt, 
   let exit;
   let child;
   let childFailure;
+  let registrationFailure;
   const record = ready => {
     let stderrBytes = null;
     try { stderrBytes = fs.statSync(logPath, { throwIfNoEntry: false })?.size ?? 0; } catch { /* diagnostic unavailable */ }
     diagnostics.push({ attempt, stage, ready, elapsedMs: Date.now() - stageStarted,
-      reportBytes, exit, childStarted: Boolean(child?.pid), socket: socketStatus(socketPath), stderrBytes });
+      reportBytes, exit, childStarted: Boolean(child?.pid), socket: socketStatus(socketPath), stderrBytes,
+      ...(stage === 'registration' && { budgetMs: registrationTimeoutMs, failure: registrationFailure }) });
   };
   const advance = next => {
     record(true);
@@ -193,12 +197,46 @@ async function connectCompanion(udid, socketPath, stateDir, timeoutMs, attempt, 
     if (description.udid !== udid) throw new Error('gRPC target identity mismatch; refusing foreign companion');
     if (childFailure) throw childFailure;
     advance('registration');
-    const registered = JSON.parse(await command('idb', ['connect', udid, '--json']));
-    if (registered.udid !== udid) throw new Error('registered target identity mismatch');
-    if (childFailure) throw childFailure;
+    // The verified companion is already listening. idb's UDID registration
+    // does its own target discovery, so give it a separate bounded deadline.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), registrationTimeoutMs);
+    let registrationOutput;
+    try {
+      ({ stdout: registrationOutput } = await execFileAsync('idb', ['connect', udid, '--json'], {
+        signal: controller.signal, killSignal: 'SIGKILL',
+      }));
+    } catch (error) {
+      registrationFailure = registrationCommandFailure(error, controller.signal);
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+    let registered;
+    try {
+      registered = JSON.parse(registrationOutput);
+    } catch (error) {
+      registrationFailure = { kind: 'invalid-response' };
+      throw error;
+    }
+    if (typeof registered?.udid !== 'string') {
+      registrationFailure = { kind: 'invalid-response' };
+      throw new Error('Registration response missing target identity');
+    }
+    if (registered.udid !== udid) {
+      registrationFailure = { kind: 'wrong-target' };
+      throw new Error('Registered target identity mismatch');
+    }
+    if (childFailure) {
+      registrationFailure = { kind: 'companion-exited' };
+      throw childFailure;
+    }
     record(true);
   } catch (error) {
     record(false);
+    if (registrationFailure) {
+      throw new Error(`Owned simulator cold-start registration failed (budget ${registrationTimeoutMs} ms): ${registrationFailure.kind}`);
+    }
     const failure = new Error(`Owned simulator cold-start ${stage} failed within ${timeoutMs} ms: ${error.message}`, { cause: error });
     if (error.code === 'COMPANION_REPORT_TIMEOUT') {
       failure.code = error.code;
@@ -209,6 +247,17 @@ async function connectCompanion(udid, socketPath, stateDir, timeoutMs, attempt, 
     child?.stdout?.destroy();
     child?.unref();
   }
+}
+
+function registrationCommandFailure(error, signal) {
+  if (signal.aborted && error.code === 'ABORT_ERR' && error.cause === signal.reason) {
+    return { kind: 'timeout' };
+  }
+  if (Number.isInteger(error.code)) return { kind: 'exit', exitCode: error.code };
+  if (typeof error.signal === 'string' && /^SIG[A-Z0-9]{1,16}$/.test(error.signal)) {
+    return { kind: 'signal', signal: error.signal };
+  }
+  return { kind: 'command-error' };
 }
 
 /** @returns {boolean} True when the UDID belongs to the simulator this suite created. */
