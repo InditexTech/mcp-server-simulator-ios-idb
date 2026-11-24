@@ -1,0 +1,21 @@
+src/parser/commands/AccessibilityCommands.ts
+  s_a80d1753c23751::t_9a4e23c882c248 21-24,67-70
+src/parser/commands/UICommands.ts
+  s_a80d1753c23751::t_40ccdbdce108e5 8-16,86-91,107,113-115,131
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "ad2fd1a9645dba89dfb6ff0d3338938fecfa64a0",
+  "prompts": {},
+  "sessions": {
+    "s_a80d1753c23751": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e0c718032ffeqUU7RoK0t4sGJe",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Arturo Naredo <arturono@inditex.com>"
+    }
+  }
+}
