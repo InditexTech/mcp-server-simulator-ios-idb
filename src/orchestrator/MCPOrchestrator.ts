@@ -191,7 +191,12 @@ export class MCPOrchestrator {
         result = await this.orchestratorToIDB.executeCommand(command, this.activeSessionId || undefined);
         
         // If it's a session creation command and successful, save the session ID
-        if (command.type === CommandType.CREATE_SIMULATOR_SESSION && result.success && result.data) {
+        if (
+          (command.type === CommandType.CREATE_SIMULATOR_SESSION ||
+            command.type === CommandType.CREATE_DEVICE_SESSION) &&
+          result.success &&
+          result.data
+        ) {
           this.activeSessionId = result.data;
           this.emit('sessionCreated', { sessionId: this.activeSessionId });
         }

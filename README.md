@@ -277,6 +277,24 @@ The NLParser supports the following natural language commands:
 | Read posture | Reads hinge angle, orientation, and active/integrated displays | "read posture", "leer postura", "get simulator posture" |
 | Set orientation | Sets physical orientation and verifies expected posture | "set orientation to landscape left", "rotate simulator to portrait expecting angle 0 and active display outer" |
 
+### 📲 Real Devices (issue #22)
+| Command | Description | Example |
+|---------|-------------|---------|
+| Create device session | Creates a session on a paired iPhone/iPad (single device needs no name) | "create device session", "create device session with iPhone de Arturo", "connect to physical device 00008101-000A0C123456001E" |
+| List devices | Lists physical devices paired with this Mac | "list devices", "listar dispositivos físicos" |
+| Check device | Checks the device session is still connected and available | "check device", "is device connected" |
+| Device info | Describes the device behind the session (name, OS, connection) | "device info", "información del dispositivo" |
+
+Device sessions share the app lifecycle (`install`/`launch`/`terminate`/`uninstall`/`list apps`),
+logs, crash logs, screenshots and `open url` commands with simulator sessions — everything
+`idb` itself supports on devices over USB or Wi-Fi. Simulator-only operations (boot/shutdown/
+focus, hinge/posture/orientation, video recording, coordinate taps, swipes, HID text/keys and
+display selection) are rejected with actionable errors instead of failing inside `idb`.
+
+**Prerequisites on the device**: pair it with the Mac (Xcode → Devices, or `devicectl`),
+trust the computer, and enable *Developer Mode* (Settings › Privacy & Security). The device
+appears in `list devices` only when `idb list-targets --only device` reports it as `Available`.
+
 ### 📱 App Management
 | Command | Description | Example |
 |---------|-------------|---------|

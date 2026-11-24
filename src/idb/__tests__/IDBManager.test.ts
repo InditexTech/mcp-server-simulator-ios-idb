@@ -1873,4 +1873,235 @@ describe('IDBManager', () => {
       '--leading-dash-id'
     ]);
   });
+
+  describe('real device sessions', () => {
+    const DEVICE_TARGET_LINE = JSON.stringify({
+      udid: '00008101-000A0C123456001E',
+      name: 'iPhone de Arturo',
+      state: 'Available',
+      type: 'device',
+      os_version: 'iOS 27.1 arm64e',
+      architecture: 'arm64e',
+      model: 'iPhone17,1',
+      connection: 'usb'
+    });
+    const NETWORK_DEVICE_LINE = JSON.stringify({
+      udid: '00008101-000A0C123456002F',
+      name: 'iPad de Oficina',
+      state: 'Available',
+      type: 'device',
+      os_version: 'iPadOS 27.1',
+      architecture: 'arm64e',
+      model: 'iPad16,1',
+      connection: 'Network'
+    });
+
+    const arrangeIdb = (manager: IDBManager, lines: string) => {
+      jest
+        .spyOn(manager as any, 'executeCommand')
+        .mockImplementation(async (...parameters: unknown[]) => {
+          const cmd = parameters[0] as string;
+          const args = parameters[1] as string[];
+          if (cmd === 'idb' && args[0] === 'list-targets') {
+            return lines;
+          }
+          return '';
+        });
+    };
+
+    it('parses connected devices from idb list-targets --only device --json', async () => {
+      const manager = new IDBManager();
+      arrangeIdb(manager, [DEVICE_TARGET_LINE, NETWORK_DEVICE_LINE].join('\n'));
+
+      const devices = await manager.listConnectedDevices();
+      expect(devices.map(d => d.udid)).toEqual([
+        '00008101-000A0C123456001E',
+        '00008101-000A0C123456002F'
+      ]);
+      expect(devices[0]).toEqual({
+        udid: '00008101-000A0C123456001E',
+        name: 'iPhone de Arturo',
+        os: 'iOS 27.1 (arm64e)',
+        deviceType: 'iPhone17,1',
+        connection: 'usb',
+        state: 'Available'
+      });
+      expect(devices[1]).toEqual(expect.objectContaining({ os: 'iPadOS 27.1', connection: 'network' }));
+    });
+
+    it('creates a device session by name or UDID without booting anything', async () => {
+      const manager = new IDBManager();
+      const executeCommand = jest
+        .spyOn(manager as any, 'executeCommand')
+        .mockImplementation(async (...parameters: unknown[]) => {
+          const cmd = parameters[0] as string;
+          const args = parameters[1] as string[];
+          if (cmd === 'idb' && args[0] === 'list-targets') {
+            return args.includes('--only') && args[args.indexOf('--only') + 1] === 'device'
+              ? DEVICE_TARGET_LINE
+              : '';
+          }
+          return '';
+        });
+
+      const byName = await manager.createDeviceSession({ deviceName: 'iPhone de Arturo' });
+      expect(byName).toMatch(/^session_/);
+
+      const byUdid = await manager.createDeviceSession({
+        deviceName: '00008101-000A0C123456001E'
+      });
+      expect(byUdid).toMatch(/^session_/);
+
+      const bootCalls = executeCommand.mock.calls.filter(
+        ([cmd, args]) => cmd === 'xcrun' && (args as string[])[1] === 'boot'
+      );
+      expect(bootCalls).toEqual([]);
+    });
+
+    it('rejects unknown, unavailable and ambiguous device selections', async () => {
+      const manager = new IDBManager();
+      arrangeIdb(manager, DEVICE_TARGET_LINE);
+
+      await expect(manager.createDeviceSession({ deviceName: 'Pixel 9' }))
+        .rejects.toThrow('No connected device found with name or UDID Pixel 9');
+
+      arrangeIdb(manager, DEVICE_TARGET_LINE.replace('Available', 'Unavailable'));
+      await expect(manager.createDeviceSession({ deviceName: 'iPhone de Arturo' }))
+        .rejects.toThrow('Device is not available');
+
+      arrangeIdb(manager, [DEVICE_TARGET_LINE, NETWORK_DEVICE_LINE].join('\n'));
+      await expect(manager.createDeviceSession())
+        .rejects.toThrow('Multiple devices connected');
+      // One device only: no name needed.
+      arrangeIdb(manager, DEVICE_TARGET_LINE);
+      await expect(manager.createDeviceSession()).resolves.toMatch(/^session_/);
+    });
+
+    it('shares app lifecycle, logs and screenshot commands with simulator sessions', async () => {
+      const manager = new IDBManager();
+      arrangeIdb(manager, DEVICE_TARGET_LINE);
+      const sessionId = await manager.createDeviceSession({ deviceName: 'iPhone de Arturo' });
+
+      jest.spyOn(manager as any, 'executeCommand').mockImplementation(
+        async (...parameters: unknown[]) => {
+          const cmd = parameters[0] as string;
+          const args = parameters[1] as string[];
+          if (cmd === 'idb' && args[0] === 'install') {
+            return JSON.stringify({ installedAppBundleId: 'com.inditex.app' });
+          }
+          if (cmd === 'idb' && args[0] === 'screenshot') {
+            const outPath = args[args.length - 1];
+            await fs.promises.writeFile(outPath, 'png-bytes');
+            return '';
+          }
+          return '';
+        }
+      );
+
+      const install = (await manager.installApp(sessionId, 'package.json'));
+      expect(install.bundleId).toBe('com.inditex.app');
+      const screenshot = await manager.takeScreenshot(sessionId);
+      expect(screenshot).toEqual(Buffer.from('png-bytes'));
+
+      await expect(manager.launchApp(sessionId, 'com.inditex.app')).resolves.toBeUndefined();
+      await expect(manager.terminateApp(sessionId, 'com.inditex.app')).resolves.toBeUndefined();
+      await expect(manager.uninstallApp(sessionId, 'com.inditex.app')).resolves.toBeUndefined();
+      await expect(manager.getSystemLogs(sessionId)).resolves.toBe('');
+    });
+
+    it('rejects simulator-only operations on device sessions with actionable errors', async () => {
+      const manager = new IDBManager();
+      arrangeIdb(manager, DEVICE_TARGET_LINE);
+      const sessionId = await manager.createDeviceSession({ deviceName: 'iPhone de Arturo' });
+
+      await expect(manager.setHingeAngle(sessionId, 120))
+        .rejects.toThrow('Hinge angle is only supported on simulators');
+      await expect(manager.getPosture(sessionId))
+        .rejects.toThrow('Posture is only supported on simulators');
+      await expect(manager.shutdownSimulator(sessionId))
+        .rejects.toThrow('Shutting down is not supported on real devices');
+      await expect(manager.focusSimulator(sessionId))
+        .rejects.toThrow('Focusing is not supported on real devices');
+      await expect(manager.isSimulatorBooted(sessionId))
+        .rejects.toThrow('Booted-state check is not supported on real devices');
+
+      await expect(manager.startVideoRecording(sessionId, 'out.mp4'))
+        .rejects.toThrow('Video recording is not supported on real devices');
+
+      jest.spyOn(manager as any, 'executeCommand').mockResolvedValue('');
+      await expect(manager.tap(sessionId, 10, 10)).rejects.toThrow(
+        'A coordinate tap is not supported on real devices'
+      );
+      await expect(manager.swipe(sessionId, 0, 0, 1, 1)).rejects.toThrow(
+        'A swipe is not supported on real devices'
+      );
+      await expect(manager.inputText(sessionId, 'hola')).rejects.toThrow(
+        'Keyboard text input is not supported on real devices'
+      );
+      await expect(manager.pressButton(sessionId, 'HOME')).rejects.toThrow(
+        'A hardware button press is not supported on real devices'
+      );
+      await expect(manager.pressKey(sessionId, 40)).rejects.toThrow(
+        'A key press is not supported on real devices'
+      );
+      await expect(manager.pressKeySequence(sessionId, [40, 41])).rejects.toThrow(
+        'A key sequence is not supported on real devices'
+      );
+    });
+
+    it('keeps booted-state and availability checks per session kind', async () => {
+      const manager = new IDBManager();
+      arrangeIdb(manager, DEVICE_TARGET_LINE);
+      const deviceSession = await manager.createDeviceSession({ deviceName: 'iPhone de Arturo' });
+
+      jest.spyOn(manager as any, 'executeCommand').mockImplementation(
+        async (...parameters: unknown[]) => {
+          const cmd = parameters[0] as string;
+          const args = parameters[1] as string[];
+          if (cmd === 'idb' && args[0] === 'list-targets') {
+            return DEVICE_TARGET_LINE;
+          }
+          if (cmd === 'idb' && args[0] === 'describe') {
+            return JSON.stringify({
+              udid: '00008101-000A0C123456001E',
+              name: 'iPhone de Arturo',
+              state: 'Available',
+              os_version: 'iOS 27.1 arm64e',
+              architecture: 'arm64e',
+              model: 'iPhone17,1',
+              connection: 'usb'
+            });
+          }
+          if (cmd === 'xcrun' && args[0] === 'simctl') {
+            return JSON.stringify({
+              devices: {
+                'com.apple.CoreSimulator.SimRuntime.iOS-27-1': [{
+                  udid: 'SIM-UDID',
+                  name: 'iPhone 17',
+                  state: 'Shutdown',
+                  deviceTypeIdentifier: 'com.apple.CoreSimulator.SimDeviceType.iPhone-17',
+                  isAvailable: true
+                }]
+              }
+            });
+          }
+          return '';
+        }
+      );
+
+      await expect(manager.isDeviceConnected(deviceSession)).resolves.toBe(true);
+
+      const simulatorSession = await manager.createSimulatorSession({
+        deviceName: 'iPhone 17',
+        autoboot: false
+      });
+      expect(await manager.isSimulatorBooted(simulatorSession)).toBe(false);
+      // A simulator session is not answered by the device connectivity check
+      // because the connectivity list only contains the device UDID.
+      await expect(manager.isDeviceConnected(simulatorSession)).resolves.toBe(false);
+      await expect(manager.getDeviceInfo(deviceSession)).resolves.toEqual(
+        expect.objectContaining({ udid: '00008101-000A0C123456001E', connection: 'usb' })
+      );
+    });
+  });
 });

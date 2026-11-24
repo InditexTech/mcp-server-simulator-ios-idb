@@ -14,9 +14,11 @@ import { AccessibilityCommands } from '../../parser/commands/AccessibilityComman
 import { CaptureCommands } from '../../parser/commands/CaptureCommands.js';
 import { DebugCommands } from '../../parser/commands/DebugCommands.js';
 import { MiscCommands } from '../../parser/commands/MiscCommands.js';
+import { DeviceCommands } from '../../parser/commands/DeviceCommands.js';
 
 const ALL_HANDLERS = [
   new SimulatorCommands(),
+  new DeviceCommands(),
   new AppCommands(),
   new UICommands(),
   new AccessibilityCommands(),
@@ -32,6 +34,10 @@ const ALL_HANDLERS = [
 const MANAGER_METHODS = [
   'createSimulatorSession',
   'terminateSimulatorSession',
+  'createDeviceSession',
+  'listConnectedDevices',
+  'isDeviceConnected',
+  'getDeviceInfo',
   'listAvailableSimulators',
   'listBootedSimulators',
   'listSimulatorSessions',
@@ -333,13 +339,47 @@ const EXPECTED_BY_EXAMPLE: Record<string, ExpectedManagerCall> = {
   'update contacts /tmp/contacts.db': call('updateContacts', '', '/tmp/contacts.db'),
   'importar contactos /ruta/contacts.sqlite': call('updateContacts', '', '/ruta/contacts.sqlite'),
   'import contacts /path/to/contacts.db': call('updateContacts', '', '/path/to/contacts.db'),
-  'load contacts /path/contacts.sqlite': call('updateContacts', '', '/path/contacts.sqlite')
+  'load contacts /path/contacts.sqlite': call('updateContacts', '', '/path/contacts.sqlite'),
+
+  // Real devices (issue #22)
+  'crear sesión de dispositivo físico': call('createDeviceSession', {}),
+  'crear sesión de dispositivo iPhone de Arturo': call('createDeviceSession', { deviceName: 'iPhone de Arturo' }),
+  'conectar dispositivo 00008101-000A0C123456001E': call('createDeviceSession', { deviceName: '00008101-000A0C123456001E' }),
+  'create device session': call('createDeviceSession', {}),
+  'create device session with iPhone de Arturo': call('createDeviceSession', { deviceName: 'iPhone de Arturo' }),
+  'connect to physical device 00008101-000A0C123456001E': call('createDeviceSession', { deviceName: '00008101-000A0C123456001E' }),
+  'listar dispositivos físicos': call('listConnectedDevices'),
+  'mostrar dispositivos físicos': call('listConnectedDevices'),
+  'qué dispositivos físicos hay': call('listConnectedDevices'),
+  'list devices': call('listConnectedDevices'),
+  'show all devices': call('listConnectedDevices'),
+  'display devices': call('listConnectedDevices'),
+  'verificar dispositivo': call('isDeviceConnected', ''),
+  'comprobar si el dispositivo está conectado': call('isDeviceConnected', ''),
+  'check device': call('isDeviceConnected', ''),
+  'verify the device is connected': call('isDeviceConnected', ''),
+  'is device connected': call('isDeviceConnected', ''),
+  'información del dispositivo': call('getDeviceInfo', ''),
+  'detalles del dispositivo': call('getDeviceInfo', ''),
+  'device info': call('getDeviceInfo', ''),
+  'describe the connected device': call('getDeviceInfo', '')
 };
 
 const createIDBManagerMock = () => {
   const manager: Record<ManagerMethod, jest.Mock> = {} as Record<ManagerMethod, jest.Mock>;
   const resolvedValues: Partial<Record<ManagerMethod, unknown>> = {
     createSimulatorSession: 'session-1',
+    createDeviceSession: 'device-session-1',
+    listConnectedDevices: [],
+    isDeviceConnected: true,
+    getDeviceInfo: {
+      udid: '00008101-000A0C123456001E',
+      name: 'iPhone de Arturo',
+      os: 'iOS 27.1 (arm64e)',
+      deviceType: 'iPhone17,1',
+      connection: 'usb',
+      state: 'Available'
+    },
     listAvailableSimulators: [],
     listBootedSimulators: [],
     listSimulatorSessions: [],

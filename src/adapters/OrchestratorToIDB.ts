@@ -71,6 +71,22 @@ export class OrchestratorToIDB {
           result = await this.idbManager.listBootedSimulators();
           break;
 
+        case CommandType.CREATE_DEVICE_SESSION:
+          result = await this.requireMethod('createDeviceSession')(command.parameters);
+          break;
+
+        case CommandType.LIST_CONNECTED_DEVICES:
+          result = await this.requireMethod('listConnectedDevices')();
+          break;
+
+        case CommandType.CHECK_DEVICE:
+          result = await this.requireMethod('isDeviceConnected')(sid);
+          break;
+
+        case CommandType.GET_DEVICE_INFO:
+          result = await this.requireMethod('getDeviceInfo')(sid);
+          break;
+
         case CommandType.BOOT_SIMULATOR:
           await this.idbManager.bootSimulatorByUDID(command.parameters.udid);
           result = { udid: command.parameters.udid };

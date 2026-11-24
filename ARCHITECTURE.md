@@ -52,7 +52,7 @@ serialized as JSON text content; on thrown errors the tool responds with
 | MCP server | `src/mcp/mcp-server.ts` | Exports `createMCPServer()` factory (builds `IDBManager` + `NLParser` + `MCPOrchestrator`) and a **module-level `MCPSimulatorServer` default export**. Registers the `process-instruction` tool on `CallToolRequestSchema` and advertises it to clients via `ListToolsRequestSchema`; all logging goes to `logs/mcp-server.log` via synchronous `logToFile()`. Its own `SIGINT`/`SIGTERM` handlers attempt an async `close()` before exiting; since `src/index.ts` exits immediately on the same signals, which handler runs first is not guaranteed — graceful shutdown on signals is best-effort, not guaranteed. |
 | Orchestrator | `src/orchestrator/MCPOrchestrator.ts` | Coordinates parse → validate → normalize → convert → execute. Dispatches `SEQUENCE` commands (iterating child commands with `stopOnError` semantics) and `CONDITIONAL` commands (async predicate + branch) itself via `executeSequenceCommand`/`executeConditionalCommand`; delegates single commands to `OrchestratorToIDB`. Owns session state, `commandHistory`, and a `sessionCreated`/`sessionTerminated`/`commandExecuted`/`sessionActivated`/`sessionDeactivated` event bus (internal `emit`/listener registry, not Node `EventEmitter`). |
 | Parser | `src/parser/NLParser.ts` | Wraps the `CommandRegistry`; implements `IParser` (`parseInstruction`, `validateInstruction`, `normalizeParameters`). |
-| Command definitions | `src/parser/commands/*.ts` | Per-domain `BaseCommandDefinition` subclasses (Simulator, App, UI, Accessibility, Capture, Debug, Misc) with regex `patterns` (Spanish + English), parameter extractors, examples. |
+| Command definitions | `src/parser/commands/*.ts` | Per-domain `BaseCommandDefinition` subclasses (Simulator, Device, App, UI, Accessibility, Capture, Debug, Misc) with regex `patterns` (Spanish + English), parameter extractors, examples. |
 | Adapter (parser→orchestrator) | `src/adapters/ParserToOrchestrator.ts` | Static Spanish/English phrase → `CommandType` mapping (exact match, then substring match); throws if no mapping exists. |
 | Adapter (orchestrator→IDB) | `src/adapters/OrchestratorToIDB.ts` | `switch` over `CommandType` translating **single** commands to concrete `IDBManager` calls; session resolution falls back with `||` (`command.parameters.sessionId \|\| sessionId \|\| ''`); returns measured `CommandResult`s. |
 | IDB gateway | `src/idb/IDBManager.ts` | Implements `IIDBManager`. Resolves session→UDID internally; shells out via `execFileAsync` only. |
@@ -79,6 +79,21 @@ There are two distinct pieces of session state; do not conflate them:
   `Session not found: ${sessionId}` if absent.
   By-UDID variants (`bootSimulatorByUDID`, `shutdownSimulatorByUDID`) bypass
   the map deliberately for UDID-addressed commands.
+  **Real-device sessions** (`createDeviceSession`, issue #22) write into the
+  same `sessions` map and the same session-id namespace, additionally tagging
+  the session kind (`simulator` / `device`). `createDeviceSession` lists
+  `idb list-targets --only device --json` — never boots anything — and
+  requires an explicit `deviceName` (name or UDID) when more than one device
+  is paired. Device sessions share the idb commands idb itself supports on
+  devices (app lifecycle, logs, crash logs, screenshots, `open url`); every
+  simulator-only operation (boot/shutdown/focus via `simctl`, hinge/posture/
+  orientation, video recording, coordinate taps, swipes, HID text/keys,
+  display selection) fails fast through the session-kind guards
+  (`requireSimulatorSession`, `requireBootedTargetSession`,
+  `requireSimulatorHid`) with guidance instead of an idb-internal error.
+  Session-generic methods (`terminateSimulatorSession`,
+  `listSimulatorSessions`, app lifecycle, logs, screenshots) are
+  kind-agnostic on purpose; only the guards are kind-specific.
 - **`MCPOrchestrator.activeSessionId: string | null`** — the orchestrator's
   *current working session*. After a successful `CREATE_SIMULATOR_SESSION`, the
   returned session id is stored and used as the default `sessionId` argument

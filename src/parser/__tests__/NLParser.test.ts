@@ -328,4 +328,37 @@ describe('NLParser', () => {
       expect(Array.isArray(command.optionalParameters)).toBe(true);
     });
   });
+
+  describe('real device commands', () => {
+    const deviceInstructions: Array<[string, string, Record<string, unknown>]> = [
+      ['create device session', 'create device session', {}],
+      ['create device session with iPhone de Arturo', 'create device session', { deviceName: 'iPhone de Arturo' }],
+      ['connect to physical device 00008101-000A0C123456001E', 'create device session', { deviceName: '00008101-000A0C123456001E' }],
+      ['conectar dispositivo 00008101-000A0C123456001E', 'create device session', { deviceName: '00008101-000A0C123456001E' }],
+      ['crear sesión de dispositivo físico', 'create device session', {}],
+      ['list devices', 'list devices', {}],
+      ['listar dispositivos físicos', 'list devices', {}],
+      ['show all devices', 'list devices', {}],
+      ['check device', 'check device', {}],
+      ['verificar si el dispositivo está conectado', 'check device', {}],
+      ['is device connected', 'check device', {}],
+      ['device info', 'get device info', {}],
+      ['información del dispositivo', 'get device info', {}],
+      ['describe the connected device', 'get device info', {}]
+    ];
+
+    it.each(deviceInstructions)('parses "%s" into %j with %j', async (instruction, command, parameters) => {
+      const result = await parser.parseInstruction(instruction);
+      expect(result.command).toBe(command);
+      expect(result.parameters).toEqual(parameters);
+    });
+
+    it('does not shadow the simulator session command', async () => {
+      const simulator = await parser.parseInstruction('create session with iPhone 17');
+      expect(simulator.command).toBe('create session');
+
+      const device = await parser.parseInstruction('create device session with iPhone de Arturo');
+      expect(device.command).toBe('create device session');
+    });
+  });
 });
