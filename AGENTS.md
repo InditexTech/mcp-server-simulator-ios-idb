@@ -25,6 +25,8 @@ repository):
 | `npm run typecheck` | Checks source and test types without emitting files |
 | `npm test` | Runs Jest with SWC (`NODE_OPTIONS=--experimental-vm-modules`) |
 | `npm run test:coverage` | Same as `npm test` with coverage |
+| `npm run test:scripts` | Runs the `node --test` tests of the release scripts in `.github/scripts/` |
+| `npm run release:prepare -- X.Y.Z` | Maintainers only: prepares a release (changelog, version, release notes; see [CONTRIBUTING.md](CONTRIBUTING.md#releases)) |
 | `npm start` | Runs `node dist/index.js` (the MCP stdio server) |
 
 ### ⚠️ Dependency installation has heavy side effects
@@ -127,6 +129,14 @@ automatically. Native Homebrew versions are not fixed by the npm lockfile.
   CLI mixes host crash data into per-device output), and CI artifacts
   publish only the suite-owned artifacts directory, never the server's
   generic `logs/` directory.
+
+## Changelog and release notes
+
+- Do not edit `CHANGELOG.md` in feature PRs: entries are generated at release
+  time from the issues that merged PRs close (`Closes #N` in the PR body).
+  See [CONTRIBUTING.md](CONTRIBUTING.md#changelog).
+- Release notes for minor and major releases live in `docs/release-notes/`.
+  They are seeded from the changelog; never leave a `TODO` in a published page.
 
 ## Never edit generated directories
 
