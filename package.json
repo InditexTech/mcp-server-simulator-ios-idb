@@ -9,6 +9,8 @@
     "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
     "test:integration": "IOS_SIM_INTEGRATION=1 NODE_OPTIONS=--experimental-vm-modules jest --config jest.integration.config.js --runInBand",
     "test:integration:tvos": "SIM_PLATFORM=tvos IOS_SIM_INTEGRATION=1 NODE_OPTIONS=--experimental-vm-modules jest --config jest.integration.config.js --runInBand",
+    "test:scripts": "node --test '.github/scripts/*.test.mjs'",
+    "release:prepare": "node .github/scripts/release-prepare.mjs",
     "typecheck": "tsc --noEmit",
     "build": "tsc",
     "start": "node dist/index.js",
